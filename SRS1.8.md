@@ -6,7 +6,7 @@
 > **SRS Changelog from v1.7:** เพิ่ม 3 ข้อ: URL validation, Reminder idempotency, Audit log purge
 
 ---
-
+1
 ## Changelog
 
 | Version | วันที่ | สิ่งที่เปลี่ยน |
