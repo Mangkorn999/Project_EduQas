@@ -1,0 +1,665 @@
+# eila — Software Requirements Specification (SRS)
+
+> ระบบประเมินเว็บไซต์มหาวิทยาลัย / Web Evaluation System
+> Prince of Songkla University
+> **Version 1.7 | Updated: 2026-04-24**
+> **SRS Changelog from v1.6:** แก้ไข 8 ข้อจาก Spec Review (4 Critical + 4 Advisory)
+
+---
+
+## Changelog
+
+| Version | วันที่ | สิ่งที่เปลี่ยน |
+|---------|--------|--------------|
+| 1.0 | 2026-04-23 | Initial SRS |
+| 1.1 | 2026-04-23 | เพิ่ม Faculty Structure, Form-first Concept, Import/Export, แก้ DB Schema, ยืนยัน Status Flow |
+| 1.2 | 2026-04-23 | เพิ่ม faculties table, Form Scope, Form Date Auto-close, Notification System |
+| 1.3 | 2026-04-23 | เพิ่ม Git Branch Strategy (หัวข้อ 11) |
+| 1.4 | 2026-04-23 | Template Scope, eila_admin แยก Path, UNIQUE Constraint, University Scope Logic, Hotfix Branch |
+| 1.5 | 2026-04-23 | แก้ไข 42 ข้อจาก SRS Review: Security 14 ข้อ, Missing 10 ข้อ, Ambiguous 8 ข้อ, Untestable 7 ข้อ, Conflicting 3 ข้อ |
+| 1.6 | 2026-04-24 | แก้ไข 5 ข้อจาก Final Sanity Check: FR-U06 (2FA→Email OTP), NFR-SEC11 (Key Management), ลบ Section 15.7 ซ้ำ, NFR-14 (Infrastructure note), audit_logs (prev_hash + hash) |
+| **1.7** | **2026-04-24** | **แก้ไข 8 ข้อจาก Spec Review: FR-AUTH05 (Faculty fallback definitive), FR-D05 (university scope formula), FR-U01+FR-U07 (Bulk XLSX spec+API), FR-N02/N03 (university scope recipients), Section 15 Phase labels, Notification API endpoints, /rollback naming, node-cron confirmed** |
+
+---
+
+## 1. บทนำ (Introduction)
+
+### 1.1 วัตถุประสงค์
+eila คือระบบเว็บสำหรับประเมินเว็บไซต์ของมหาวิทยาลัย โดย Admin สามารถสร้างแบบประเมินแบบ Drag & Drop คล้าย Google Forms กำหนด Role และขอบเขต (Faculty / University) ที่รับฟอร์ม ตั้งเวลาเปิด-ปิดอัตโนมัติ Import/Export ฟอร์มได้ และดูผลลัพธ์ผ่าน Dashboard ผู้ใช้ทุกคน Login ผ่าน PSU Passport และระบบแยก Role อัตโนมัติ
+
+### 1.2 ขอบเขตของระบบ (Scope)
+- สร้างและจัดการแบบประเมิน (Form) แบบ Form-first คล้าย Google Forms
+- ระบบ Authentication ผ่าน PSU Passport (OAuth)
+- กำหนดสิทธิ์การเข้าถึงตาม Role และ Faculty อย่างเข้มงวด
+- Form Scope: `faculty` (เฉพาะคณะ) และ `university` (ทุก Role ทุก Faculty เห็น)
+- Template Scope: `faculty` (เฉพาะคณะตัวเอง) และ `global` (eila_admin สร้างให้ทุกคณะใช้)
+- ตั้งเวลาเปิด-ปิดฟอร์มอัตโนมัติ พร้อมแก้ไขได้
+- Import/Export โครงสร้างฟอร์ม (.json) และผลลัพธ์ (.pdf / .xlsx)
+- แสดงผลลัพธ์ผ่าน Dashboard แยกตาม Faculty
+- ระบบแจ้งเตือนผ่าน Email + In-app
+
+### 1.3 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14 + Tailwind CSS |
+| Backend | Fastify + Node.js |
+| Database | PostgreSQL |
+| Authentication | PSU Passport (OAuth 2.0 + PKCE) |
+| Form Drag & Drop | dnd-kit |
+| Export Results | PDF-lib + ExcelJS |
+| Export/Import Structure | JSON |
+| Scheduler (Auto-close) | **node-cron** ✅ (confirmed — Node.js native, ไม่ต้องการ PostgreSQL extension) |
+| Email Notification | Nodemailer / SMTP PSU |
+| Deploy | TBD |
+
+---
+
+## 2. ผู้ใช้งาน (User Roles)
+
+ระบบมีทั้งหมด **6 Role**
+
+| Role | สร้างฟอร์ม | ตอบฟอร์ม | ดู Dashboard | จัดการ Admin | ขอบเขตข้อมูล |
+|---|:---:|:---:|:---:|:---:|---|
+| eila_admin | ✅ | ❌ | ✅ | ✅ | ทุก Faculty |
+| faculty_admin | ✅ | ❌ | ✅ | ❌ | แค่ Faculty ตัวเอง |
+| executive | ❌ | ❌ | ✅ | ❌ | ทุก Faculty |
+| teacher | ❌ | ✅ | ❌ | ❌ | เฉพาะฟอร์มที่ได้รับ |
+| staff | ❌ | ✅ | ❌ | ❌ | เฉพาะฟอร์มที่ได้รับ |
+| student | ❌ | ✅ | ❌ | ❌ | เฉพาะฟอร์มที่ได้รับ |
+
+### 2.1 eila_admin
+- Admin หลักของระบบ EILA ทั้งหมด
+- จัดการ faculty_admin ได้ (เพิ่ม / ลบ / แก้ไข)
+- จัดการ Faculty ในระบบได้ (เพิ่ม / ลบ / แก้ไข ผ่าน `faculties` table)
+- จัดการผู้ใช้ทุก Role รวมถึง executive
+- สร้างฟอร์มได้ทั้ง `faculty` scope และ `university` scope ผ่าน Path `/eila-admin/forms/*`
+- สร้าง Template ได้ทั้ง `faculty` scope และ `global` scope
+- ดู Dashboard และ Export ได้ทุก Faculty
+- มีได้ 1–2 คนเท่านั้น
+- `faculty_id = NULL` (ไม่ผูกกับ Faculty ใด)
+- ต้อง configure `FALLBACK_FACULTY_ID` ใน environment ก่อน deploy
+
+### 2.2 faculty_admin
+- Admin ประจำแต่ละ Faculty
+- สร้างได้เฉพาะฟอร์ม `faculty` scope ของตัวเองเท่านั้น (ไม่สร้าง `university` scope)
+- เห็นและจัดการได้เฉพาะฟอร์ม / Template ของ Faculty ตัวเองเท่านั้น
+- ไม่เห็นฟอร์ม / Template ของ Faculty อื่น นอกจาก Import เข้ามาเอง
+- Import / Export ฟอร์ม (.json) ได้
+- Export ผลลัพธ์ (.pdf / .xlsx) ได้
+- มีได้หลายคนต่อ Faculty
+
+### 2.3 executive
+- ดู Dashboard ได้ทุกฟอร์มทุก Faculty
+- Export PDF และ Excel ได้
+- ไม่ตอบฟอร์ม (เพื่อความถูกต้องของข้อมูล)
+- กำหนดโดย eila_admin เท่านั้น
+
+### 2.4 teacher / staff / student (Respondent)
+- Login ผ่าน PSU Passport → ระบบรับ Role + Faculty อัตโนมัติ
+- Auto-create ลงใน `users` table ครั้งแรกที่ Login
+- เห็นฟอร์มที่ถูกกำหนดให้ Role และ Faculty ตัวเอง **รวมถึงฟอร์ม `university` scope ทุกชิ้น**
+- แก้ไขคำตอบได้จนกว่าฟอร์มจะ `closed`
+- ไม่เห็นคำตอบของคนอื่น
+
+---
+
+## 3. Authentication
+
+### 3.1 PSU Passport (OAuth 2.0 + PKCE)
+- ไม่มีระบบ Register หรือจัดการรหัสผ่านเอง
+- ผู้ใช้ทุกคน Login ผ่าน PSU Passport
+- PSU Passport ส่ง Role + Faculty มาให้อัตโนมัติ
+- **NFR-SEC10: Implement PKCE for OAuth, validate state parameter, verify JWT signature**
+
+รหัสนักศึกษา  →  student  + faculty จาก PSU Passport
+รหัสอาจารย์    →  teacher  + faculty จาก PSU Passport
+รหัสบุคลากร    →  staff    + faculty จาก PSU Passport
+กำหนดโดย eila_admin  →  executive / faculty_admin / eila_admin
+### 3.2 Role Resolution Flow
+
+PSU Passport Login
+↓
+ดึง psu_passport_id + role + faculty จาก PSU
+↓
+เช็ค users table ว่ามีการ Override role ไหม?
+├── มี Override → ใช้ role จาก DB (executive / faculty_admin / eila_admin)
+└── ไม่มี → Auto-create / Update ข้อมูลจาก PSU
+(role: student / teacher / staff, faculty จาก PSU)
+### 3.3 Session Management
+
+**FR-AUTH01: Session Timeout**
+- User session หมดอายุหลังจากไม่มีการใช้งาน 30 นาที
+- ระบบแสดง countdown 5 นาทีก่อน session หมดอายุ
+- User สามารถ refresh session ได้ก่อนหมดอายุ
+
+**FR-AUTH02: Logout**
+- User สามารถ Logout ได้ทุกเมื่อ
+- เมื่อ Logout ระบบจะลบ session token ทั้งหมด
+- Logout มี 2 แบบ:
+  - **Logout ปกติ:** กลับไปหน้า Landing Page
+  - **Logout ทุกอุปกรณ์:** ลบ session ทั้งหมด (สำหรับกรณีฉุกเฉิน)
+
+**FR-AUTH03: Session Storage**
+- Session token เก็บใน HttpOnly Cookie
+- Cookie มี Secure flag + SameSite=Strict
+- Token มีอายุสูงสุด 30 นาที
+
+### 3.4 Token Refresh Strategy
+
+**FR-AUTH04: Token Expiry Handling**
+- PSU Passport Access Token มีอายุ 30 นาที
+- ระบบใช้ Refresh Token เพื่อขอ Access Token ใหม่ (ถ้า PSU รองรับ)
+- ถ้าไม่มี Refresh Token → ให้ user Login ใหม่
+- ถ้า Token หมดอายุระหว่างใช้งาน → บันทึก state ไว้ และ redirect ไป Login
+
+### 3.5 PSU Passport Fallback ✏️ (Updated v1.7)
+
+**FR-AUTH05: PSU Passport Fallback — Definitive Rules**
+
+**กรณี PSU ไม่ส่ง `faculty_id`:**
+1. ระบบ assign `faculty_id = FALLBACK_FACULTY_ID` ซึ่ง configure ไว้ใน environment variable
+2. `FALLBACK_FACULTY_ID` ต้องเป็น UUID ของ Faculty "PSU General" ที่ eila_admin สร้างไว้ใน `faculties` table ก่อน deploy
+3. User ที่ถูก assign FALLBACK_FACULTY_ID จะเห็นเฉพาะฟอร์ม `university` scope เท่านั้น จนกว่า eila_admin จะ assign `faculty_id` ที่ถูกต้อง
+4. บันทึก error ลง audit log: `{ action: 'FALLBACK_FACULTY_ASSIGNED', entity_type: 'USER', psu_passport_id, reason: 'PSU did not provide faculty_id' }`
+5. **ไม่มี UI ให้ user เลือก Faculty เอง** — ทั้งหมด handle อัตโนมัติ
+
+**กรณี PSU ไม่ส่ง `role`:**
+1. Default เป็น `'student'`
+2. บันทึก error ลง audit log
+
+**Setup requirement:**
+.env (production)FALLBACK_FACULTY_ID=<UUID ของ Faculty "PSU General" ใน faculties table>
+---
+
+## 4. Functional Requirements
+
+### 4.1 Form Builder (Form-first แบบ Google Forms)
+
+- **FR-F01** Admin สร้างฟอร์มใหม่แบบเปล่าได้ โดยไม่ต้องมี Template
+- **FR-F02** รองรับการ Drag & Drop เพื่อเรียงลำดับคำถาม
+- **FR-F03** สามารถเพิ่ม / ลบ / แก้ไขคำถามใน Form ได้
+- **FR-F04** สามารถกำหนด URL เว็บไซต์ที่ต้องการประเมินได้
+- **FR-F05** สามารถกำหนด Role ที่จะรับฟอร์มได้ (เลือกได้หลาย Role) เฉพาะ `faculty` scope
+- **FR-F06** สามารถเปิด / ปิดฟอร์มได้ตลอดเวลา
+- **FR-F07** ฟอร์มมีสถานะ 3 สถานะ ได้แก่ `draft` / `open` / `closed`
+- **FR-F08** สามารถ Copy ฟอร์มเก่าไปสร้างใหม่และแก้ไขได้
+
+#### Form Scope
+
+- **FR-F09** ฟอร์มมี Scope 2 แบบ
+
+| Scope | สร้างโดย | ใครเห็น | target_roles |
+|-------|---------|--------|-------------|
+| `faculty` | faculty_admin หรือ eila_admin | เฉพาะ Role ที่กำหนดใน Faculty นั้น | ✅ ใช้ |
+| `university` | eila_admin เท่านั้น | ทุก Role ทุก Faculty ทั้งหมด | ❌ ไม่ใช้ (เห็นหมดเลย) |
+
+- **FR-F10** faculty_admin สร้างได้เฉพาะ `faculty` scope
+- **FR-F11** eila_admin สร้างได้ทั้ง `faculty` และ `university` scope
+- **FR-F12** ฟอร์ม `university` scope ไม่มี `form_target_roles`
+
+**Form Visibility Logic (Pseudocode):**
+
+```typescript
+function canUserSeeForm(user, form): boolean {
+  if (form.scope === 'university') return true
+  if (form.scope === 'faculty') {
+    if (user.role === 'faculty_admin' && user.faculty_id === form.faculty_id) return true
+    if (user.faculty_id === form.faculty_id) {
+      const targetRoles = getFormTargetRoles(form.id)
+      return targetRoles.includes(user.role)
+    }
+    return false
+  }
+  return false
+}
+Form Date (Auto-close)
+FR-F13 Admin สามารถกำหนด open_at และ close_at ล่วงหน้าได้
+FR-F14 ระบบเปลี่ยน Status เป็น open อัตโนมัติเมื่อถึงเวลา open_at
+FR-F15 ระบบเปลี่ยน Status เป็น closed อัตโนมัติเมื่อถึงเวลา close_at
+FR-F16 Admin สามารถแก้ไข close_at เพื่อขยายเวลาได้ แม้ฟอร์มจะ open หรือ closed แล้ว
+FR-F17 open_at และ close_at เป็น Optional — ถ้าไม่กำหนด Admin ต้องเปิด/ปิดเอง
+Status Flowdraft ⇄ open → closed
+↑      |
+└──────┘ (เปิดใหม่ได้)
+
+draft  → open   ✅ (กดเอง หรือระบบเปิดอัตโนมัติตาม open_at)
+open   → draft  ✅ (ดึงกลับมาแก้ไข)
+open   → closed ✅ (กดเอง หรือระบบปิดอัตโนมัติตาม close_at)
+closed → open   ✅ (เปิดรอบใหม่ หรือขยายเวลา)
+
+ถ้าฟอร์ม closed → Respondent เห็นข้อความ "หมดเวลาการประเมินแล้ว"
+closed → open ใหม่: ไม่ลบ responses เก่า / Respondent Upsert response เดิมได้
+Concurrent Form EditingFR-F18: Optimistic Locking
+ฟอร์มทุกฟอร์มมี version field (integer, เริ่มที่ 1)
+บันทึก: ตรวจสอบ version ใน DB ตรงกับ client หรือไม่
+
+ตรงกัน → บันทึกสำเร็จ + เพิ่ม version ขึ้น 1
+ไม่ตรงกัน → แสดง warning + diff + ให้เลือก Overwrite หรือ Cancel
+
+
+4.2 Template System
+FR-T01 Admin สร้าง Template ชุดคำถามสำเร็จรูปได้
+FR-T02 Template มี Scope 2 แบบ
+Scopeสร้างโดยใครเห็นfacultyfaculty_admin หรือ eila_adminเฉพาะ Faculty ตัวเองglobaleila_admin เท่านั้นทุก Faculty ใช้ได้
+FR-T03 faculty_admin เห็นเฉพาะ scope='global' OR (scope='faculty' AND faculty_id = user.faculty_id)
+FR-T04 แชร์ Template ระหว่าง Faculty ต้องทำผ่าน Export JSON → Import เท่านั้น
+FR-T05 เมื่อ Admin เลือก Template มาสร้างฟอร์ม ระบบ Clone คำถามทั้งหมดเข้า form_questions ทันที
+FR-T06 คำถามที่ Clone มาสามารถแก้ไขได้อิสระ ไม่กระทบ Template ต้นฉบับ
+FR-T07 Admin สามารถแก้ไข / ลบ Template ของตัวเองได้
+4.3 ประเภทคำถาม (Question Types)
+FR-Q01 Rating Scale (1–5 ดาว)
+FR-Q02 Short Text (ข้อความสั้น / ความคิดเห็น)
+FR-Q03 สามารถกำหนดได้ว่าคำถามข้อนั้นบังคับตอบหรือไม่
+FR-Q04 สามารถเรียงลำดับคำถามได้อิสระด้วย Drag & Drop
+4.4 Import / Export📤 Export โครงสร้างฟอร์ม
+FR-IE01 Admin Export โครงสร้างฟอร์มออกเป็น .json ได้
+FR-IE02 ไฟล์ .json มีเฉพาะโครงสร้างคำถาม ไม่มีคำตอบของ User
+FR-IE03 โครงสร้าง JSON มาตรฐาน ดูที่หัวข้อ 8
+📥 Import ฟอร์ม
+FR-IE04 Admin Import ไฟล์ .json เพื่อนำคำถามเข้าฟอร์มได้
+FR-IE05 ระบบ Preview รายการคำถามที่จะ Import ให้ Admin ยืนยันก่อนเสมอ
+FR-IE06 หากฟอร์มมีคำถามอยู่แล้ว ระบบถามว่า "เพิ่มต่อท้าย" หรือ "แทนที่ทั้งหมด"
+FR-IE07 รองรับไฟล์ .json จากระบบอื่นหาก Format ถูกต้องตาม Validation Rules ในหัวข้อ 8.2
+FR-IE08 หาก Format ผิด ระบบแจ้ง Error พร้อมระบุว่าผิดตรงไหน
+FR-IE09 คำถามที่ Import มาแล้วสามารถแก้ไข / ลบ / เรียงลำดับใหม่ได้อิสระ
+📤 Export ผลลัพธ์
+FR-IE10 Admin และ Executive Export ผลลัพธ์เป็น .pdf ได้
+FR-IE11 Admin และ Executive Export ผลลัพธ์เป็น .xlsx ได้
+4.5 การตอบฟอร์ม (Response)
+FR-R01 Respondent เห็นฟอร์มหาก form.scope = 'university' หรือ (form.scope = 'faculty' AND form.faculty_id = user.faculty_id AND user.role IN form_target_roles)
+FR-R02 แสดงสถานะฟอร์ม: ยังไม่ตอบ / ตอบแล้ว / หมดเวลาแล้ว
+FR-R03 Respondent แก้ไขคำตอบได้จนกว่าฟอร์มจะ closed
+FR-R04 เมื่อฟอร์ม closed Respondent เห็นข้อความ "หมดเวลาการประเมินแล้ว"
+FR-R05 ระบบเก็บเฉพาะคำตอบล่าสุด (Upsert) — UPDATE ถ้ามี, INSERT ถ้ายังไม่มี
+FR-R06 Respondent ไม่สามารถเห็นคำตอบของคนอื่นได้
+FR-R07 UNIQUE (form_id, user_id) ใน responses table ป้องกันส่งซ้ำ
+4.6 Dashboard & Analytics ✏️ (Updated v1.7)
+FR-D01 faculty_admin ดูผลลัพธ์ได้เฉพาะฟอร์มใน Faculty ตัวเอง
+FR-D02 eila_admin และ executive ดู Dashboard ได้ทุกฟอร์มทุก Faculty
+FR-D03 แสดงคะแนนเฉลี่ยของแต่ละคำถาม
+FR-D04 แสดงกราฟสรุปผลภาพรวม (Bar Chart sorted by count desc, max 20 bars / Short text max 100 comments sorted by recency)
+FR-D05 แสดงจำนวนผู้ตอบทั้งหมด และ % ของผู้ที่ยังไม่ตอบ
+% ผู้ตอบ — สูตรแยกตาม Form Scope:Faculty Scope:
+  % = (users_who_answered / total_targeted_users) × 100
+
+  total_targeted_users =
+    SELECT COUNT(*) FROM users
+    WHERE role IN (form_target_roles)
+      AND faculty_id = form.faculty_id
+      AND is_active = true
+
+University Scope:
+  % = (users_who_answered / total_respondents_in_system) × 100
+
+  total_respondents_in_system =
+    SELECT COUNT(*) FROM users
+    WHERE role IN ('teacher', 'staff', 'student')
+      AND is_active = true
+
+Rationale: ฟอร์ม university scope เปิดให้ respondent ทุกคนในระบบ ดังนั้น denominator คือ respondent ที่ active ทั้งระบบ
+
+FR-D06 แสดงความคิดเห็น (Short Text) ทั้งหมด
+4.7 User Management ✏️ (Updated v1.7 — เพิ่ม FR-U07)
+FR-U01 eila_admin สามารถเพิ่ม / ลบ / แก้ไข faculty_admin และ executive ได้
+
+"ลบ" = soft delete (mark is_active = false)
+รองรับ single operation และ bulk operation (ดู FR-U07)
+ทุก query ต้อง filter WHERE is_active = true
+
+
+FR-U02 eila_admin กำหนด Faculty ให้ faculty_admin ได้ (เลือกจาก faculties table)
+FR-U03 eila_admin จัดการ faculties table ได้ (เพิ่ม / ลบ / แก้ไขคณะ)
+
+"ลบ" Faculty = soft delete, ไม่ลบถ้ามี user/form อยู่
+
+
+FR-U04 eila_admin ดูภาพรวมผู้ใช้งานทั้งระบบได้
+FR-U07: Bulk User Import via XLSX ✏️ (New v1.7)eila_admin สามารถ Import รายชื่อ user จำนวนมากผ่านไฟล์ .xlsx ได้XLSX Format (required columns):Column NameTypeRequiredหมายเหตุpsu_passport_idString✅UNIQUE identifier จาก PSUnameString✅ชื่อ-นามสกุล, max 200 charsemailString✅PSU email format *@psu.ac.throleEnum✅faculty_admin / executive เท่านั้นfaculty_idUUID✅ต้องมีอยู่ใน faculties table
+หมายเหตุ: Bulk import ใช้สำหรับ faculty_admin และ executive เท่านั้น — teacher, staff, student auto-create ผ่าน PSU Passport
+Validation Rules:RuleError Messageไฟล์ต้องเป็น .xlsx"ไฟล์ต้องเป็น .xlsx เท่านั้น"Max 500 rows"จำนวน user เกิน 500 แถว"Max 5 MB"ไฟล์ใหญ่เกิน 5 MB"psu_passport_id ว่างเปล่า"psu_passport_id แถวที่ N ว่างเปล่า"email ไม่ใช่ format PSU"email แถวที่ N ต้องเป็น @psu.ac.th"role ไม่ถูกต้อง"role แถวที่ N ต้องเป็น faculty_admin หรือ executive"faculty_id ไม่มีใน DB"faculty_id แถวที่ N ไม่พบในระบบ"psu_passport_id ซ้ำในไฟล์"psu_passport_id แถวที่ N ซ้ำกันในไฟล์"Import Flow:Upload .xlsx
+    ↓
+Validate format + all rows
+    ↓
+มี error? → แสดง error report ทุก row ที่ผิด → หยุด
+    ↓
+Preview table: แสดง N rows ที่จะ import
++ แยกแสดง: "สร้างใหม่ X คน" / "อัปเดต Y คน (psu_passport_id ซ้ำ)"
+    ↓
+Admin ยืนยัน → INSERT หรือ UPSERT ทีละ row ใน transaction
+    ↓
+แสดงผลสรุป: สำเร็จ N คน + ล้มเหลว M คน (ถ้ามี)
+    ↓
+บันทึก audit log: BULK_IMPORT, entity_type: USER, count: N
+Conflict Handling (psu_passport_id ซ้ำ):
+ถ้า user มีอยู่แล้วและ is_active = true → อัปเดต role + faculty_id + name
+ถ้า user มีอยู่แล้วและ is_active = false → reactivate + อัปเดตข้อมูล
+4.8 Notification System (Phase 2) ✏️ (Updated v1.7)ช่องทาง: Email (SMTP PSU) + In-app (ไอคอนระฆังในระบบ)รหัสเหตุการณ์ผู้รับช่องทางFR-N01Admin เผยแพร่ฟอร์ม (status → open)Respondent ที่เกี่ยวข้องทุกคนEmail + In-appFR-N02เหลือ 3 วันก่อนปิด + ยังไม่ตอบRespondent ที่ยังไม่ตอบEmail + In-appFR-N03เหลือ 1 วันก่อนปิด + ยังไม่ตอบRespondent ที่ยังไม่ตอบEmail + In-appFR-N04Admin ขยายเวลา (close_at ถูกแก้ไข)Respondent ที่เกี่ยวข้องทุกคนEmail + In-appFR-N05Respondent ส่งฟอร์มสำเร็จRespondent คนนั้นIn-app เท่านั้นFR-N06ฟอร์ม closed อัตโนมัติตาม Schedulerfaculty_admin เจ้าของฟอร์มIn-app เท่านั้น"Respondent ที่เกี่ยวข้อง" — ขึ้นอยู่กับ Form Scope ✏️ (Clarified v1.7):Faculty Scope:
+  recipients = users
+    WHERE role IN (form_target_roles)
+      AND faculty_id = form.faculty_id
+      AND is_active = true
+
+University Scope:
+  recipients = users
+    WHERE role IN ('teacher', 'staff', 'student')
+      AND is_active = true
+"Respondent ที่ยังไม่ตอบ" (FR-N02, FR-N03):pending_recipients = recipients (ตาม scope ด้านบน)
+  WHERE NOT EXISTS (
+    SELECT 1 FROM responses
+    WHERE form_id = form.id AND user_id = user.id
+  )
+
+หมายเหตุ: สำหรับ university scope ที่มี respondent จำนวนมาก ระบบส่ง email เป็น batch (500 per batch) เพื่อป้องกัน SMTP overload
+
+FR-N07 In-app Notification แสดงเป็นไอคอนระฆัง บอกจำนวนที่ยังไม่อ่าน
+FR-N08 ผู้ใช้สามารถกด Mark as Read / Mark All as Read ได้
+FR-N09 Email แจ้งเตือนมีลิงก์ตรงไปยังฟอร์มนั้น
+Clarified Timing (FR-N02, FR-N03):
+Reminder ส่งที่เวลา 9:00 AM PSU timezone (UTC+7)
+"3 วัน" = close_at - 72 ชั่วโมง
+"1 วัน" = close_at - 24 ชั่วโมง
+Email Failure Handling (FR-N10):
+Retry 3 ครั้งด้วย exponential backoff: 1 นาที → 5 นาที → 15 นาที
+บันทึก error ลง notification_logs table
+Retry ครบ 3 ครั้งแล้วยังไม่สำเร็จ → แจ้ง admin ผ่าน in-app
+4.9 Error HandlingFR-ERR01: Input Validation
+ระบบ validate ทุก user input ก่อนประมวลผล
+Form title: required, max 200 chars
+Question text: required, max 1000 chars
+Website URL: must be valid URL format
+Rating value: integer 1–5
+Error response format: ดู Section 14.2
+FR-ERR02: Timeout Handling
+API request timeout: 30 วินาที
+PSU Passport timeout → แสดง "ไม่สามารถเชื่อมต่อระบบ PSU ได้ กรุณาลองใหม่อีกครั้ง"
+Retry PSU Passport API 3 ครั้งก่อนแจ้ง error
+FR-ERR03: JSON Import Error Handling
+Validate JSON format ก่อน import
+Error messages ระบุชัดเจน เช่น "question_text ข้อที่ 3 ว่างเปล่า"
+4.10 Audit LoggingFR-U05: Audit Logระบบบันทึกทุกการเปลี่ยนแปลงสำคัญ:
+สร้าง / แก้ไข / ลบ ฟอร์ม, Template, Faculty
+เปลี่ยน role ของ user, Bulk Import user
+Login / Logout
+Export ข้อมูล (PDF / Excel / JSON)
+FALLBACK_FACULTY_ASSIGNED (กรณี PSU ไม่ส่ง faculty_id)
+Audit log เก็บข้อมูล: user_id, action, entity_type, entity_id, old_value, new_value, ip_address, prev_hash, hash, timestamp
+eila_admin ดู Audit Log ของทั้งระบบได้
+Audit log เก็บไว้ 1 ปี
+5. Non-Functional Requirements5.1 General
+NFR-01 Phase 1 ใช้ Single Role ต่อ User (Enum) รองรับ Multi-role ในอนาคตโดย Migrate เป็น user_roles table
+NFR-02 รองรับ Mobile (Responsive) — breakpoints: 320px / 768px / 1024px, test Safari iOS 13+, Chrome Android 8+
+NFR-03 ทุก API ต้อง auth ยกเว้น GET /api/health และ GET /api/forms/:id/public
+NFR-04 Audit Log track ทุกการเปลี่ยนแปลง (Tamper-proof)
+NFR-05 รองรับ ≥ 10 concurrent admin users แก้ไขฟอร์มต่างกัน / ฟอร์มเดียวกัน → Optimistic Locking
+NFR-06 Max file import: 5 MB, max 500 questions, max 500 chars per text
+NFR-07 Scheduler (node-cron) ตรวจสอบทุก 1–5 นาที / Acceptance: 98% ของฟอร์มเปลี่ยน status ภายใน 5 นาที
+NFR-08 Notification scheduler รันทุก 1 ชั่วโมงที่เวลา 00 นาที
+NFR-09 ทุก API query ต้อง filter by user.faculty_id (defense in depth)
+5.2 Data Retention & BackupNFR-10: Data Retention
+ข้อมูลเก่ากว่า 2 ปี → archive ไป forms_archive, responses_archive, answers_archive
+ข้อมูลเก่ากว่า 5 ปี → ลบได้ตามนโยบายมหาวิทยาลัย
+Scheduler รันทุกวันที่ 02:30 น.
+NFR-11: Backup & Recovery
+Backup ทุกวันเวลา 02:00 น. / เก็บไว้ 7 วัน
+RTO < 1 ชั่วโมง, RPO < 24 ชั่วโมง
+Off-site backup, ทดสอบ recovery ทุกเดือน, มี runbook
+5.3 Form VersioningNFR-12: ทุกครั้งที่แก้ไขโครงสร้างฟอร์ม → สร้าง version ใหม่ใน form_versions เก็บ questions_snapshot (JSON)Admin ดู version history และ rollback ได้ (rollback = สร้าง form ใหม่จาก snapshot เก่า ไม่ overwrite ปัจจุบัน — ดู FR-ROLL01)FR-ROLL01: Rollback Behavior ✏️ (Clarified v1.7)
+POST /api/forms/:id/rollback → สร้าง form ใหม่ จาก questions_snapshot เก่า (ไม่แก้ไข form ปัจจุบัน)
+Form ใหม่จะมี status = 'draft', copied_from = form.id, title = "[ชื่อเดิม] (Rollback v{version})"
+Admin ต้อง review และ publish ด้วยตัวเอง
+5.4 API DocumentationNFR-13: OpenAPI 3.0 spec สำหรับทุก REST API / Swagger UI ที่ /api/docs5.5 PerformanceNFR-14:
+API response time < 500ms (95th percentile)
+รองรับ 1000 concurrent users
+Dashboard load < 2 วินาที, Form submit < 1 วินาที
+
+Note: ตัวเลข 1000 concurrent users เป็น target ตาม Deploy Infrastructure ที่จะกำหนดในภายหลัง (TBD) ขึ้นอยู่กับ server spec ที่ PSU จัดให้ — จะ verify อีกครั้งก่อน Production
+6. Security Requirements6.1 Transport SecurityNFR-SEC01: HTTPS/TLS 1.2+ ทุกช่องทาง6.2 Authentication SecurityNFR-SEC02: CSRF tokens สำหรับทุก POST/PUT/DELETE + SameSite=StrictNFR-SEC07: Session cookies: Secure + HttpOnly + SameSite=Strict, random via CSPRNGNFR-SEC10: OAuth 2.0 PKCE flow, validate state param, verify JWT signature6.3 Input/Output SecurityNFR-SEC03: XSS Prevention — sanitize/escape ทุก input, CSP header, ห้าม dangerouslySetInnerHTML โดยไม่ sanitizeNFR-SEC04: SQL Injection Prevention — parameterized queries / ORM ทุก operationNFR-SEC06: File Upload — JSON only, max 5 MB, scan malicious content, เก็บนอก web root, ลบทันทีหลังประมวลผล6.4 API SecurityNFR-SEC05: Rate Limiting
+100 req/min per IP
+50 req/min per user
+Login: 5 attempts/min per IP
+Response: HTTP 429
+NFR-SEC08: Faculty-Level Authorization — validate ที่ middleware AND query6.5 Audit & MonitoringNFR-SEC09: Append-only audit log, SHA-256 hash chain, เก็บ 1 ปีNFR-SEC11: Encryption at Rest
+Email: AES-256, Responses: AES-256 (optional)
+ENCRYPTION_KEY เก็บใน environment variable — ห้าม hardcode / commit เข้า Git
+Production: พิจารณา KMS (AWS KMS / HashiCorp Vault) ตาม PSU infrastructure (TBD ก่อน Production)
+Key rotation ทุก 6 เดือน พร้อม re-encrypt
+NFR-SEC12: Security Monitoring — alert เมื่อ failed login >5/min, error rate spike6.6 Role Override SecurityFR-U06: Role Override — Phase 1: Email OTP
+เฉพาะ eila_admin เท่านั้น
+กด "Override Role" → ส่ง OTP 6 หลักไปยัง PSU Email ของ eila_admin
+OTP อายุ 5 นาที, ใช้ได้ครั้งเดียว
+กรอกผิด 3 ครั้ง → block 15 นาที
+Phase 2: เพิ่ม TOTP (Google Authenticator)
+ทุก role override บันทึกใน audit log
+User ที่ถูก override ได้รับ notification
+7. Database SchemafacultiesFieldTypeหมายเหตุidUUIDPrimary Keyname_thStringชื่อคณะภาษาไทยname_enStringชื่อคณะภาษาอังกฤษis_activeBooleanSoft delete (default: true)created_atDateTimeupdated_atDateTime
+ต้องมี Faculty "PSU General" สำหรับใช้เป็น FALLBACK_FACULTY_ID
+usersFieldTypeหมายเหตุidUUIDPrimary Keypsu_passport_idStringUNIQUEnameStringชื่อ-นามสกุลemailStringAES-256 encryptedroleEnumeila_admin / faculty_admin / executive / teacher / staff / studentfaculty_idUUIDFK → faculties (NULL สำหรับ eila_admin)is_activeBooleanSoft delete (default: true)last_login_atDateTimecreated_atDateTimeupdated_atDateTimetemplatesFieldTypeหมายเหตุidUUIDPrimary KeynameStringชื่อ TemplatedescriptionStringคำอธิบายscopeEnumfaculty / globalfaculty_idUUIDFK → faculties (NULL ถ้า scope = global)created_byUUIDFK → userscreated_atDateTimetemplate_questionsFieldTypeหมายเหตุidUUIDPrimary Keytemplate_idUUIDFK → templatesquestion_textStringquestion_typeEnumrating / short_textorderIntegerrequiredBooleancreated_atDateTimeformsFieldTypeหมายเหตุidUUIDPrimary KeytitleStringชื่อฟอร์มwebsite_urlStringURL เว็บที่ประเมินscopeEnumfaculty / universityfaculty_idUUIDFK → faculties (NULL ถ้า scope = university)template_idUUIDFK → templates (NULLABLE)copied_fromUUIDFK → forms (NULLABLE)imported_fromStringชื่อไฟล์ที่ Import มา (NULLABLE)statusEnumdraft / open / closedopen_atDateTimeNULLABLEclose_atDateTimeNULLABLEversionIntegerOptimistic locking (default: 1)created_byUUIDFK → userscreated_atDateTimeupdated_atDateTimeform_questionsFieldTypeหมายเหตุidUUIDPrimary Keyform_idUUIDFK → formsquestion_textStringquestion_typeEnumrating / short_textorderIntegerDrag & DroprequiredBooleancreated_atDateTime
+คำถามทุกข้ออยู่ใน form_questions เสมอ ไม่ว่าจะสร้างเอง / Clone จาก Template / Import จาก JSON
+form_target_rolesFieldTypeหมายเหตุidUUIDPrimary Keyform_idUUIDFK → formsroleEnumteacher / staff / student
+ใช้เฉพาะฟอร์ม scope = faculty — ฟอร์ม scope = university ไม่มี record ในตารางนี้
+responsesFieldTypeหมายเหตุidUUIDPrimary Keyform_idUUIDFK → formsuser_idUUIDFK → userssubmitted_atDateTimeวันที่ส่งครั้งแรกupdated_atDateTime
+Constraint: UNIQUE (form_id, user_id)
+answersFieldTypeหมายเหตุidUUIDPrimary Keyresponse_idUUIDFK → responsesquestion_idUUIDFK → form_questionsrating_valueIntegerถ้าเป็น Rating (1–5)text_valueStringถ้าเป็น Short Textcreated_atDateTimeupdated_atDateTime
+Constraint: UNIQUE (response_id, question_id)
+notifications (Phase 2)FieldTypeหมายเหตุidUUIDPrimary Keyuser_idUUIDFK → userstypeEnumform_opened / reminder_3d / reminder_1d / deadline_extended / submitted / form_closedform_idUUIDFK → formsmessageStringis_readBooleancreated_atDateTimeaudit_logs ✏️ (Updated v1.6/v1.7)FieldTypeหมายเหตุidUUIDPrimary Keyuser_idUUIDFK → usersactionEnumCREATE / UPDATE / DELETE / LOGIN / LOGOUT / EXPORT / BULK_IMPORT / FALLBACK_FACULTY_ASSIGNEDentity_typeEnumFORM / TEMPLATE / USER / FACULTY / RESPONSEentity_idUUIDID ของ entity ที่ถูกทำold_valueJSONค่าเดิมnew_valueJSONค่าใหม่ip_addressStringprev_hashStringSHA-256 hash ของ record ก่อนหน้าhashStringSHA-256 hash ของ record นี้created_atDateTimeHash Chain Implementation:hash = SHA256(
+  id + user_id + action + entity_id +
+  JSON.stringify(old_value) + JSON.stringify(new_value) +
+  prev_hash + created_at.toISOString()
+)
+// prev_hash ของ record แรก = '0'.repeat(64)
+// ทุก record ใหม่: prev_hash = hash ของ record ก่อนหน้า
+
+ไม่มี UPDATE/DELETE permission บน table นี้ (append-only)
+form_versionsFieldTypeหมายเหตุidUUIDPrimary Keyform_idUUIDFK → formsversionIntegerversion numberquestions_snapshotJSONSnapshot ของคำถามchanged_byUUIDFK → userschanged_atDateTimenotification_logsFieldTypeหมายเหตุidUUIDPrimary Keynotification_idUUIDFK → notificationsattemptIntegerครั้งที่ retry (1, 2, 3)statusEnumsuccess / failederror_messageStringcreated_atDateTimeRecommended IndexesTableIndexPurposeformsidx_forms_faculty_idFilter by facultyformsidx_forms_scope_facultyComposite (scope, faculty_id)form_target_rolesidx_form_target_roles_form_idJoin queryform_target_rolesidx_form_target_roles_roleFilter by roleaudit_logsidx_audit_logs_user_idAudit trailaudit_logsidx_audit_logs_entity(entity_type, entity_id)audit_logsidx_audit_logs_created_atTime-based queriesresponsesidx_responses_form_userUNIQUE constraintusersidx_users_faculty_idFilter by facultyusersidx_users_psu_passportLogin lookupnotificationsidx_notifications_user_read(user_id, is_read)8. Import/Export JSON Specification8.1 โครงสร้าง JSON มาตรฐาน{
+  "eila_schema_version": "1.0",
+  "form_title": "ชื่อฟอร์ม",
+  "exported_at": "2026-04-24T10:00:00Z",
+  "questions": [
+    {
+      "order": 1,
+      "question_text": "ข้อคำถาม",
+      "question_type": "rating",
+      "required": true
+    },
+    {
+      "order": 2,
+      "question_text": "ข้อเสนอแนะ",
+      "question_type": "short_text",
+      "required": false
+    }
+  ]
+}
+8.2 Validation RulesFieldRuleError Messagequestionsต้องเป็น Array"questions ต้องเป็น Array"question_textต้องมีค่า ไม่ว่าง"question_text ข้อที่ N ว่างเปล่า"question_typerating หรือ short_text"question_type ข้อที่ N ไม่ถูกต้อง"requiredboolean"required ข้อที่ N ต้องเป็น true/false"orderInteger"order ข้อที่ N ต้องเป็นตัวเลข"file sizeMax 5 MB"ไฟล์ใหญ่เกิน 5 MB"questions countMax 500"คำถามเกิน 500 ข้อ"text lengthMax 1000 chars"question_text ข้อที่ N ยาวเกิน 1000 ตัวอักษร"8.3 Import Conflict Flowมีคำถามในฟอร์มอยู่แล้ว + Import ใหม่
+          ↓
+ระบบแสดง Dialog
+┌─────────────────────────────────┐
+│ ฟอร์มมีคำถามอยู่แล้ว 5 ข้อ     │
+│ ต้องการ Import 8 คำถามใหม่      │
+│                                 │
+│ [เพิ่มต่อท้าย] [แทนที่ทั้งหมด]  │
+└─────────────────────────────────┘
+9. หน้าเว็บ (Pages)ทั่วไปPathคำอธิบาย/Landing Page + ปุ่ม Login/auth/callbackPSU Passport OAuth Callbackeila_adminPathคำอธิบาย/eila-admin/dashboardภาพรวมระบบทั้งหมดทุก Faculty/eila-admin/usersจัดการผู้ใช้ทุก Role/eila-admin/users/bulk-importBulk Import ผู้ใช้ผ่าน XLSX/eila-admin/facultiesจัดการ Faculty/eila-admin/formsรายการฟอร์มทั้งหมดทุก Faculty/eila-admin/forms/createสร้างฟอร์มใหม่ (เลือก scope ได้)/eila-admin/forms/[id]/editแก้ไขฟอร์ม/eila-admin/forms/[id]/resultsดูผลลัพธ์ + Export/eila-admin/templatesรายการ Template ทั้งหมด/eila-admin/audit-logsดู Audit Log ทั้งระบบfaculty_adminPathคำอธิบาย/admin/dashboardสรุปภาพรวมฟอร์มของ Faculty ตัวเอง/admin/formsรายการฟอร์มของ Faculty ตัวเอง/admin/forms/createสร้างฟอร์มใหม่ (faculty scope)/admin/forms/[id]/editแก้ไขฟอร์ม + Drag & Drop + Import/Export + ตั้งเวลา/admin/forms/[id]/copyCopy ฟอร์ม/admin/forms/[id]/resultsดูผลลัพธ์ + Export/admin/forms/[id]/versionsดู Version History/admin/templatesTemplate ของ Faculty + global/admin/templates/createสร้าง Template ใหม่/admin/templates/[id]/editแก้ไข TemplateexecutivePathคำอธิบาย/executive/dashboardDashboard ทุกฟอร์มทุก Faculty/executive/forms/[id]/resultsดูผลลัพธ์ + ExportRespondentPathคำอธิบาย/homeรายการฟอร์มที่ได้รับ พร้อม Status/forms/[id]หน้าตอบฟอร์ม/forms/[id]/doneหน้ายืนยันส่งแล้ว10. แผนการพัฒนา (Development Phases)Phase 1 — MVP
+ PSU Passport Login + Role Resolution + Auto-create User + FR-AUTH05 Fallback
+ 6 Role พร้อม Faculty Scope + Data Isolation
+ faculties table + eila_admin จัดการ Faculty
+ Form Builder แบบ Form-first (Drag & Drop)
+ Form Scope: faculty / university
+ Template Scope: faculty / global
+ Form Date: open_at / close_at + Auto-close Scheduler (node-cron)
+ Template System (Clone เข้า form_questions)
+ Copy ฟอร์มเก่า
+ Import / Export JSON
+ ตอบฟอร์มตาม Role + Scope + Status
+ UNIQUE Constraint ป้องกันส่งซ้ำ
+ Dashboard แยก Faculty
+ Optimistic Locking (FR-F18)
+ Session Management (FR-AUTH01–04)
+ Audit Logging + Hash Chain (FR-U05, NFR-SEC09)
+ Error Handling (FR-ERR01–03)
+ Role Override + Email OTP 2FA (FR-U06)
+ Bulk XLSX Import (FR-U07) ✏️ New v1.7
+ Security Requirements (NFR-SEC01–12)
+Phase 2 — ปรับปรุง
+ Export PDF & Excel
+ กราฟ Analytics
+ Dashboard Executive
+ Notification System (Email + In-app)
+ Form Versioning + Rollback (NFR-12, FR-ROLL01)
+ Data Retention & Backup (NFR-10, NFR-11)
+ Role Override TOTP 2FA
+Phase 3 — ขยาย
+ เพิ่มประเภทคำถาม
+ eila_admin Panel เต็มรูปแบบ
+ Audit Log UI
+ Multi-role Support
+ API Documentation (NFR-13)
+ Performance Optimization (NFR-14)
+11. การแบ่งงาน (Team)คนที่ 1 — Backend + Auth
+ติดตั้ง Fastify + PostgreSQL
+PSU Passport OAuth + Role Resolution + Auto-create + FR-AUTH05 Fallback
+OAuth PKCE flow (NFR-SEC10)
+Session Management (FR-AUTH01–04)
+API: faculties CRUD
+API: users / roles / permissions / faculty scope + Data Isolation
+API: audit_logs (append-only + SHA-256 hash chain + verify endpoint)
+API: forms CRUD + Scope + Optimistic Locking
+API: templates CRUD + Scope
+API: form_questions / form_target_roles
+API: responses / answers (Upsert + UNIQUE)
+API: Import JSON + Export JSON
+API: Bulk XLSX Import (FR-U07) ✏️ New v1.7
+Scheduler (node-cron): Auto open/close
+Scheduler: Notification trigger (Phase 2)
+Error Handling (FR-ERR01–03)
+Export PDF + Excel (Phase 2)
+Email Notification + retry logic (Phase 2)
+Role Override API + Email OTP (FR-U06)
+Security: Rate Limiting, CSRF, Encryption
+คนที่ 2 — Frontend
+Next.js + Tailwind
+หน้า Login / PSU Passport Callback
+Session timeout warning UI
+Form Builder Drag & Drop + ตั้งเวลา open_at/close_at
+Form Scope Selector (eila_admin เท่านั้น)
+Template Scope badges
+Import JSON: Upload → Validate → Preview → Confirm
+Export JSON button
+Bulk XLSX Import UI (preview table + error report) ✏️ New v1.7
+Template Picker & Clone
+Copy Form feature
+หน้าตอบฟอร์ม + Status + แสดงคำตอบเดิม
+Admin Dashboard + กราฟ
+eila_admin หน้าจัดการ Faculty + Forms
+Audit Log Viewer
+Optimistic locking conflict dialog
+Error message display
+Email OTP modal สำหรับ Role Override
+Executive Dashboard (Phase 2)
+In-app Notification (Phase 2)
+12. Git Branch Strategy12.1 โครงสร้าง Branchmain
+└── develop
+    ├── feature/backend-xxx   (คนที่ 1)
+    ├── feature/frontend-xxx  (คนที่ 2)
+    └── hotfix/xxx            (กรณี Bug เร่งด่วน)
+Branchวัตถุประสงค์Merge ไปที่mainProduction—developรวมงานก่อน Releasemainfeature/xxxงานแต่ละชิ้นdevelophotfix/xxxBug เร่งด่วนmain และ develop❌ ห้าม push ตรงเข้า main เด็ดขาด12.2 Feature Branchesคนที่ 1 — Backendfeature/backend-setup
+feature/backend-auth-psu
+feature/backend-faculties-api
+feature/backend-users-api
+feature/backend-bulk-import         ← FR-U07 (v1.7)
+feature/backend-forms-api
+feature/backend-templates-api
+feature/backend-responses-api
+feature/backend-import-export
+feature/backend-scheduler
+feature/backend-audit-logging
+feature/backend-session-mgmt
+feature/backend-security
+feature/backend-role-override-otp
+feature/backend-notifications        ← Phase 2
+feature/backend-export-pdf-excel     ← Phase 2
+คนที่ 2 — Frontendfeature/frontend-setup
+feature/frontend-login
+feature/frontend-form-builder
+feature/frontend-form-scope
+feature/frontend-import-export-ui
+feature/frontend-bulk-import-ui      ← FR-U07 (v1.7)
+feature/frontend-templates
+feature/frontend-respondent
+feature/frontend-admin-dashboard
+feature/frontend-eila-admin
+feature/frontend-audit-log-viewer
+feature/frontend-session-timeout
+feature/frontend-role-override-otp
+feature/frontend-executive-dashboard ← Phase 2
+feature/frontend-notifications       ← Phase 2
+12.3 Commit Message ConventionPrefixใช้เมื่อfeat:เพิ่มฟีเจอร์ใหม่fix:แก้ Bughotfix:แก้ Bug เร่งด่วน Productionchore:Config / Setuprefactor:ปรับโค้ดdocs:แก้ Documentationstyle:แก้ UI/CSSsecurity:Security-related13. Test Cases13.1 Authentication TestsTest IDDescriptionExpected ResultAUTH-01PSU Passport LoginAuto-create user with correct role + facultyAUTH-02PSU ไม่ส่ง faculty_idAssign FALLBACK_FACULTY_ID + audit log บันทึกAUTH-03PSU ไม่ส่ง roleDefault เป็น studentAUTH-04Session timeout after 30 minRedirect to loginAUTH-05Logout clears sessionไม่สามารถเข้า protected routesAUTH-06Role override by eila_adminRole updated + audit log13.2 Form Visibility TestsTest IDDescriptionExpected ResultFORM-VIS-01faculty form visible to same facultyRespondent เห็นฟอร์มFORM-VIS-02faculty form not visible to other facultyไม่เห็นFORM-VIS-03university form visible to all respondentsทุกคนเห็นFORM-VIS-04faculty_admin sees only own faculty forms403 สำหรับ faculty อื่น13.3 Dashboard % Tests ✏️ (New v1.7)Test IDDescriptionExpected ResultDASH-01% ผู้ตอบ — faculty scopedenominator = users ใน faculty ที่ตรง target_rolesDASH-02% ผู้ตอบ — university scopedenominator = users role IN (teacher,staff,student) ทั้งระบบDASH-03university scope ไม่มี form_target_rolesไม่ error, ใช้สูตร university scope13.4 Bulk Import Tests ✏️ (New v1.7)Test IDDescriptionExpected ResultBULK-01Import 100 users ถูกต้องสร้าง 100 users + audit logBULK-02Import มี column ขาดError report บอก column ที่ขาดBULK-03faculty_id ไม่มีใน DBError: "faculty_id แถวที่ N ไม่พบในระบบ"BULK-04psu_passport_id ซ้ำในไฟล์Error: แถวที่ซ้ำBULK-05psu_passport_id มีอยู่แล้วใน DBUpsert (อัปเดตข้อมูล)BULK-06Import user ที่ is_active=falseReactivate + อัปเดตข้อมูลBULK-07role เป็น teacher (ไม่อนุญาต)Error: "role ต้องเป็น faculty_admin หรือ executive"BULK-08ไฟล์เกิน 500 rowsError: จำนวน user เกิน 500 แถว13.5 Security TestsTest IDDescriptionExpected ResultSEC-01CSRF token validationRequest ที่ไม่มี CSRF token ถูก rejectSEC-02SQL injection attemptQuery parameterized, ไม่ถูก injectSEC-03XSS in form titleTitle escaped on outputSEC-04Rate limiting>100 req/min → 429SEC-05faculty_admin access other faculty API403 Forbidden13.6 Notification Tests ✏️ (Updated v1.7)Test IDDescriptionExpected ResultNOTIF-01Reminder — faculty scope, user ยังไม่ตอบส่ง email + in-app ถึง user ใน faculty ที่ตรง roleNOTIF-02Reminder — university scopeส่งถึง teacher/staff/student ทั้งระบบที่ยังไม่ตอบNOTIF-03User ตอบแล้ว — university scopeไม่ได้รับ reminderNOTIF-04Email fail 3 ครั้งMark failed + แจ้ง admin in-app13.7 Rollback Tests ✏️ (Updated v1.7)Test IDDescriptionExpected ResultROLL-01POST /api/forms/:id/rollbackสร้าง form ใหม่ status=draft จาก snapshotROLL-02Form เดิมไม่ถูกแก้ไขForm ปัจจุบันยังคงเหมือนเดิมROLL-03Form ใหม่มี title "[ชื่อเดิม] (Rollback vN)"Title ถูกต้อง13.8 Concurrent Editing TestsTest IDDescriptionExpected ResultCONC-01Two admins edit same formSecond save shows conflict dialogCONC-02Optimistic locking version mismatchWarning + diff แสดง13.9 Scheduler TestsTest IDDescriptionExpected ResultSCH-01Form opens at open_atStatus → open ภายใน 5 นาทีSCH-02Form closes at close_atStatus → closed ภายใน 5 นาทีSCH-03Reminder 3 days beforeEmail + in-app ส่งที่ 9:00 AM13.10 Soft Delete TestsTest IDDescriptionExpected ResultDEL-01Deleted user has is_active=falseไม่ login ได้ แต่ data ยังอยู่DEL-02Queries filter inactiveis_active=true อัตโนมัติDEL-03Faculty delete with existing formsDelete ถูก block13.11 Role Override 2FA TestsTest IDDescriptionExpected ResultOTP-01eila_admin triggers role overrideEmail OTP ส่งไปยัง PSU EmailOTP-02OTP ถูกต้องOverride สำเร็จ + audit logOTP-03OTP ผิด 3 ครั้งBlock 15 นาทีOTP-04OTP หมดอายุ 5 นาทีOTP ถูก rejectOTP-05Target user รับ notificationNotification ส่งสำเร็จ13.12 Audit Log Hash Chain TestsTest IDDescriptionExpected ResultHASH-01First audit log recordprev_hash = '0'.repeat(64)HASH-02Chain integrity after 100 recordsVerify endpoint ผ่านHASH-03Tamper detectionModified record → chain verify failsHASH-04Audit log append-onlyUPDATE/DELETE → permission error14. Appendix14.1 Form Visibility Pseudocodefunction canUserSeeForm(user: User, form: Form): boolean {
+  if (user.role === 'eila_admin') return true
+  if (user.role === 'executive') return true
+  if (form.scope === 'university') return true
+  if (form.scope === 'faculty') {
+    if (user.role === 'faculty_admin' && user.faculty_id === form.faculty_id) return true
+    if (user.faculty_id === form.faculty_id) {
+      const targetRoles = getFormTargetRoles(form.id)
+      return targetRoles.includes(user.role)
+    }
+    return false
+  }
+  return false
+}
+
+function canUserEditForm(user: User, form: Form): boolean {
+  if (user.role === 'eila_admin') return true
+  if (user.role === 'faculty_admin') return user.faculty_id === form.faculty_id
+  return false
+}
+14.2 Notification Recipients Pseudocode ✏️ (New v1.7)function getFormRecipients(form: Form): User[] {
+  if (form.scope === 'university') {
+    return db.users.findAll({
+      where: {
+        role: { in: ['teacher', 'staff', 'student'] },
+        is_active: true
+      }
+    })
+  }
+  if (form.scope === 'faculty') {
+    const targetRoles = getFormTargetRoles(form.id)
+    return db.users.findAll({
+      where: {
+        role: { in: targetRoles },
+        faculty_id: form.faculty_id,
+        is_active: true
+      }
+    })
+  }
+  return []
+}
+
+function getPendingRecipients(form: Form): User[] {
+  const all = getFormRecipients(form)
+  const answered = db.responses
+    .findAll({ where: { form_id: form.id } })
+    .map(r => r.user_id)
+  return all.filter(u => !answered.includes(u.id))
+}
+14.3 API Error Response Schema{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable message",
+    "details": [
+      {
+        "field": "field_name",
+        "message": "Field-specific error"
+      }
+    ],
+    "stack": "Stack trace (development only)"
+  }
+}
+CodeHTTPDescriptionVALIDATION_ERROR400Input validation failedUNAUTHORIZED401Not logged inFORBIDDEN403No permissionNOT_FOUND404Resource not foundCONFLICT409Version conflict (optimistic locking)RATE_LIMITED429Too many requestsINTERNAL_ERROR500Server error14.4 GlossaryTermDefinitionPSU PassportOAuth provider ของมหาวิทยาลัยFacultyคณะ/วิทยาลัยในมหาวิทยาลัยRespondentผู้ตอบแบบประเมิน (teacher/staff/student)Form Scopeขอบเขตการมองเห็นฟอร์ม (faculty/university)Template Scopeขอบเขต template (faculty/global)Optimistic LockingConcurrent editing strategy ด้วย version numberSoft Deletemark is_active=false ไม่ลบข้อมูลจริงHash ChainSHA-256 linked chain สำหรับ tamper-proof audit logEmail OTPOne-Time Password ส่งผ่าน PSU Email สำหรับ 2FAKMSKey Management Service สำหรับ encryption keyFALLBACK_FACULTY_IDFaculty default เมื่อ PSU ไม่ส่ง faculty_idRollbackสร้าง form ใหม่จาก version snapshot เก่า15. API Endpoints Specification ✏️ (Updated v1.7 — Phase labels + Notification endpoints)15.1 Authentication [Phase 1]MethodEndpointDescriptionAuthGET/api/auth/psuRedirect to PSU Passport❌GET/api/auth/callbackOAuth callback❌POST/api/auth/logoutLogout✅GET/api/auth/meCurrent user info✅GET/api/healthHealth check❌15.2 Forms [Phase 1]MethodEndpointDescriptionAuthGET/api/formsList forms (filtered by scope/role)✅GET/api/forms/:idGet form by ID✅POST/api/formsCreate new form✅PUT/api/forms/:idUpdate form (optimistic locking)✅DELETE/api/forms/:idSoft delete form✅POST/api/forms/:id/duplicateCopy form✅15.3 Form Versioning [Phase 2]MethodEndpointDescriptionAuthGET/api/forms/:id/versionsGet version history✅POST/api/forms/:id/rollbackCreate new form from old snapshot✅
+POST /api/forms/:id/rollback — สร้าง form ใหม่ status=draft จาก questions_snapshot ที่ระบุ ไม่ overwrite form ปัจจุบัน (ดู FR-ROLL01)
+Request body: { "version": 3 }
+15.4 Responses [Phase 1]MethodEndpointDescriptionAuthGET/api/forms/:id/responsesList responses✅POST/api/forms/:id/responsesSubmit response (Upsert)✅GET/api/responses/:idGet response by ID✅PUT/api/responses/:idUpdate response✅15.5 Templates [Phase 1]MethodEndpointDescriptionAuthGET/api/templatesList templates (faculty + global)✅POST/api/templatesCreate template✅PUT/api/templates/:idUpdate template✅DELETE/api/templates/:idDelete template✅15.6 Admin — eila_admin only [Phase 1]MethodEndpointDescriptionAuthGET/api/admin/usersList all users✅ eila_adminPOST/api/admin/usersCreate user✅ eila_adminPUT/api/admin/users/:idUpdate user✅ eila_adminDELETE/api/admin/users/:idSoft delete user✅ eila_adminPOST/api/admin/users/bulk-importBulk import via XLSX ✏️✅ eila_adminGET/api/admin/facultiesList faculties✅ eila_adminPOST/api/admin/facultiesCreate faculty✅ eila_adminPUT/api/admin/faculties/:idUpdate faculty✅ eila_adminDELETE/api/admin/faculties/:idSoft delete faculty✅ eila_adminGET/api/admin/audit-logsList audit logs✅ eila_adminGET/api/admin/audit-logs/verifyVerify hash chain✅ eila_adminPOST/api/admin/users/:id/role-override/requestRequest Email OTP✅ eila_adminPOST/api/admin/users/:id/role-override/confirmConfirm OTP + execute✅ eila_admin15.7 Export / Import [Phase 1 / Phase 2]MethodEndpointDescriptionAuthPhaseGET/api/forms/:id/exportExport structure as JSON✅1POST/api/forms/:id/importImport structure from JSON✅1GET/api/forms/:id/export/pdfExport results as PDF✅2GET/api/forms/:id/export/xlsxExport results as Excel✅215.8 Notifications [Phase 2] ✏️ (New v1.7)MethodEndpointDescriptionAuthGET/api/notificationsList user's notifications✅GET/api/notifications/unread-countGet unread count✅PUT/api/notifications/:id/readMark notification as read✅PUT/api/notifications/read-allMark all as read✅
+Error Response Schema: ดู Section 14.3
+สรุปการแก้ไขv1.6 — แก้ไข 5 ข้อจาก Final Sanity Check(รายละเอียดใน v1.6)v1.7 — แก้ไข 8 ข้อจาก Spec Review ✏️#Issueการแก้ไข1FR-AUTH05: Faculty fallback มี 2 ทางเลือก [Critical]ระบุ definitive: auto-assign FALLBACK_FACULTY_ID + user เห็นเฉพาะ university scope จนกว่า admin จะ assign faculty ถูกต้อง2FR-D05: University scope ไม่มี denominator [Critical]เพิ่มสูตรแยก: university scope ใช้ total active teacher/staff/student ทั้งระบบ3FR-U01: Bulk XLSX ไม่มี spec [Critical]เพิ่ม FR-U07 ครบ: XLSX format, validation rules, import flow, conflict handling, API endpoint, test cases4FR-N02/N03: University scope recipients undefined [Critical]เพิ่ม pseudocode getFormRecipients() แยก faculty/university scope + batch send 500/batch5Section 15: ไม่มี Phase labels [Advisory]เพิ่ม [Phase 1] / [Phase 2] ทุก endpoint6Notification API endpoints หายไปจาก Section 15 [Advisory]เพิ่ม Section 15.8 Notifications (GET list, unread-count, PUT read, read-all)7POST /restore naming vs behavior conflict [Advisory]เปลี่ยนเป็น POST /rollback + เพิ่ม FR-ROLL01 ระบุ behavior ชัดเจน8Scheduler technology ยังเป็น OR [Advisory]Confirm: node-cron (Node.js native)eila — Web Evaluation System | SRS v1.7 | 2026-04-24
+Prince of Songkla University
+✅ SRS v1.7 — ครบทั้ง 55 ข้อ (42 จาก v1.5 + 5 จาก v1.6 + 8 จาก v1.7)
