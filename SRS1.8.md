@@ -2,8 +2,8 @@
 
 > ระบบประเมินเว็บไซต์มหาวิทยาลัย / Web Evaluation System
 > Prince of Songkla University
-> **Version 1.7.1 | Updated: 2026-04-24**
-> **SRS Changelog from v1.6:** แก้ไข 8 ข้อจาก Spec Review (4 Critical + 4 Advisory)
+> **Version 1.8 | Updated: 2026-04-24**
+> **SRS Changelog from v1.7:** เพิ่ม 3 ข้อ: URL validation, Reminder idempotency, Audit log purge
 
 ---
 
@@ -180,6 +180,9 @@ PSU Passport Login
 - **FR-F02** รองรับการ Drag & Drop เพื่อเรียงลำดับคำถาม
 - **FR-F03** สามารถเพิ่ม / ลบ / แก้ไขคำถามใน Form ได้
 - **FR-F04** สามารถกำหนด URL เว็บไซต์ที่ต้องการประเมินได้
+- **FR-F19** ระบบ validate website_url ต้องเป็น valid URL format (http:// หรือ https://)
+- **FR-F20** ระบบตรวจสอบ website_url ว่า reachable ได้ (HTTP HEAD request, timeout 5 วินาที)
+- **FR-F21** ระบบเตือน Admin ก่อน publish หาก URL ไม่สามารถเชื่อมต่อได้
 - **FR-F05** สามารถกำหนด Role ที่จะรับฟอร์มได้ (เลือกได้หลาย Role) เฉพาะ `faculty` scope
 - **FR-F06** สามารถเปิด / ปิดฟอร์มได้ตลอดเวลา
 - **FR-F07** ฟอร์มมีสถานะ 3 สถานะ ได้แก่ `draft` / `open` / `closed`
@@ -363,6 +366,12 @@ Email Failure Handling (FR-N10):
 Retry 3 ครั้งด้วย exponential backoff: 1 นาที → 5 นาที → 15 นาที
 บันทึก error ลง notification_logs table
 Retry ครบ 3 ครั้งแล้วยังไม่สำเร็จ → แจ้ง admin ผ่าน in-app
+
+**FR-N11: Reminder Idempotency**
+- ระบบบันทึก `reminder_3d_sent` และ `reminder_1d_sent` boolean flags ใน form
+- ส่ง reminder แต่ละประเภทได้แค่ครั้งเดียวต่อ form
+- ถ้า scheduler รันซ้ำ → ตรวจสอบ flag ก่อนส่ง
+- Reset flag เมื่อ close_at ถูกแก้ไข (FR-N04 trigger ส่งใหม่)
 4.9 Error HandlingFR-ERR01: Input Validation
 ระบบ validate ทุก user input ก่อนประมวลผล
 Form title: required, max 200 chars
@@ -386,6 +395,12 @@ FALLBACK_FACULTY_ASSIGNED (กรณี PSU ไม่ส่ง faculty_id)
 Audit log เก็บข้อมูล: user_id, action, entity_type, entity_id, old_value, new_value, ip_address, prev_hash, hash, timestamp
 eila_admin ดู Audit Log ของทั้งระบบได้
 Audit log เก็บไว้ 1 ปี
+
+**FR-U08: Audit Log Purge Scheduler**
+- Scheduler รันทุกวันเวลา 03:00 น.
+- ลบ record เก่ากว่า 365 วัน
+- ก่อนลบ → archive ไป `audit_logs_archive` table (เก็บไว้ 7 ปี)
+- บันทึก audit log entry: `AUDIT_LOG_PURGE`, count: N rows purged
 5. Non-Functional Requirements5.1 General
 NFR-01 Phase 1 ใช้ Single Role ต่อ User (Enum) รองรับ Multi-role ในอนาคตโดย Migrate เป็น user_roles table
 NFR-02 รองรับ Mobile (Responsive) — breakpoints: 320px / 768px / 1024px, test Safari iOS 13+, Chrome Android 8+
