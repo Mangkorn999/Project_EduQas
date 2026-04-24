@@ -478,7 +478,7 @@ eila เป็นระบบเว็บภายในมหาวิทยา
 
 ### C. Role Permission Matrix
 
-| Capability | eila_admin | faculty_admin | executive | teacher | staff | student |
+| Capability | super_admin | admin | executive | teacher | staff | student |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | Manage WebsiteTarget ทุก faculty | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Manage WebsiteTarget ใน faculty ตัวเอง | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
