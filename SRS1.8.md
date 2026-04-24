@@ -2,8 +2,8 @@
 
 > ระบบประเมินเว็บไซต์มหาวิทยาลัย / Web Evaluation System
 > Prince of Songkla University
-> **Version 1.7 | Updated: 2026-04-24**
-> **SRS Changelog from v1.6:** แก้ไข 8 ข้อจาก Spec Review (4 Critical + 4 Advisory)
+> **Version 1.8 | Updated: 2026-04-24**
+> **SRS Changelog from v1.7:** เพิ่ม 3 ข้อ: URL validation, Reminder idempotency, Audit log purge
 
 ---
 
@@ -19,6 +19,7 @@
 | 1.5 | 2026-04-23 | แก้ไข 42 ข้อจาก SRS Review: Security 14 ข้อ, Missing 10 ข้อ, Ambiguous 8 ข้อ, Untestable 7 ข้อ, Conflicting 3 ข้อ |
 | 1.6 | 2026-04-24 | แก้ไข 5 ข้อจาก Final Sanity Check: FR-U06 (2FA→Email OTP), NFR-SEC11 (Key Management), ลบ Section 15.7 ซ้ำ, NFR-14 (Infrastructure note), audit_logs (prev_hash + hash) |
 | **1.7** | **2026-04-24** | **แก้ไข 8 ข้อจาก Spec Review: FR-AUTH05 (Faculty fallback definitive), FR-D05 (university scope formula), FR-U01+FR-U07 (Bulk XLSX spec+API), FR-N02/N03 (university scope recipients), Section 15 Phase labels, Notification API endpoints, /rollback naming, node-cron confirmed** |
+| **1.8** | **2026-04-24** | **เพิ่ม 3 ข้อ: FR-F19/F20/F21 (URL validation), FR-N11 (Reminder idempotency), FR-U08 (Audit log purge scheduler)** |
 
 ---
 
@@ -180,6 +181,9 @@ PSU Passport Login
 - **FR-F02** รองรับการ Drag & Drop เพื่อเรียงลำดับคำถาม
 - **FR-F03** สามารถเพิ่ม / ลบ / แก้ไขคำถามใน Form ได้
 - **FR-F04** สามารถกำหนด URL เว็บไซต์ที่ต้องการประเมินได้
+- **FR-F19** ระบบ validate website_url ต้องเป็น valid URL format (http:// หรือ https://)
+- **FR-F20** ระบบตรวจสอบ website_url ว่า reachable ได้ (HTTP HEAD request, timeout 5 วินาที)
+- **FR-F21** ระบบเตือน Admin ก่อน publish หาก URL ไม่สามารถเชื่อมต่อได้
 - **FR-F05** สามารถกำหนด Role ที่จะรับฟอร์มได้ (เลือกได้หลาย Role) เฉพาะ `faculty` scope
 - **FR-F06** สามารถเปิด / ปิดฟอร์มได้ตลอดเวลา
 - **FR-F07** ฟอร์มมีสถานะ 3 สถานะ ได้แก่ `draft` / `open` / `closed`
@@ -363,6 +367,12 @@ Email Failure Handling (FR-N10):
 Retry 3 ครั้งด้วย exponential backoff: 1 นาที → 5 นาที → 15 นาที
 บันทึก error ลง notification_logs table
 Retry ครบ 3 ครั้งแล้วยังไม่สำเร็จ → แจ้ง admin ผ่าน in-app
+
+**FR-N11: Reminder Idempotency**
+- ระบบบันทึก `reminder_3d_sent` และ `reminder_1d_sent` boolean flags ใน form
+- ส่ง reminder แต่ละประเภทได้แค่ครั้งเดียวต่อ form
+- ถ้า scheduler รันซ้ำ → ตรวจสอบ flag ก่อนส่ง
+- Reset flag เมื่อ close_at ถูกแก้ไข (FR-N04 trigger ส่งใหม่)
 4.9 Error HandlingFR-ERR01: Input Validation
 ระบบ validate ทุก user input ก่อนประมวลผล
 Form title: required, max 200 chars
@@ -386,6 +396,12 @@ FALLBACK_FACULTY_ASSIGNED (กรณี PSU ไม่ส่ง faculty_id)
 Audit log เก็บข้อมูล: user_id, action, entity_type, entity_id, old_value, new_value, ip_address, prev_hash, hash, timestamp
 eila_admin ดู Audit Log ของทั้งระบบได้
 Audit log เก็บไว้ 1 ปี
+
+**FR-U08: Audit Log Purge Scheduler**
+- Scheduler รันทุกวันเวลา 03:00 น.
+- ลบ record เก่ากว่า 365 วัน
+- ก่อนลบ → archive ไป `audit_logs_archive` table (เก็บไว้ 7 ปี)
+- บันทึก audit log entry: `AUDIT_LOG_PURGE`, count: N rows purged
 5. Non-Functional Requirements5.1 General
 NFR-01 Phase 1 ใช้ Single Role ต่อ User (Enum) รองรับ Multi-role ในอนาคตโดย Migrate เป็น user_roles table
 NFR-02 รองรับ Mobile (Responsive) — breakpoints: 320px / 768px / 1024px, test Safari iOS 13+, Chrome Android 8+
@@ -660,6 +676,6 @@ POST /api/forms/:id/rollback — สร้าง form ใหม่ status=draft 
 Request body: { "version": 3 }
 15.4 Responses [Phase 1]MethodEndpointDescriptionAuthGET/api/forms/:id/responsesList responses✅POST/api/forms/:id/responsesSubmit response (Upsert)✅GET/api/responses/:idGet response by ID✅PUT/api/responses/:idUpdate response✅15.5 Templates [Phase 1]MethodEndpointDescriptionAuthGET/api/templatesList templates (faculty + global)✅POST/api/templatesCreate template✅PUT/api/templates/:idUpdate template✅DELETE/api/templates/:idDelete template✅15.6 Admin — eila_admin only [Phase 1]MethodEndpointDescriptionAuthGET/api/admin/usersList all users✅ eila_adminPOST/api/admin/usersCreate user✅ eila_adminPUT/api/admin/users/:idUpdate user✅ eila_adminDELETE/api/admin/users/:idSoft delete user✅ eila_adminPOST/api/admin/users/bulk-importBulk import via XLSX ✏️✅ eila_adminGET/api/admin/facultiesList faculties✅ eila_adminPOST/api/admin/facultiesCreate faculty✅ eila_adminPUT/api/admin/faculties/:idUpdate faculty✅ eila_adminDELETE/api/admin/faculties/:idSoft delete faculty✅ eila_adminGET/api/admin/audit-logsList audit logs✅ eila_adminGET/api/admin/audit-logs/verifyVerify hash chain✅ eila_adminPOST/api/admin/users/:id/role-override/requestRequest Email OTP✅ eila_adminPOST/api/admin/users/:id/role-override/confirmConfirm OTP + execute✅ eila_admin15.7 Export / Import [Phase 1 / Phase 2]MethodEndpointDescriptionAuthPhaseGET/api/forms/:id/exportExport structure as JSON✅1POST/api/forms/:id/importImport structure from JSON✅1GET/api/forms/:id/export/pdfExport results as PDF✅2GET/api/forms/:id/export/xlsxExport results as Excel✅215.8 Notifications [Phase 2] ✏️ (New v1.7)MethodEndpointDescriptionAuthGET/api/notificationsList user's notifications✅GET/api/notifications/unread-countGet unread count✅PUT/api/notifications/:id/readMark notification as read✅PUT/api/notifications/read-allMark all as read✅
 Error Response Schema: ดู Section 14.3
-สรุปการแก้ไขv1.6 — แก้ไข 5 ข้อจาก Final Sanity Check(รายละเอียดใน v1.6)v1.7 — แก้ไข 8 ข้อจาก Spec Review ✏️#Issueการแก้ไข1FR-AUTH05: Faculty fallback มี 2 ทางเลือก [Critical]ระบุ definitive: auto-assign FALLBACK_FACULTY_ID + user เห็นเฉพาะ university scope จนกว่า admin จะ assign faculty ถูกต้อง2FR-D05: University scope ไม่มี denominator [Critical]เพิ่มสูตรแยก: university scope ใช้ total active teacher/staff/student ทั้งระบบ3FR-U01: Bulk XLSX ไม่มี spec [Critical]เพิ่ม FR-U07 ครบ: XLSX format, validation rules, import flow, conflict handling, API endpoint, test cases4FR-N02/N03: University scope recipients undefined [Critical]เพิ่ม pseudocode getFormRecipients() แยก faculty/university scope + batch send 500/batch5Section 15: ไม่มี Phase labels [Advisory]เพิ่ม [Phase 1] / [Phase 2] ทุก endpoint6Notification API endpoints หายไปจาก Section 15 [Advisory]เพิ่ม Section 15.8 Notifications (GET list, unread-count, PUT read, read-all)7POST /restore naming vs behavior conflict [Advisory]เปลี่ยนเป็น POST /rollback + เพิ่ม FR-ROLL01 ระบุ behavior ชัดเจน8Scheduler technology ยังเป็น OR [Advisory]Confirm: node-cron (Node.js native)eila — Web Evaluation System | SRS v1.7 | 2026-04-24
+สรุปการแก้ไขv1.6 — แก้ไข 5 ข้อจาก Final Sanity Check(รายละเอียดใน v1.6)v1.7 — แก้ไข 8 ข้อจาก Spec Review ✏️#Issueการแก้ไข1FR-AUTH05: Faculty fallback มี 2 ทางเลือก [Critical]ระบุ definitive: auto-assign FALLBACK_FACULTY_ID + user เห็นเฉพาะ university scope จนกว่า admin จะ assign faculty ถูกต้อง2FR-D05: University scope ไม่มี denominator [Critical]เพิ่มสูตรแยก: university scope ใช้ total active teacher/staff/student ทั้งระบบ3FR-U01: Bulk XLSX ไม่มี spec [Critical]เพิ่ม FR-U07 ครบ: XLSX format, validation rules, import flow, conflict handling, API endpoint, test cases4FR-N02/N03: University scope recipients undefined [Critical]เพิ่ม pseudocode getFormRecipients() แยก faculty/university scope + batch send 500/batch5Section 15: ไม่มี Phase labels [Advisory]เพิ่ม [Phase 1] / [Phase 2] ทุก endpoint6Notification API endpoints หายไปจาก Section 15 [Advisory]เพิ่ม Section 15.8 Notifications (GET list, unread-count, PUT read, read-all)7POST /restore naming vs behavior conflict [Advisory]เปลี่ยนเป็น POST /rollback + เพิ่ม FR-ROLL01 ระบุ behavior ชัดเจน8Scheduler technology ยังเป็น OR [Advisory]Confirm: node-cron (Node.js native)v1.8 — เพิ่ม 3 ข้อ#Issueการแก้ไข1FR-F19/F20/F21: URL validation [Medium]เพิ่ม validation + HEAD check + warning dialog2FR-N11: Reminder idempotency [Medium]เพิ่ม flag ป้องกันส่ง reminder ซ้ำ3FR-U08: Audit log purge [Low]เพิ่ม scheduler archive + purge 365 วันeila — Web Evaluation System | SRS v1.8 | 2026-04-24
 Prince of Songkla University
-✅ SRS v1.7 — ครบทั้ง 55 ข้อ (42 จาก v1.5 + 5 จาก v1.6 + 8 จาก v1.7)
+✅ SRS v1.8 — ครบทั้ง 58 ข้อ (42 จาก v1.5 + 5 จาก v1.6 + 8 จาก v1.7 + 3 จาก v1.8)
