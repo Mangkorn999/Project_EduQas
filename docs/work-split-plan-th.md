@@ -1,112 +1,241 @@
-# แผนแบ่งงานโครงการ EILA (ภาษาไทย)
+# แผนแบ่งงานโครงการ EILA (ภาษาไทย, AI-executable)
 
 อ้างอิงหลัก: `SRS2.1.md` และเอกสารใน `docs/design/*`
 
----
-
-## 1) Backend/API Team
-
-### ขอบเขตงาน
-- พัฒนา `Auth + Session` ตาม `FR-AUTH-01..20`
-- พัฒนา `Website / Round / Form / Response / Template` CRUD ตาม role/scope
-- พัฒนา `Notification` รวม `FR-NOTIF-13` (resend จำกัด 1 ครั้ง/recipient/24 ชั่วโมง)
-- พัฒนา `Ranking API` ตาม `FR-RANK-08..11` (threshold 30%, tie-break, eligibility status)
-- ทำ error contract ตาม `NFR-API` (`code`, `message`, `requestId`, `details?`)
-
-### ผลลัพธ์ (Deliverables)
-- API ครบตาม `docs/design/api-contracts.md`
-- Contract tests ผ่าน
-- Collection/API examples ให้ทีม FE/QA ใช้งาน
+## วิธีใช้เอกสารนี้กับ AI
+- AI ต้องทำงานเป็น Task ID เท่านั้น (ห้ามข้ามลำดับ dependency)
+- ทุก Task ต้องมีหลักฐานผลลัพธ์ตาม Output และ Done Criteria
+- ถ้า task ไหนติด dependency ให้หยุดและรายงาน blocker
 
 ---
 
-## 2) Data/DB Team
-
-### ขอบเขตงาน
-- ออกแบบและสร้าง Drizzle schema + migrations ตาม `docs/design/db-schema.md`
-- เพิ่ม constraints สำคัญ (scope, ownership, unique response ต่อ `form_id + user_id`)
-- รองรับ ranking eligibility, notification log, audit hash chain
-- รองรับ retention + anonymization ตาม `docs/design/data-lifecycle.md`
-
-### ผลลัพธ์ (Deliverables)
-- Migration ชุดแรก + seed สำคัญ (`FALLBACK_FACULTY_ID`, faculties, roles)
-- เอกสารตรวจสอบ schema/index/constraint
+## สถานะงาน
+- `todo`: ยังไม่เริ่ม
+- `in_progress`: กำลังทำ
+- `blocked`: ติด dependency หรือข้อมูลไม่พอ
+- `done`: ผ่าน Done Criteria ครบ
 
 ---
 
-## 3) Frontend Team
-
-### ขอบเขตงาน
-- พัฒนา route และ access guard ตาม `docs/design/component-tree.md`
-- พัฒนา Form Builder + Evaluator flow (ต้องกดเปิดเว็บก่อน submit)
-- พัฒนา Dashboard/Ranking UI พร้อมแสดงเหตุผล exclusion (`excluded_low_response`)
-- รองรับ error handling จาก API (`requestId`, field errors)
-- ทำ WCAG 2.1 AA baseline ตาม NFR-ACCESS
-
-### ผลลัพธ์ (Deliverables)
-- หน้าหลัก Phase 1 ใช้งานได้ครบ
-- โครงหน้า Phase 2 พร้อมต่อ API จริง
+## Task Graph (ลำดับบังคับ)
+`DB-*` -> `BE-*` -> `FE-*` -> `QA-*`  
+`DEVOPS-*` เริ่มคู่กับ `BE-*` ได้ และต้องเสร็จก่อน `QA-E2E-01`
 
 ---
 
-## 4) Scheduler/DevOps Team
+## Data/DB Tasks
 
-### ขอบเขตงาน
-- ตั้ง cron jobs: URL validate, reminder, auto-open/close, retry mail, lifecycle jobs
-- ทำ observability ตาม `NFR-OBS` (p95/p99, error rate, queue, scheduler lag, DB pool)
-- ตั้ง alert rules: 5xx spike, queue backlog, scheduler failure, backup failure
-- จัดทำ backup/restore ตาม `NFR-AVAIL` (RTO/RPO)
+### DB-SCH-01
+- Owner: Data/DB
+- Status: `todo`
+- Input: `docs/design/db-schema.md`, `SRS2.1.md` (FR-DATA, FR-AUDIT, FR-RESP)
+- Output: Drizzle schema ครบ domain หลัก + migration ชุดแรก
+- Depends on: -
+- Done Criteria:
+  - ตารางหลักสร้างได้ครบและผ่าน migrate
+  - enum/constraint สำคัญครบ (scope, status, role)
+  - เอกสารสรุป schema เปรียบเทียบกับ SRS แล้วไม่ตกหล่น
 
-### ผลลัพธ์ (Deliverables)
-- Dashboard monitoring + alert channels
-- Runbook incident/DR + health/readiness checks
+### DB-SCH-02
+- Owner: Data/DB
+- Status: `todo`
+- Input: ผลจาก `DB-SCH-01`
+- Output: constraints เพิ่มเติม (`form_id + user_id` unique, ownership/scope checks)
+- Depends on: `DB-SCH-01`
+- Done Criteria:
+  - ทดสอบ insert/update ผิดเงื่อนไขแล้วถูก reject
+  - มี SQL/ORM test case ยืนยันอย่างน้อย 1 เคสต่อ constraint สำคัญ
 
----
-
-## 5) QA/Test Team
-
-### ขอบเขตงาน
-- จัดทำ test matrix จาก `SRS2.1.md` และ `Appendix H`
-- ทดสอบกรณีเสี่ยงสำคัญ:
-  - auth/session timeout/refresh reuse
-  - ranking threshold/tie-break determinism
-  - resend policy 24 ชั่วโมง
-  - PDPA/anonymization/audit chain verification
-- ทำ regression suite แยก Phase 1 / Phase 2
-
-### ผลลัพธ์ (Deliverables)
-- Test cases + automated suites + UAT checklist
-- Requirement trace report
-
----
-
-## Dependency Order (ลำดับเริ่มงาน)
-1. Data/DB
-2. Backend/API (ทำคู่กับ DevOps setup ได้)
-3. Frontend (เริ่ม mock แล้วต่อ API จริง)
-4. QA automation + end-to-end
-5. UAT + hardening
+### DB-LIFE-01
+- Owner: Data/DB
+- Status: `todo`
+- Input: `docs/design/data-lifecycle.md`
+- Output: โครง retention/anonymization/audit chain ที่ runnable
+- Depends on: `DB-SCH-01`
+- Done Criteria:
+  - มี script/job prototype สำหรับ anonymize + archive audit
+  - มีวิธี verify hash chain ตามที่ design ระบุ
 
 ---
 
-## Sprint Plan (แนะนำ)
+## Backend/API Tasks
 
-### Sprint 1 (P1 Core)
-- Auth, Website, Round, Form, Response, DB base, basic UI
+### BE-AUTH-01
+- Owner: Backend/API
+- Status: `todo`
+- Input: `docs/design/auth-flow.md`, `SRS2.1.md` FR-AUTH-01..20
+- Output: auth endpoints + refresh rotation + reuse detection + revoke-all
+- Depends on: `DB-SCH-01`
+- Done Criteria:
+  - flow login/refresh/logout/revoke-all ทำงานครบ
+  - reuse token แล้ว revoke ทุก session ได้จริง
+  - มี integration test หลักครบ
 
-### Sprint 2 (P1 Complete)
-- Notification, Import/Export, Audit/PDPA, observability baseline
+### BE-CORE-01
+- Owner: Backend/API
+- Status: `todo`
+- Input: `docs/design/api-contracts.md`, `SRS2.1.md` FR-WEB/FR-ROUND/FR-FORM/FR-RESP/FR-TMPL
+- Output: CRUD/domain endpoints หลักครบตาม contract
+- Depends on: `DB-SCH-01`, `DB-SCH-02`
+- Done Criteria:
+  - ผ่าน role/scope authorization tests
+  - form-response flow ใช้งาน end-to-end ได้
 
-### Sprint 3 (P2 Analytics)
-- Ranking, Scorecard, PDF/Email status, heatmap/trend
+### BE-NOTIF-01
+- Owner: Backend/API
+- Status: `todo`
+- Input: `SRS2.1.md` FR-NOTIF-01..13
+- Output: notification + resend policy (1 ครั้ง/recipient/24 ชั่วโมง)
+- Depends on: `DB-SCH-01`, `BE-CORE-01`
+- Done Criteria:
+  - resend เกิน policy แล้วถูก reject พร้อม error code ชัดเจน
+  - ทุก resend มี audit event
 
-### Sprint 4 (Stabilize)
-- Performance/Security/Accessibility/DR drills + regression
+### BE-RANK-01
+- Owner: Backend/API
+- Status: `todo`
+- Input: `docs/design/scoring-and-ranking.md`, `SRS2.1.md` FR-RANK-08..11
+- Output: ranking endpoints รองรับ threshold 30%, tie-break, eligibility
+- Depends on: `BE-CORE-01`
+- Done Criteria:
+  - responseRate < 30% -> `excluded_low_response`
+  - tie-break deterministic ตามลำดับที่กำหนด
+  - มี test data case ยืนยัน ranking ซ้ำแล้วผลเท่าเดิม
+
+### BE-API-STD-01
+- Owner: Backend/API
+- Status: `todo`
+- Input: `SRS2.1.md` NFR-API
+- Output: error envelope มาตรฐาน `{code,message,requestId,details?}`
+- Depends on: `BE-CORE-01`
+- Done Criteria:
+  - endpoint หลักคืน error รูปแบบเดียวกัน
+  - `requestId` มีในทุก non-2xx response
 
 ---
 
-## Definition of Done (ทีมรวม)
-- งานผ่าน acceptance criteria ตาม `SRS2.1.md`
-- มี test evidence (unit/integration/e2e ตามความเหมาะสม)
-- ไม่มีช่องโหว่ critical ที่ยังไม่ปิด
-- เอกสาร design/contract/update ครบและสอดคล้องกัน
+## Frontend Tasks
+
+### FE-ROUTE-01
+- Owner: Frontend
+- Status: `todo`
+- Input: `docs/design/component-tree.md`
+- Output: route structure + role guards พื้นฐาน
+- Depends on: `BE-AUTH-01`
+- Done Criteria:
+  - role เข้าได้เฉพาะหน้าอนุญาต
+  - unauthorized ถูก redirect/deny ถูกต้อง
+
+### FE-FORM-01
+- Owner: Frontend
+- Status: `todo`
+- Input: `SRS2.1.md` FR-FORM/FR-EVAL/FR-RESP
+- Output: Form Builder + Evaluator flow พร้อม soft gate
+- Depends on: `BE-CORE-01`
+- Done Criteria:
+  - ไม่กดเปิดเว็บไซต์แล้ว submit ไม่ได้
+  - autosave/edit จนก่อนปิดฟอร์มทำงานได้
+
+### FE-DASH-01
+- Owner: Frontend
+- Status: `todo`
+- Input: `SRS2.1.md` FR-DASH/FR-RANK
+- Output: dashboard/ranking UI + exclusion reason
+- Depends on: `BE-RANK-01`
+- Done Criteria:
+  - แสดง `excluded_low_response` ชัดเจน
+  - filter หลักทำงานร่วมกันได้
+
+### FE-ERR-01
+- Owner: Frontend
+- Status: `todo`
+- Input: output จาก `BE-API-STD-01`
+- Output: error handling กลาง (requestId, field errors)
+- Depends on: `BE-API-STD-01`
+- Done Criteria:
+  - แสดง validation error ราย field ได้
+  - แสดง requestId ใน error toast/panel สำหรับ trace
+
+---
+
+## DevOps/Scheduler Tasks
+
+### DEVOPS-CRON-01
+- Owner: DevOps
+- Status: `todo`
+- Input: `docs/design/deployment.md`
+- Output: cron jobs สำคัญ (validate URL, reminder, open/close, retry, lifecycle)
+- Depends on: `BE-CORE-01`, `BE-NOTIF-01`
+- Done Criteria:
+  - schedule ทำงานตามเวลาและมี log ตรวจสอบได้
+  - job fail แล้วมี retry/alert ตาม policy
+
+### DEVOPS-OBS-01
+- Owner: DevOps
+- Status: `todo`
+- Input: `SRS2.1.md` NFR-OBS
+- Output: metrics dashboard + alerts (5xx, queue, scheduler, backup)
+- Depends on: `BE-CORE-01`
+- Done Criteria:
+  - เห็น p95/p99, error rate, queue, DB pool, scheduler lag ครบ
+  - ทดสอบ alert แล้วยิงแจ้งเตือนจริง
+
+### DEVOPS-DR-01
+- Owner: DevOps
+- Status: `todo`
+- Input: `SRS2.1.md` NFR-AVAIL
+- Output: backup/restore runbook + drill evidence
+- Depends on: `DB-SCH-01`
+- Done Criteria:
+  - มีผลทดสอบ restore
+  - มีเอกสารยืนยัน RTO/RPO ตามเกณฑ์
+
+---
+
+## QA/Test Tasks
+
+### QA-MTX-01
+- Owner: QA
+- Status: `todo`
+- Input: `SRS2.1.md`, `Appendix H`, output จากทุกทีม
+- Output: requirement-to-test matrix
+- Depends on: `BE-CORE-01`, `FE-ROUTE-01`
+- Done Criteria:
+  - FR/NFR สำคัญถูก map กับ test case ครบ
+  - ระบุ owner/frequency ของ regression ชัดเจน
+
+### QA-CRIT-01
+- Owner: QA
+- Status: `todo`
+- Input: ผลจาก `BE-AUTH-01`, `BE-RANK-01`, `BE-NOTIF-01`, `DB-LIFE-01`
+- Output: critical scenario tests (auth/reuse, ranking determinism, resend policy, PDPA/audit)
+- Depends on: `QA-MTX-01`
+- Done Criteria:
+  - ทุก critical path ผ่าน
+  - defect ระดับ critical = 0 ก่อน UAT
+
+### QA-E2E-01
+- Owner: QA
+- Status: `todo`
+- Input: ระบบรวมทุกส่วน
+- Output: end-to-end report + UAT checklist
+- Depends on: `FE-DASH-01`, `DEVOPS-CRON-01`, `DEVOPS-OBS-01`
+- Done Criteria:
+  - flow หลักตั้งแต่ login -> evaluation -> dashboard/ranking ผ่าน
+  - มีหลักฐานผลทดสอบและ known issues list
+
+---
+
+## Sprint Mapping (แนะนำ)
+- Sprint 1: `DB-SCH-*`, `BE-AUTH-01`, `BE-CORE-01`, `FE-ROUTE-01`, `FE-FORM-01`
+- Sprint 2: `BE-NOTIF-01`, `BE-API-STD-01`, `DEVOPS-CRON-01`, `DEVOPS-OBS-01`, `QA-MTX-01`
+- Sprint 3: `BE-RANK-01`, `FE-DASH-01`, `FE-ERR-01`, `QA-CRIT-01`
+- Sprint 4: `DB-LIFE-01`, `DEVOPS-DR-01`, `QA-E2E-01`, hardening
+
+---
+
+## Definition of Done (ภาพรวม)
+- ผ่าน acceptance criteria ตาม `SRS2.1.md`
+- มีหลักฐาน test (unit/integration/e2e) ตามระดับงาน
+- ไม่มีช่องโหว่ critical ค้าง
+- เอกสาร (`SRS2.1`, `docs/design`, API contract, task status) สอดคล้องกัน
