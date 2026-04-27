@@ -1,6 +1,6 @@
 # Database Schema
 
-PostgreSQL via Drizzle ORM. Entity coverage follows SRS2.0 Appendix A plus
+PostgreSQL via Drizzle ORM. Entity coverage follows SRS2.1 Appendix A plus
 dependents needed by the functional requirements.
 
 **Convention** — every table carries `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`,
@@ -9,8 +9,7 @@ dependents needed by the functional requirements.
 (FR-DATA-01). These three columns are omitted from per-table listings
 below to keep them readable.
 
-Deviation note: SRS2.0 §5.1 and Appendix A name Prisma. These docs use
-Drizzle; see README deviation log.
+Drizzle is the canonical ORM in SRS2.1.
 
 ## 1. Enums `[P1]`
 

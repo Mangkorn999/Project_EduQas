@@ -1,6 +1,6 @@
 # API Contracts
 
-Covers SRS2.0 Appendix B plus endpoints implied by the functional
+Covers SRS2.1 Appendix B plus endpoints implied by the functional
 requirements. All endpoints are served by Fastify under `/api/v1`.
 
 ## 1. Conventions
@@ -14,7 +14,7 @@ requirements. All endpoints are served by Fastify under `/api/v1`.
 | Timestamps | ISO-8601 UTC, e.g. `2026-04-24T07:15:00Z` |
 | Pagination | `?page=<int, default 1>&limit=<int, default 20, max 100>`; response: `{data: [...], page, limit, total}` |
 | Filters | Query params documented per endpoint |
-| Error envelope | `{error: {code, message, details?}}` |
+| Error envelope | `{error: {code, message, requestId, details?}}` |
 | Validation | Zod schemas shared between FE + BE (NFR-MAINT-02) |
 | Rate limit | ≥ 10 req / min / IP on auth-sensitive endpoints (NFR-SEC-05) |
 | Idempotency | `Idempotency-Key` header honored on `POST` endpoints that create notifications or exports |
@@ -32,6 +32,13 @@ requirements. All endpoints are served by Fastify under `/api/v1`.
 | 422 | `business_rule` | Valid request but domain rule rejected it |
 | 429 | `rate_limited` | Too many requests |
 | 500 | `internal_error` | Unhandled server fault |
+
+### 1.2 Error Payload Details (NFR-API)
+
+- `requestId` is required on every non-2xx response for traceability.
+- `400 validation_error` returns `details[]` with `{ field, reason }`.
+- `401/403` always return machine-readable `code`.
+- `500 internal_error` must not expose stack traces, SQL, or secrets.
 
 ## 2. Auth `[P1]`
 
@@ -158,7 +165,7 @@ Request body (submit):
 | `PUT` | `/api/v1/notifications/:id/read` | Bearer | Mark one as read |
 | `PUT` | `/api/v1/notifications/read-all` | Bearer | Mark all as read |
 | `GET` | `/api/v1/notifications/delivery-status` `[P2]` | `super_admin` | Admin panel view (FR-NOTIF-10) |
-| `POST` | `/api/v1/notifications/:id/resend` `[P2]` | `super_admin` | Manual resend (FR-NOTIF-11) |
+| `POST` | `/api/v1/notifications/:id/resend` `[P2]` | `super_admin` | Manual resend (FR-NOTIF-11, FR-NOTIF-13) |
 
 ## 10. Reports `[P1]` for Excel / JSON, `[P2]` for PDF
 
@@ -197,6 +204,19 @@ Long-running exports enqueue a job and return 202 with a job id; poll
 | `GET` | `/api/v1/ranking/heatmap` `[P2]` | `super_admin`, `executive` | Faculty × dimension (FR-RANK-04) |
 
 Formulae and threshold rules live in `scoring-and-ranking.md`.
+
+### 12.1 Ranking response contract additions (FR-RANK-10)
+
+Ranking endpoints should include eligibility status so FE can explain exclusions:
+
+```json
+{
+  "websiteId": "uuid",
+  "score": 82.41,
+  "responseRate": 0.27,
+  "rankingEligibility": "excluded_low_response"
+}
+```
 
 ## 13. Health
 

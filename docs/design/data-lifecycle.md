@@ -1,6 +1,6 @@
 # Data Lifecycle, PDPA, and Audit
 
-Implements SRS2.0 FR-DATA-01..10 and FR-AUDIT-01..08.
+Implements SRS2.1 FR-DATA-01..10 and FR-AUDIT-01..08.
 
 ## 1. Soft Delete `[P1]`
 

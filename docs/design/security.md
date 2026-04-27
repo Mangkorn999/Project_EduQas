@@ -1,6 +1,6 @@
 # Security
 
-Covers SRS2.0 NFR-SEC-01..10 and related FR-AUTH / FR-AUDIT / PDPA
+Covers SRS2.1 NFR-SEC-01..10 and related FR-AUTH / FR-AUDIT / PDPA
 concerns. Companion to `auth-flow.md` (identity), `data-lifecycle.md`
 (PDPA + audit), and `deployment.md` (TLS, secrets, envs).
 
@@ -22,7 +22,7 @@ Primary adversaries:
 
 Out of scope:
 
-- Public / anonymous respondents (excluded by SRS2.0 §1.2).
+- Public / anonymous respondents (excluded by SRS2.1 §1.2).
 - Nation-state-level attackers.
 
 Residual risks:

@@ -127,7 +127,7 @@ single role guard (`super_admin`).
 
 ## 8. Accessibility (WCAG 2.1 AA)
 
-SRS2.0 NFR-ACCESS-01..08. Applied uniformly:
+SRS2.1 NFR-ACCESS-01..08. Applied uniformly:
 
 - Every input has a `<label>`; error text linked via `aria-describedby`
   (NFR-ACCESS-02).

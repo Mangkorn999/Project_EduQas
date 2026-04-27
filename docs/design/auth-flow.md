@@ -1,6 +1,6 @@
 # Auth Flow
 
-Implements SRS2.0 FR-AUTH-01..20. Covers PSU Passport OAuth 2.0 + PKCE,
+Implements SRS2.1 FR-AUTH-01..20. Covers PSU Passport OAuth 2.0 + PKCE,
 JWT access + refresh-token rotation with reuse detection, timeout
 policy, and email-OTP role override for `super_admin`.
 

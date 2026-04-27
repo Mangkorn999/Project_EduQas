@@ -3,7 +3,7 @@
 System-design artifacts for the **EILA Website Evaluation System**
 (ระบบประเมินคุณภาพเว็บไซต์หน่วยงาน, Prince of Songkla University).
 
-Source of requirements: [`../../SRS2.0.md`](../../SRS2.0.md) (authoritative).
+Source of requirements: [`../../SRS2.1.md`](../../SRS2.1.md) (authoritative).
 SRS says *what* to build; this folder says *how* to build it.
 
 ## Doc Map
@@ -26,7 +26,7 @@ needed.
 
 ## Phase Legend
 
-SRS2.0 Appendix E defines three phases. Every design doc tags sections
+SRS2.1 Appendix E defines three phases. Every design doc tags sections
 or subsections with the earliest phase that introduces them:
 
 - **`[P1]`** — Auth, Website Registry, Evaluation Round, Form Builder,
@@ -39,20 +39,19 @@ or subsections with the earliest phase that introduces them:
 
 Sections without a marker apply to all phases.
 
-## Deviations from SRS2.0
+## Deviations from SRS2.1
 
 Tracked here so readers know what conflicts exist between these design
-docs and SRS2.0. Each item is proposed for an SRS2.1 update.
+docs and SRS2.1.
 
-| # | SRS2.0 reference | SRS2.0 says | Design docs say | Why |
+| # | SRS2.1 reference | SRS2.1 says | Design docs say | Why |
 |---|---|---|---|---|
-| 1 | §5.1, Appendix A, NFR-MAINT-04, NFR-SEC-04 | Prisma ORM | **Drizzle ORM** | Prior product decision; keeps SQL transparency; SRS2.1 to reconcile |
-| 2 | §2.3, §3 FR-AUTH / FR-USER (main text) | Role names `eila_admin` / `faculty_admin` | **`super_admin` / `admin`** | Matches SRS2.0 Appendix C role matrix; main text and Appendix C conflict; design docs follow Appendix C |
+| 1 | - | - | **No active deviations** | Design docs currently aligned to SRS2.1 baseline |
 
-Role mapping for cross-reference with SRS2.0 main text:
+Role mapping note retained for historical cross-reference:
 
-- `super_admin` ↔ `eila_admin`
-- `admin` ↔ `faculty_admin`
+- `super_admin` was `eila_admin` in legacy text
+- `admin` was `faculty_admin` in legacy text
 - `executive`, `teacher`, `staff`, `student` unchanged
 
 ## Contribution Notes
@@ -61,14 +60,14 @@ Role mapping for cross-reference with SRS2.0 main text:
   restating requirements.
 - Keep `[P1]` / `[P2]` / `[P3]` markers current when moving features
   across phases.
-- When a design decision conflicts with SRS2.0, add a row to the
+- When a design decision conflicts with SRS2.1, add a row to the
   deviations table above rather than silently diverging.
 - Diagrams: Mermaid for flows / sequences / ERD; ASCII for simple
   boxes and matrices.
 
 ## See Also
 
-- [`../../SRS2.0.md`](../../SRS2.0.md) — current authoritative SRS
+- [`../../SRS2.1.md`](../../SRS2.1.md) — current authoritative SRS
 - [`../../CLAUDE.md`](../../CLAUDE.md) — repo overview for AI agents
 - [`../superpowers/specs/2026-04-24-design-docs-folder-design.md`](../superpowers/specs/2026-04-24-design-docs-folder-design.md)
   — spec that produced this folder

@@ -1,7 +1,7 @@
 # Deployment
 
 Covers environments, env vars, topology, pipeline, scheduler, backup /
-DR, and observability. Satisfies SRS2.0 NFR-AVAIL and parts of NFR-PERF
+DR, and observability. Satisfies SRS2.1 NFR-AVAIL and parts of NFR-PERF
 and NFR-SEC.
 
 ## 1. Environments `[P1]`
