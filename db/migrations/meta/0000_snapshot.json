@@ -1,24 +1,16 @@
 {
-  "id": "99f91e1c-dae2-4465-9c30-f929f74ca718",
+  "id": "386c1b06-7771-4df6-8863-59b24d414692",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {},
   "enums": {
-    "public.field_type": {
-      "name": "field_type",
+    "public.form_scope": {
+      "name": "form_scope",
       "schema": "public",
       "values": [
-        "text",
-        "textarea",
-        "radio",
-        "checkbox",
-        "rating",
-        "scale",
-        "date",
-        "file",
-        "number",
-        "select"
+        "faculty",
+        "university"
       ]
     },
     "public.form_status": {
@@ -30,13 +22,38 @@
         "closed"
       ]
     },
-    "public.notif_status": {
-      "name": "notif_status",
+    "public.notification_channel": {
+      "name": "notification_channel",
+      "schema": "public",
+      "values": [
+        "email",
+        "in_app"
+      ]
+    },
+    "public.notification_status": {
+      "name": "notification_status",
       "schema": "public",
       "values": [
         "pending",
         "sent",
-        "failed"
+        "failed",
+        "retrying"
+      ]
+    },
+    "public.question_type": {
+      "name": "question_type",
+      "schema": "public",
+      "values": [
+        "short_text",
+        "long_text",
+        "single_choice",
+        "multi_choice",
+        "rating",
+        "scale_5",
+        "scale_10",
+        "boolean",
+        "date",
+        "number"
       ]
     },
     "public.role": {
@@ -51,6 +68,14 @@
         "student"
       ]
     },
+    "public.round_scope": {
+      "name": "round_scope",
+      "schema": "public",
+      "values": [
+        "faculty",
+        "university"
+      ]
+    },
     "public.round_status": {
       "name": "round_status",
       "schema": "public",
@@ -60,12 +85,20 @@
         "closed"
       ]
     },
-    "public.website_status": {
-      "name": "website_status",
+    "public.template_scope": {
+      "name": "template_scope",
       "schema": "public",
       "values": [
-        "active",
-        "inactive",
+        "faculty",
+        "global"
+      ]
+    },
+    "public.url_status": {
+      "name": "url_status",
+      "schema": "public",
+      "values": [
+        "unknown",
+        "ok",
         "unreachable"
       ]
     }
