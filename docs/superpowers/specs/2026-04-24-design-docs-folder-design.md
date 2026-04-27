@@ -1,12 +1,17 @@
-# Design Spec: `docs/design/` Folder for EILA (SRS2.0-aligned)
+# Design Spec: `docs/design/` Folder for EILA (Historical, SRS2.0-era)
 
 **Date:** 2026-04-24 (rewritten after SRS2.0 landed)
-**Status:** Approved; implementation underway
-**Source of requirements:** [`../../../SRS2.0.md`](../../../SRS2.0.md) (authoritative)
+**Status:** Historical reference only (superseded by SRS2.1-aligned docs)
+**Current authoritative requirements:** [`../../../SRS2.1.md`](../../../SRS2.1.md)
+**Original source at authoring time:** [`../../../SRS2.0.md`](../../../SRS2.0.md)
 **Superseded:** `SRS_v1.5.md`, `SRSV1.7.md`, `SRS1.8.md`, `SRS1.9.md`, `SRS.md`
 **Related:** `../../../CLAUDE.md`, `../../../SRS_REVIEW.md`
 
 ## 0. Reset Notice
+
+> **Important:** This spec is preserved for traceability/history. For current
+> planning and implementation, use `SRS2.1.md` and `docs/design/*` as the
+> source of truth.
 
 A prior revision of this spec (2026-04-24 draft) described a
 public-access / anonymous-respondent "EILA Survey Platform" pivot.

@@ -10,6 +10,8 @@
 |---|---------|-------------|-------------|-----------|
 | 1 | §5.1, Appendix A, NFR-MAINT-04, NFR-SEC-04 | Prisma ORM | **Drizzle ORM** | Prior product decision; SQL transparency; drizzle-kit migration model |
 | 2 | §2.3, FR-AUTH, FR-USER main text | `eila_admin` / `faculty_admin` | **`super_admin` / `admin`** | Align with Appendix C role matrix |
+| 3 | FR-RANK, FR-NOTIF, Appendix F | Ranking / resend policy not deterministic | **Deterministic scoring, tie-break, threshold, resend policy** | Reduce ambiguity across FE/BE/QA and improve testability |
+| 4 | NFR (new), Appendix G/H | No unified API error format, timezone policy, observability baseline, full traceability matrix | **Add NFR-API, NFR-TIME, NFR-OBS + supporting appendices** | Improve operability, reliability, and implementation consistency |
 
 **Role mapping for backward reference:**
 
@@ -267,7 +269,7 @@ eila เป็นระบบเว็บภายในมหาวิทยา
 | FR-USER-09 | ระบบ SHALL บันทึก audit log ทุกครั้งที่ create update import delete หรือ override role | Must Have | Backend | action สำคัญทุกตัวมี audit log |
 | FR-USER-10 | ระบบ SHOULD รองรับ search และ filter user ตาม role, faculty, status | Should Have | Frontend | admin filter user list ได้ตามเงื่อนไข |
 
-### FR-NOTIF : Notification System (FR-NOTIF-01 ถึง FR-NOTIF-12)
+### FR-NOTIF : Notification System (FR-NOTIF-01 ถึง FR-NOTIF-13)
 
 | ID | Requirement | Priority | Assigned To | Acceptance Criteria |
 |---|---|---|---|---|
@@ -281,8 +283,9 @@ eila เป็นระบบเว็บภายในมหาวิทยา
 | FR-NOTIF-08 | หลัง retry ครบแล้วระบบ SHALL mark email เป็น `failed` และแจ้ง super_admin | Must Have | Backend | failed 3 ครั้งแล้วมี admin alert |
 | FR-NOTIF-09 | ระบบ SHALL fallback เป็น in-app only เมื่อ email fail ครบ retry และ event รองรับ in-app | Must Have | Backend | email fail แต่ user ยังเห็น in-app |
 | FR-NOTIF-10 | super_admin SHALL ดู delivery status ได้จาก NotificationLog หรือ admin panel | Should Have | Both | admin เปิดหน้าดู log delivery ได้ |
-| FR-NOTIF-11 | user หรือ admin MAY resend notification เมื่อ status = failed ตาม policy ที่กำหนด | Nice to Have | Both | failed notification ถูก resend ได้ |
+| FR-NOTIF-11 | user หรือ admin MAY resend notification เมื่อ status = failed และเป็นไปตาม policy ระบบ | Nice to Have | Both | failed notification ถูก resend ได้ตามเงื่อนไข |
 | FR-NOTIF-12 | ระบบ SHALL รองรับ mark-as-read และ unread count สำหรับ in-app notification | Must Have | Both | unread count ลดลงเมื่อกด read |
+| FR-NOTIF-13 | ระบบ SHALL จำกัด resend notification ไม่เกิน 1 ครั้งต่อ recipient ต่อ 24 ชั่วโมง และบันทึก audit log ทุกครั้ง | Should Have | Backend | resend เกิน policy ถูก reject และมี audit event |
 
 ### FR-DASH : Dashboard & Analytics (FR-DASH-01 ถึง FR-DASH-12)
 
@@ -301,7 +304,7 @@ eila เป็นระบบเว็บภายในมหาวิทยา
 | FR-DASH-11 | dashboard SHALL แสดง score card รายเว็บไซต์ | Must Have | Both | website score card เปิดดูข้อมูลรายเว็บได้ |
 | FR-DASH-12 | dashboard SHOULD แสดง top strengths และ improvement areas จาก feedback summary หรือ manual tag | Nice to Have | Both | score card มีสรุป strengths และ improvements ได้ |
 
-### FR-RANK : Website Ranking (FR-RANK-01 ถึง FR-RANK-08)
+### FR-RANK : Website Ranking (FR-RANK-01 ถึง FR-RANK-11)
 
 | ID | Requirement | Priority | Assigned To | Acceptance Criteria |
 |---|---|---|---|---|
@@ -312,7 +315,10 @@ eila เป็นระบบเว็บภายในมหาวิทยา
 | FR-RANK-05 | super_admin และ executive SHALL เห็น cross-faculty ranking ได้ | Must Have | Backend | executive เรียก ranking ทุก faculty ได้ |
 | FR-RANK-06 | admin SHALL เห็น ranking เฉพาะ faculty ของตัวเอง | Must Have | Backend | admin query ข้าม faculty แล้วถูกจำกัด |
 | FR-RANK-07 | ranking SHALL filter ตาม EvaluationRound, Faculty, Category, Academic Year | Must Have | Both | filter เปลี่ยนแล้วลำดับ ranking เปลี่ยนตาม |
-| FR-RANK-08 | ranking SHALL ใช้เฉพาะข้อมูลที่ผ่าน minimum response threshold ตาม policy ที่กำหนด | Should Have | Backend | เว็บไซต์ response ต่ำกว่า threshold ถูก exclude หรือถูก mark ไว้ |
+| FR-RANK-08 | ranking SHALL ใช้เฉพาะข้อมูลที่มี response rate ไม่น้อยกว่า 30% ของ assignment ทั้งหมดใน scope ที่เลือก | Must Have | Backend | เว็บไซต์ที่ response rate < 30% ถูก exclude และมีเหตุผลกำกับ |
+| FR-RANK-09 | ระบบ SHALL ใช้ tie-break ตามลำดับ: weighted score มากกว่า > response rate มากกว่า > submittedAt ล่าสุด > website name A-Z | Must Have | Backend | คะแนนเท่ากันแล้วลำดับสุดท้าย deterministic |
+| FR-RANK-10 | dashboard และ ranking API SHALL คืนสถานะ eligibility ของแต่ละเว็บไซต์ (`eligible`, `excluded_low_response`) | Should Have | Backend | API response บอกเหตุผลการเข้าหรือไม่เข้าจัดอันดับได้ |
+| FR-RANK-11 | ระบบ SHALL แสดงข้อความอธิบายการ exclusion จาก ranking ในหน้า dashboard/scorecard เมื่อเว็บไซต์ไม่ผ่านเกณฑ์ | Should Have | Frontend | ผู้ใช้เห็นเหตุผล exclusion ชัดเจนใน UI |
 
 ### FR-IE : Import / Export (FR-IE-01 ถึง FR-IE-15)
 
@@ -435,6 +441,33 @@ eila เป็นระบบเว็บภายในมหาวิทยา
 | NFR-MAINT-05 | ระบบ SHOULD มี API documentation สำหรับ internal team และ admin integration | Should Have | Backend | endpoint list และ request response summary พร้อมใช้งาน |
 | NFR-MAINT-06 | ระบบ SHOULD มี automated test ครอบคลุม auth, scoring, ranking, export และ data lifecycle | Should Have | Both | CI ผ่าน test suite ของ domain สำคัญ |
 
+### NFR-API : API Error Contract
+
+| ID | Requirement | Priority | Assigned To | Acceptance Criteria |
+|---|---|---|---|---|
+| NFR-API-01 | API error response SHALL ใช้รูปแบบเดียวกันอย่างน้อย `code`, `message`, `requestId`, `details?` | Must Have | Backend | ทุก endpoint คืน error schema เดียวกัน |
+| NFR-API-02 | validation error SHALL คืน `400` พร้อม `details[]` ที่มี `field` และ `reason` | Must Have | Backend | payload ผิดแล้ว client map field error ได้ |
+| NFR-API-03 | authentication/authorization error SHALL คืน `401` หรือ `403` พร้อม machine-readable `code` | Must Have | Backend | FE แยกจัดการ session หมดอายุและ no-permission ได้ถูกต้อง |
+| NFR-API-04 | internal server error SHALL คืน `500` โดยไม่เปิดเผย stack trace หรือ secret ใดๆ | Must Have | Backend | response 500 ไม่มีข้อมูลอ่อนไหว |
+
+### NFR-TIME : Time & Timezone
+
+| ID | Requirement | Priority | Assigned To | Acceptance Criteria |
+|---|---|---|---|---|
+| NFR-TIME-01 | ระบบ SHALL เก็บ timestamp ทุกประเภทในฐานข้อมูลเป็น UTC | Must Have | Backend | DB ตรวจพบเวลาบันทึกเป็น UTC สม่ำเสมอ |
+| NFR-TIME-02 | business schedule เช่น open/close, reminder และ daily scheduler cutoff SHALL ใช้ `Asia/Bangkok` | Must Have | Backend / DevOps | งานตามเวลาธุรกิจทำงานตรงเวลาท้องถิ่น |
+| NFR-TIME-03 | API ที่ส่งข้อมูลเวลา SHALL ใช้รูปแบบ ISO-8601 พร้อม timezone (`Z` หรือ offset) | Must Have | Backend | contract test ผ่านรูปแบบเวลาเดียวกัน |
+| NFR-TIME-04 | ระบบ SHOULD มี test กรณี boundary time เช่น วันเปลี่ยนเดือนและปีงบประมาณ | Should Have | Both | test coverage ครอบคลุม time boundary case สำคัญ |
+
+### NFR-OBS : Observability
+
+| ID | Requirement | Priority | Assigned To | Acceptance Criteria |
+|---|---|---|---|---|
+| NFR-OBS-01 | ระบบ SHALL มี structured log อย่างน้อย `requestId`, `route`, `statusCode`, `latencyMs`, `userId?` | Must Have | Backend | log query ตาม requestId แล้ว trace request ได้ |
+| NFR-OBS-02 | ระบบ SHALL monitor อย่างน้อย p95/p99 latency, error rate, queue length, DB pool usage, scheduler lag | Must Have | DevOps | dashboard แสดง metric ครบและอัปเดตต่อเนื่อง |
+| NFR-OBS-03 | ระบบ SHALL มี alert สำหรับ 5xx spike, queue backlog, scheduler failure, backup failure | Must Have | DevOps | simulation แล้ว alert ถูกส่งตาม policy |
+| NFR-OBS-04 | ระบบ SHOULD รองรับ trace correlation ข้าม service โดยใช้ requestId เดียวกัน | Should Have | Backend / DevOps | incident review เชื่อม log chain ได้ครบ flow |
+
 ---
 
 ## 5. Constraints & Assumptions
@@ -511,3 +544,65 @@ eila เป็นระบบเว็บภายในมหาวิทยา
 | View audit logs | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ### D. Use Case Diagram — Textual View
+
+| Actor | Use Cases |
+|---|---|
+| super_admin | login, manage websites, manage users, manage rounds, manage templates, create forms, publish forms, view university dashboard, export reports, manage audit logs |
+| admin | login, manage own websites, create faculty rounds, create faculty forms, assign evaluators, view faculty dashboard, export faculty website reports |
+| executive | login, view university ranking, view score cards, export summary reports |
+| teacher | login, open assigned website, answer evaluation form, submit response |
+| staff | login, open assigned website, answer evaluation form, submit response |
+| student | login, open assigned website, answer evaluation form, submit response |
+
+### E. Phase Roadmap (Phase1 / Phase2 / Phase3)
+
+| Phase | Scope |
+|---|---|
+| Phase 1 | Auth, Website Registry, Evaluation Round, Form Builder, Criteria Preset, Assignment, Evaluator View, Response Submission, Dashboard พื้นฐาน, JSON/Excel Export, Audit, PDPA, Backup |
+| Phase 2 | Ranking Dashboard, Website Score Card เต็มรูปแบบ, PDF Report รายเว็บ, Email delivery status, Trend comparison, Faculty heatmap |
+| Phase 3 | Conditional Logic, Auto Screenshot, AI Summary, Public API, Multi-language, Advanced Analytics, Benchmarking |
+
+### F. Deterministic Scoring and Ranking Rules
+
+#### F.1 Numeric normalization
+- คะแนนที่เป็น scale 1-5 SHALL normalize เป็น 0-100 ด้วยสูตร `((value - 1) / (5 - 1)) * 100`
+- ถ้า field ไม่ใช่ numeric (เช่น feedback text) SHALL ไม่ถูกนำไปเป็นตัวหารของคะแนน
+
+#### F.2 Weighted score formula
+- สำหรับเว็บไซต์หนึ่งรายการในรอบที่เลือก ให้คำนวณคะแนนรวมด้วย weighted average:
+  - `total_score = sum(dimension_score_i * weight_i) / sum(weight_i)`
+- `dimension_score_i` คือค่าเฉลี่ย normalized score ของคำถาม numeric ในมิตินั้น
+
+#### F.3 Rounding
+- คะแนนที่แสดงผลใน dashboard และรายงาน SHALL ปัดเป็นทศนิยม 2 ตำแหน่งด้วย round half up
+- การจัดอันดับภายในระบบคำนวณด้วยค่าก่อนปัด (raw precision) แล้วค่อยแสดงผลแบบปัดเศษ
+
+#### F.4 Missing answers
+- คำตอบที่เว้นว่างในคำถาม optional SHALL ถูกตัดออกจากตัวหาร
+- ถ้าคำถามบังคับขาดคำตอบ response นั้น SHALL ถือว่า invalid สำหรับการ submit
+
+#### F.5 Ranking eligibility and tie-break
+- เว็บไซต์จะเข้า ranking ได้เมื่อ response rate >= 30% ของ assignment ใน scope ที่เลือก
+- กรณีคะแนนรวมเท่ากันให้ใช้ tie-break ตาม FR-RANK-09
+
+### G. Data Classification and Retention Matrix
+
+| Data Domain | Examples | Class | Encryption at Rest | Retention | Notes |
+|---|---|---|---|---|---|
+| Authentication | refresh token hash, OTP events | Sensitive | Required | token: 7 days / security event: 2 years+ | ห้ามเก็บ plaintext token |
+| User Profile | PSU ID, name, email, faculty | Sensitive (PII) | Required | 7 years (or PDPA-approved anonymization) | governed by FR-DATA-07/08 |
+| Evaluation Response | numeric answers, feedback text, timestamps | Internal + PII-linked | Required | 7 years then anonymize | แยก PII reference ออกจาก analytics เมื่อทำ anonymize |
+| Operational Logs | request logs, scheduler logs | Internal | Recommended | 180-365 days (ops policy) | ต้องมี requestId |
+| Audit Log | action trail + hash chain | Sensitive | Required | primary 2 years + archive up to 7 years | append-only per FR-AUDIT |
+
+### H. Requirement Traceability Matrix (Starter)
+
+| Requirement ID | Design Doc Reference | Verification Method | Owner |
+|---|---|---|---|
+| FR-AUTH-09 | `docs/design/auth-flow.md` (refresh rotation) | integration test + security test | Backend |
+| FR-FORM-19 | `docs/design/db-schema.md` (form_versions) | unit + migration test | Backend |
+| FR-RANK-08/09 | `docs/design/scoring-and-ranking.md` | ranking calculation test | Backend |
+| FR-NOTIF-13 | `docs/design/deployment.md` + scheduler section | scheduler integration test | Backend/DevOps |
+| NFR-API-01 | `docs/design/api-contracts.md` | contract test | Backend |
+| NFR-TIME-02 | `docs/design/deployment.md` (scheduler timezone) | scheduler UAT | Backend/DevOps |
+| NFR-OBS-02 | `docs/design/deployment.md` (observability) | monitoring checklist | DevOps |

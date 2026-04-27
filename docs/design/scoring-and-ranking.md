@@ -1,6 +1,6 @@
 # Scoring & Ranking
 
-Implements SRS2.0 FR-CRIT (criteria + weights), FR-DASH (dashboard
+Implements SRS2.1 FR-CRIT (criteria + weights), FR-DASH (dashboard
 analytics), and FR-RANK (rankings). Formulas, snapshots, thresholds.
 
 ## 1. Criteria, Weights, Snapshots `[P1]`
@@ -77,8 +77,9 @@ Content, Performance, Mobile, Feedback), show the average
 `scoreCriterionResponse` across responses. Feedback dimension is
 text-only and shows representative comments only.
 
-All scores are displayed on a 0–100 scale (multiply by 100) and
-rounded to 1 decimal in UI.
+All scores are displayed on a 0-100 scale (multiply by 100), rounded
+using round half up to 2 decimals for display. Ranking comparisons use
+the raw (pre-rounded) score to avoid ordering drift.
 
 ## 4. Response Rate `[P1]`
 
@@ -97,11 +98,12 @@ Where `countExpected` is the count of users matching:
 
 ## 5. Minimum Response Threshold `[P1]` policy config, `[P2]` applied to ranking
 
-- Store in a `system_config` row: `ranking_min_responses` (default 5).
+- Use response-rate threshold: `responseRate >= 0.30` (30%) to qualify
+  for ranking (FR-RANK-08).
 - Websites below the threshold are:
   - Shown on the dashboard with a "below threshold" badge.
-  - Excluded from ranking outputs (FR-RANK-08) or marked as
-    "insufficient data."
+  - Excluded from ranking outputs (FR-RANK-08) and marked with
+    `rankingEligibility = excluded_low_response` (FR-RANK-10).
 
 ## 6. Ranking Queries `[P2]`
 
@@ -115,6 +117,12 @@ All ranking queries accept filters: `roundId`, `facultyId`,
   desc (FR-RANK-03).
 - **Percentile** —
   `percent_rank() OVER (PARTITION BY scope ORDER BY scoreWebsite)`.
+
+Tie-break order (FR-RANK-09), applied when `scoreWebsite` is equal:
+
+1. Higher `responseRate`.
+2. More recent `submittedAt` (latest wins).
+3. `website_name` ascending (A-Z).
 
 Cross-faculty ranking only available to `super_admin` and `executive`
 (FR-RANK-05, FR-RANK-06).
@@ -156,6 +164,9 @@ Scoring queries are read-heavy. Strategy:
 | Form soft-deleted | Excluded from dashboard but kept in responses for history |
 | Website soft-deleted | Keep historic scores visible in round archive; hidden from live dashboard |
 | Conflicting rounds (same website, same round) | Sum inside the round; dedup by form id |
+
+If a website is excluded from ranking by threshold, dashboard and
+scorecard must display an explicit explanation string (FR-RANK-11).
 
 ## 11. Manual Tags `[P2]`
 

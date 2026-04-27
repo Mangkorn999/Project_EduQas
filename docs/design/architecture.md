@@ -3,7 +3,7 @@
 System-level overview of the EILA Website Evaluation System. For per-layer
 details see the other docs in this folder.
 
-SRS source: [`../../SRS2.0.md`](../../SRS2.0.md) §2 (Overall Description)
+SRS source: [`../../SRS2.1.md`](../../SRS2.1.md) §2 (Overall Description)
 and §5 (Constraints).
 
 ## 1. System Context `[P1]`
@@ -43,7 +43,7 @@ flowchart LR
 ```
 
 **Actors** — six PSU-internal roles only. No anonymous public
-respondents (SRS2.0 §1.2 exclusion).
+respondents (SRS2.1 §1.2 exclusion).
 
 **External systems** — PSU Passport for identity, PSU SMTP for email,
 evaluated websites (opened in a new browser tab by evaluators).
@@ -71,7 +71,7 @@ a dedicated worker; see `deployment.md`).
 | Drag-drop | dnd-kit | Keyboard alternative baked in (NFR-ACCESS-04) |
 | Forms | React Hook Form + Zod | NFR-MAINT-02 mandates shared Zod schema FE/BE |
 | Backend framework | Fastify | Lightweight, schema-first, good JWT + rate-limit plugins |
-| ORM | **Drizzle** | Deviation from SRS2.0 Prisma mandate; see README deviation log |
+| ORM | **Drizzle** | Official stack in SRS2.1 |
 | Database | PostgreSQL | Row-level security via app-layer guards, JSON for flexible answers |
 | Auth | PSU Passport OAuth 2.0 + PKCE, JWT + refresh rotation | FR-AUTH-01..20 |
 | Scheduler | node-cron | §5.1 technical constraint |
@@ -84,7 +84,7 @@ a dedicated worker; see `deployment.md`).
 - **Logging** — pino JSON at the backend; frontend errors shipped via a
   small `/api/v1/logs/client` endpoint.
 - **Error handling** — unified error envelope
-  `{error: {code, message, details}}`; see `api-contracts.md` §Conventions.
+  `{error: {code, message, requestId, details?}}`; see `api-contracts.md` §Conventions.
 - **i18n** `[P3]` — Thai default, English secondary (Phase 3); keep copy
   in message catalogs from day one even though Phase 1 ships Thai only.
 - **Timezone** — all times persisted as UTC `timestamptz`; rendered in
@@ -98,7 +98,7 @@ a dedicated worker; see `deployment.md`).
 
 ## 5. Phase Boundaries
 
-SRS2.0 Appendix E:
+SRS2.1 Appendix E:
 
 - **Phase 1** `[P1]` — auth, registry, rounds, form builder, criteria
   presets, evaluator view, response submission, basic dashboard, JSON +
