@@ -1,4 +1,10 @@
 {
+	"scripts": {
+		"db:seed": "tsx db/seed/0001_faculties.ts",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:check": "drizzle-kit check"
+	},
 	"dependencies": {
 		"@fastify/cookie": "^11.0.2",
 		"@fastify/cors": "^11.2.0",
