@@ -27,6 +27,8 @@ export const responses = pgTable('responses', {
   formVersionId: uuid('form_version_id').references(() => formVersions.id),
   assignmentId: uuid('assignment_id').references(() => evaluatorAssignments.id),
   respondentId: uuid('respondent_id').notNull().references(() => users.id),
+  // FR-EVAL-07 — metadata timestamps ทั้ง 3 จุด
+  formOpenedAt: timestamp('form_opened_at', { withTimezone: true }),
   // FR-EVAL-03 — บันทึกเวลาเปิดเว็บจริง (soft gate สำหรับ submit)
   websiteOpenedAt: timestamp('website_opened_at', { withTimezone: true }),
   submittedAt: timestamp('submitted_at', { withTimezone: true }),

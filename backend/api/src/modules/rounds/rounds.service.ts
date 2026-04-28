@@ -1,6 +1,6 @@
 import { db } from '../../../../db'
-import { rounds, roundWebsites } from '../../../../db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
+import { rounds, roundWebsites, forms } from '../../../../db/schema'
+import { eq, and, isNull, ne } from 'drizzle-orm'
 
 export class RoundsService {
   async listRounds(scopeFilter?: string, facultyFilter?: string, academicYear?: number, status?: string) {
@@ -65,11 +65,12 @@ export class RoundsService {
     const [existing] = await db.select().from(rounds).where(and(...filters))
     if (!existing) throw new Error('not_found')
     
-    // FR-ROUND-07 will require firing an event or updating forms to auto-close.
-    // For now, we update the round status.
-    await db.update(rounds).set({
-      status: 'closed',
-      closeDate: new Date()
-    }).where(eq(rounds.id, id))
+    await db.transaction(async (tx) => {
+      await tx.update(rounds).set({ status: 'closed', closeDate: new Date() }).where(eq(rounds.id, id))
+      // FR-ROUND-07 — auto-close all forms belonging to this round
+      await tx.update(forms)
+        .set({ status: 'closed', updatedAt: new Date() })
+        .where(and(eq(forms.roundId, id), ne(forms.status, 'closed'), isNull(forms.deletedAt)))
+    })
   }
 }

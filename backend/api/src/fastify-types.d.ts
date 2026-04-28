@@ -1,9 +1,19 @@
-// Fastify plugin type augmentations for @fastify/jwt and @fastify/cookie.
+// Fastify plugin type augmentations for @fastify/jwt, @fastify/cookie, @fastify/multipart.
 // export {} makes this a module, so declare module 'fastify' augments instead of replacing.
+
+import type { Readable } from 'stream'
 
 export {}
 
 declare module 'fastify' {
+  interface MultipartFile {
+    fieldname: string
+    filename: string
+    encoding: string
+    mimetype: string
+    file: Readable
+  }
+
   interface FastifyRequest {
     user: {
       userId: string
@@ -14,6 +24,7 @@ declare module 'fastify' {
     }
     jwtVerify<Decoded extends object = object>(options?: object): Promise<Decoded>
     cookies: { [cookieName: string]: string | undefined }
+    file(): Promise<MultipartFile | undefined>
   }
   interface FastifyReply {
     setCookie(name: string, value: string, options?: object): this
