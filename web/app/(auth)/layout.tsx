@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   ClipboardCheck,
+  ClipboardList,
   BarChart3,
   BookOpen,
   HelpCircle,
@@ -21,7 +22,10 @@ export default function AuthLayout({
 }>) {
   const pathname = usePathname();
   const useAppShell =
-    pathname === '/evaluator' || pathname === '/profile' || pathname === '/notifications';
+    pathname.startsWith('/evaluator') || 
+    pathname.startsWith('/forms') ||
+    pathname === '/profile' || 
+    pathname === '/notifications';
 
   if (!useAppShell) {
     return children;
@@ -39,7 +43,8 @@ export default function AuthLayout({
 
         <nav className="flex-1 px-4 space-y-1">
           {[
-            { icon: LayoutDashboard, label: 'หน้าหลัก', href: '/evaluator', active: true },
+            { icon: LayoutDashboard, label: 'หน้าหลัก', href: '/evaluator', active: pathname === '/evaluator' },
+            { icon: ClipboardList, label: 'จัดการ Form', href: '/forms', active: pathname.startsWith('/forms') },
             { icon: ClipboardCheck, label: 'รายการประเมิน', href: '/evaluator' },
             { icon: BarChart3, label: 'สรุปผล', href: '/evaluator' },
             { icon: BookOpen, label: 'คู่มือการใช้งาน', href: '/profile' },
