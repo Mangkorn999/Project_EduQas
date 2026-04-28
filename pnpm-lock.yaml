@@ -28,7 +28,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  api:
+  backend/api:
     dependencies:
       '@fastify/cookie':
         specifier: ^11.0.2
