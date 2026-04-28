@@ -1,28 +1,28 @@
 {
-	"scripts": {
-		"db:seed": "tsx db/seed/0001_faculties.ts",
-		"db:generate": "drizzle-kit generate",
-		"db:migrate": "drizzle-kit migrate",
-		"db:check": "drizzle-kit check"
-	},
-	"dependencies": {
-		"@fastify/cookie": "^11.0.2",
-		"@fastify/cors": "^11.2.0",
-		"@fastify/csrf-protection": "^7.1.0",
-		"@fastify/env": "^6.0.0",
-		"@fastify/jwt": "^10.0.0",
-		"@fastify/multipart": "^10.0.0",
-		"@fastify/rate-limit": "^10.3.0",
-		"drizzle-orm": "^0.45.2",
-		"fastify": "^5.8.5",
-		"fastify-type-provider-zod": "^6.1.0",
-		"postgres": "^3.4.9",
-		"zod": "^4.3.6"
-	},
-	"devDependencies": {
-		"@types/node": "^25.6.0",
-		"drizzle-kit": "^0.31.10",
-		"tsx": "^4.21.0",
-		"typescript": "^6.0.3"
-	}
+  "name": "eila",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.18.3",
+  "workspaces": [
+    "api",
+    "web"
+  ],
+  "scripts": {
+    "dev": "pnpm -r run dev",
+    "build": "pnpm -r run build",
+    "db:seed": "pnpm --filter api db:seed",
+    "db:generate": "pnpm --filter api db:generate",
+    "db:migrate": "pnpm --filter api db:migrate",
+    "db:check": "pnpm --filter api db:check"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
 }
