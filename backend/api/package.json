@@ -7,9 +7,9 @@
     "build": "tsc -p ../../tsconfig.json --noImplicitAny false",
     "start": "node ../../dist/backend/api/src/server.js",
     "db:seed": "tsx ../db/seed/0001_faculties.ts",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:check": "drizzle-kit check"
+    "db:generate": "drizzle-kit generate --config=../../drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config=../../drizzle.config.ts",
+    "db:check": "drizzle-kit check --config=../../drizzle.config.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
@@ -20,13 +20,18 @@
     "@fastify/multipart": "^10.0.0",
     "@fastify/rate-limit": "^10.3.0",
     "drizzle-orm": "^0.45.2",
+    "exceljs": "^4.4.0",
     "fastify": "^5.8.5",
     "fastify-type-provider-zod": "^6.1.0",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.7",
     "postgres": "^3.4.9",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^8.0.0",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"

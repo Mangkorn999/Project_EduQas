@@ -36,6 +36,20 @@
       "when": 1777358896806,
       "tag": "0004_scoring_forms_responses",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777403378618,
+      "tag": "0005_cloudy_switch",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777403902490,
+      "tag": "0006_massive_tattoo",
+      "breakpoints": true
     }
   ]
 }

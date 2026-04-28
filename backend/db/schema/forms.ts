@@ -4,7 +4,7 @@ import { faculties } from './faculties'
 import { users } from './users'
 import { rounds } from './rounds'
 import { websites } from './websites'
-import { formStatusEnum, formScopeEnum, questionTypeEnum } from './enums'
+import { formStatusEnum, formScopeEnum, questionTypeEnum, roleEnum } from './enums'
 
 // ─── Forms ────────────────────────────────────────────────────────────────────
 // FR-FORM-01 — แบบฟอร์มประเมินเว็บไซต์ที่ผูกกับ round + website
@@ -12,13 +12,20 @@ export const forms = pgTable('forms', {
   id: uuid('id').primaryKey().defaultRandom(),
   title: text('title').notNull(),
   description: text('description'),
-  roundId: uuid('round_id').notNull().references(() => rounds.id),
+  roundId: uuid('round_id').references(() => rounds.id),
   websiteTargetId: uuid('website_target_id').references(() => websites.id),
+  // FR-FORM-02/03/04 — snapshot ของ URL/ชื่อ/faculty ณ ตอนสร้างฟอร์ม
+  websiteUrl: text('website_url'),
+  websiteName: text('website_name'),
+  websiteOwnerFaculty: text('website_owner_faculty'),
   scope: formScopeEnum('scope').notNull(),
   status: formStatusEnum('status').notNull().default('draft'),
   // FR-FORM-10/11 — scope control: faculty-level หรือ university-level
   ownerFacultyId: uuid('owner_faculty_id').references(() => faculties.id),
   createdById: uuid('created_by_id').notNull().references(() => users.id),
+  // FR-FORM-15/16 — auto open/close schedule
+  openAt: timestamp('open_at', { withTimezone: true }),
+  closeAt: timestamp('close_at', { withTimezone: true }),
   // FR-FORM-17 — optimistic locking version
   version: integer('version').notNull().default(1),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
@@ -29,6 +36,12 @@ export const forms = pgTable('forms', {
   index('forms_status_idx').on(t.status).where(sql`${t.deletedAt} IS NULL`),
   index('forms_owner_faculty_idx').on(t.ownerFacultyId).where(sql`${t.deletedAt} IS NULL`),
 ])
+
+// FR-FORM-13 — target roles สำหรับ faculty-scoped form (university scope ไม่ใช้)
+export const formTargetRoles = pgTable('form_target_roles', {
+  formId: uuid('form_id').notNull().references(() => forms.id, { onDelete: 'cascade' }),
+  role: roleEnum('role').notNull(),
+})
 
 // ─── Evaluation Criteria ──────────────────────────────────────────────────────
 // FR-CRIT-01~08 — เกณฑ์การประเมิน snapshot ที่ผูกกับ form
