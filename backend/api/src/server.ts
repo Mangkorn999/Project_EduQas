@@ -1,8 +1,8 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
-import cookie from '@fastify/cookie'
+import cookie = require('@fastify/cookie')
 import jwt from '@fastify/jwt'
-import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod'
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
 import csrfMiddleware from './modules/security/csrf.middleware'
 import rateLimitMiddleware from './modules/security/ratelimit.middleware'
 import authRoutes from './modules/auth/oauth.handler'
@@ -14,7 +14,7 @@ import dashboardRoutes from './modules/dashboard/dashboard.handler'
 
 export const server = Fastify({
   logger: true,
-}).withTypeProvider<ZodTypeProvider>()
+})
 
 // Add schema validator and serializer
 server.setValidatorCompiler(validatorCompiler)
