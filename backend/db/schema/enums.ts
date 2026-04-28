@@ -72,3 +72,11 @@ export const notificationStatusEnum = pgEnum('notification_status', [
   'failed',
   'retrying',
 ])
+
+// FR-DATA-07 — PDPA delete/anonymize request lifecycle
+export const pdpaRequestStatusEnum = pgEnum('pdpa_request_status', [
+  'pending',
+  'approved',
+  'rejected',
+  'completed',
+])
