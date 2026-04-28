@@ -124,7 +124,7 @@ export default async function dashboardRoutes(app: FastifyInstance) {
         ))
         .limit(1)
 
-      let eligibility = null
+      let eligibility: Awaited<ReturnType<typeof checkEligibility>> | null = null
       if (form) {
         eligibility = await checkEligibility(id, roundId, form.id, ws.score)
       }
