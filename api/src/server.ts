@@ -8,6 +8,8 @@ import rateLimitMiddleware from './modules/security/ratelimit.middleware'
 import authRoutes from './modules/auth/oauth.handler'
 import websitesRoutes from './modules/websites/websites.handler'
 import roundsRoutes from './modules/rounds/rounds.handler'
+import rankingRoutes from './modules/ranking/ranking.handler'
+import dashboardRoutes from './modules/dashboard/dashboard.handler'
 
 export const server = Fastify({
   logger: true,
@@ -39,6 +41,8 @@ export async function buildServer() {
   await server.register(authRoutes, { prefix: '/api/v1/auth' })
   await server.register(websitesRoutes, { prefix: '/api/v1/websites' })
   await server.register(roundsRoutes, { prefix: '/api/v1/rounds' })
+  await server.register(rankingRoutes, { prefix: '/api/v1/ranking' })
+  await server.register(dashboardRoutes, { prefix: '/api/v1/dashboard' })
 
   // Basic Health Check (NFR-AVAIL-08)
   server.get('/health', async () => {
