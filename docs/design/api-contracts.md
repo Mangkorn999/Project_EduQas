@@ -7,7 +7,7 @@ requirements. All endpoints are served by Fastify under `/api/v1`.
 
 | Concern | Rule |
 |---|---|
-| Base path | `/api/v1` (exception: `/auth/psu`, `/auth/callback`, `/health`) |
+| Base path | `/api/v1` (exception: `/health`) |
 | Auth | `Authorization: Bearer <access_token>` (JWT, 15 min) |
 | Token rotation | See `auth-flow.md` |
 | Content type | `application/json` unless stated otherwise (XLSX / PDF / JSON export) |
@@ -44,21 +44,21 @@ requirements. All endpoints are served by Fastify under `/api/v1`.
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| `GET` | `/auth/psu` | none | Redirects to PSU Passport with PKCE `code_challenge` |
-| `GET` | `/auth/callback` | none | Exchanges code, issues access + refresh token pair |
-| `POST` | `/auth/refresh` | refresh token (body) | Rotates tokens, reuse detection |
-| `POST` | `/auth/logout` | Bearer | Revokes current refresh token |
-| `POST` | `/auth/revoke-all` | Bearer | Revokes all refresh tokens for the user |
-| `GET` | `/auth/me` | Bearer | Returns effective role, faculty, display name |
-| `POST` | `/auth/role-override/otp/request` | Bearer (`super_admin`) | Sends OTP email |
-| `POST` | `/auth/role-override/otp/verify` | Bearer (`super_admin`) | Verifies OTP, applies override, audits |
+| `GET` | `/api/v1/auth/psu` | none | Redirects to PSU Passport with PKCE `code_challenge` |
+| `GET` | `/api/v1/auth/callback` | none | Exchanges code, issues access token and refresh cookie |
+| `POST` | `/api/v1/auth/refresh` | refresh cookie | Rotates tokens, reuse detection |
+| `POST` | `/api/v1/auth/logout` | Bearer | Revokes current refresh token |
+| `POST` | `/api/v1/auth/revoke-all` | Bearer | Revokes all refresh tokens for the user |
+| `GET` | `/api/v1/auth/me` | Bearer | Returns effective role, faculty, display name |
+| `POST` | `/api/v1/auth/role-override/otp/request` | Bearer (`super_admin`) | Sends OTP email |
+| `POST` | `/api/v1/auth/role-override/otp/verify` | Bearer (`super_admin`) | Verifies OTP, applies override, audits |
 
-### 2.1 `POST /auth/refresh`
+### 2.1 `POST /api/v1/auth/refresh`
 
 | Field | Value |
 |---|---|
-| Request | `{ refreshToken: string }` |
-| Response 200 | `{ accessToken: string, refreshToken: string, accessTokenExp: ISO, refreshTokenExp: ISO }` |
+| Request | `refreshToken` is read from HttpOnly cookie |
+| Response 200 | `{ accessToken: string }` |
 | Errors | `401 token_reuse` (triggers revoke-all, FR-AUTH-10), `401 unauthenticated` |
 
 ## 3. Website Registry `[P1]`
@@ -103,7 +103,7 @@ requirements. All endpoints are served by Fastify under `/api/v1`.
 | `POST` | `/api/v1/forms/:id/close` | owner admin | open → closed |
 | `POST` | `/api/v1/forms/:id/duplicate` | owner admin | Clone form as a new draft |
 | `GET` | `/api/v1/forms/:id/versions` | owner admin | List snapshots |
-| `POST` | `/api/v1/forms/:id/rollback` | owner admin | Create a new draft from snapshot (FR-FORM-20) |
+| `POST` | `/api/v1/forms/:id/versions/:vid/rollback` | owner admin | Create a new draft from snapshot (FR-FORM-20) |
 | `GET` | `/api/v1/forms/:id/export.json` | owner admin | JSON export without responses (FR-IE-04) |
 | `POST` | `/api/v1/forms/import.json` | admin | Import JSON with Zod validation, preview flow (FR-IE-02, FR-IE-05) |
 
@@ -111,11 +111,12 @@ requirements. All endpoints are served by Fastify under `/api/v1`.
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| `GET` | `/api/v1/forms/:id/responses` | owner admin, `super_admin`, `executive` | List; optional `?userId` (admin only) |
-| `POST` | `/api/v1/forms/:id/responses` | respondent (in scope) | Create or upsert. Soft gate: requires `websiteOpenedAt` prior to submit (FR-EVAL-06) |
+| `GET` | `/api/v1/forms/:formId/responses` | owner admin, `super_admin`, `executive` | List; optional `?userId` (admin only) |
+| `POST` | `/api/v1/forms/:formId/responses` | respondent (in scope) | Create or upsert. Soft gate: requires `websiteOpenedAt` prior to submit (FR-EVAL-06) |
 | `GET` | `/api/v1/responses/:id` | owner of response or owner admin | Read |
 | `PATCH` | `/api/v1/responses/:id` | owner of response | Allowed only while form is `open` (FR-RESP-03) |
-| `POST` | `/api/v1/forms/:id/website-open` | respondent | Logs `websiteOpenedAt` (FR-EVAL-03) |
+| `POST` | `/api/v1/responses/:id/submit` | owner of response | Final submit after website has been opened |
+| `POST` | `/api/v1/forms/:formId/website-open` | respondent | Logs `websiteOpenedAt` (FR-EVAL-03) |
 
 Request body (submit):
 

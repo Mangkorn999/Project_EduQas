@@ -9,8 +9,13 @@ import authRoutes from './modules/auth/oauth.handler'
 import websitesRoutes from './modules/websites/websites.handler'
 import roundsRoutes from './modules/rounds/rounds.handler'
 import formsRoutes from './modules/forms/forms.handler'
+import responsesRoutes from './modules/responses/responses.handler'
+import templatesRoutes from './modules/templates/templates.handler'
+import notificationsRoutes from './modules/notifications/notifications.handler'
 import rankingRoutes from './modules/ranking/ranking.handler'
 import dashboardRoutes from './modules/dashboard/dashboard.handler'
+import usersRoutes, { facultiesRoutes } from './modules/users/users.handler'
+import { registerCronJobs } from './modules/scheduler/cron.registry'
 
 export const server = Fastify({
   logger: true,
@@ -26,7 +31,7 @@ export async function buildServer() {
     credentials: true,
   })
 
-  await server.register(cookie, {
+  await server.register(cookie as any, {
     secret: process.env.COOKIE_SECRET || 'super-secret-cookie-password',
   })
 
@@ -43,6 +48,11 @@ export async function buildServer() {
   await server.register(websitesRoutes, { prefix: '/api/v1/websites' })
   await server.register(roundsRoutes, { prefix: '/api/v1/rounds' })
   await server.register(formsRoutes, { prefix: '/api/v1/forms' })
+  await server.register(responsesRoutes, { prefix: '/api/v1' })
+  await server.register(templatesRoutes, { prefix: '/api/v1' })
+  await server.register(notificationsRoutes, { prefix: '/api/v1' })
+  await server.register(usersRoutes, { prefix: '/api/v1/users' })
+  await server.register(facultiesRoutes, { prefix: '/api/v1/faculties' })
   await server.register(rankingRoutes, { prefix: '/api/v1/ranking' })
   await server.register(dashboardRoutes, { prefix: '/api/v1/dashboard' })
 
@@ -50,6 +60,8 @@ export async function buildServer() {
   server.get('/health', async () => {
     return { status: 'ok', db: 'ok', smtp: 'ok', scheduler: 'ok' }
   })
+
+  registerCronJobs()
 
   return server
 }

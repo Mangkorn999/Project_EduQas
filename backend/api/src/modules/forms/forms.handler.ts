@@ -280,6 +280,39 @@ export default async function formsRoutes(app: FastifyInstance) {
     }
   })
 
+  app.post('/:id/close', {
+    preHandler: [authenticate, authorize(['super_admin', 'admin'])]
+  }, async (request, reply) => {
+    const { id } = request.params as any
+    const user = request.user as any
+    const facultyScope = user.role === 'admin' ? user.facultyId : undefined
+
+    try {
+      const data = await formsService.closeForm(id, facultyScope)
+      return { data }
+    } catch (err: any) {
+      if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
+      if (err.message === 'form_not_open') return reply.code(422).send({ error: { code: 'business_rule', message: 'Can only close open forms' } })
+      return reply.code(400).send({ error: { code: 'business_rule', message: err.message } })
+    }
+  })
+
+  app.post('/:id/duplicate', {
+    preHandler: [authenticate, authorize(['super_admin', 'admin'])]
+  }, async (request, reply) => {
+    const { id } = request.params as any
+    const user = request.user as any
+    const facultyScope = user.role === 'admin' ? user.facultyId : undefined
+
+    try {
+      const data = await formsService.duplicateForm(id, facultyScope)
+      return reply.code(201).send({ data })
+    } catch (err: any) {
+      if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
+      return reply.code(400).send({ error: { code: 'business_rule', message: err.message } })
+    }
+  })
+
   app.get('/:id/versions', {
     preHandler: [authenticate]
   }, async (request, reply) => {
