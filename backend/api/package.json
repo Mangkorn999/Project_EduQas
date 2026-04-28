@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p ../tsconfig.json --noImplicitAny false",
-    "start": "node ../dist/api/src/server.js",
+    "build": "tsc -p ../../tsconfig.json --noImplicitAny false",
+    "start": "node ../../dist/backend/api/src/server.js",
     "db:seed": "tsx ../db/seed/0001_faculties.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
