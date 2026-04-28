@@ -6,6 +6,8 @@ import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-
 import csrfMiddleware from './modules/security/csrf.middleware'
 import rateLimitMiddleware from './modules/security/ratelimit.middleware'
 import authRoutes from './modules/auth/oauth.handler'
+import websitesRoutes from './modules/websites/websites.handler'
+import roundsRoutes from './modules/rounds/rounds.handler'
 
 export const server = Fastify({
   logger: true,
@@ -35,6 +37,8 @@ export async function buildServer() {
 
   // Register API routes
   await server.register(authRoutes, { prefix: '/api/v1/auth' })
+  await server.register(websitesRoutes, { prefix: '/api/v1/websites' })
+  await server.register(roundsRoutes, { prefix: '/api/v1/rounds' })
 
   // Basic Health Check (NFR-AVAIL-08)
   server.get('/health', async () => {

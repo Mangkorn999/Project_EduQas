@@ -22,6 +22,13 @@
       "when": 1777347559722,
       "tag": "0002_0001_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777349933558,
+      "tag": "0003_tan_cannonball",
+      "breakpoints": true
     }
   ]
 }
