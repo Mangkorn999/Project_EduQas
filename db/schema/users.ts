@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, uniqueIndex, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { inet } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import { faculties } from './faculties'
@@ -30,7 +30,12 @@ export const roleOverrides = pgTable('role_overrides', {
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdateFn(() => new Date()),
-})
+}, (t) => [
+  // 1 user มี active override ได้แค่ 1 อัน
+  uniqueIndex('role_overrides_user_active_uniq')
+    .on(t.userId)
+    .where(sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > now()`),
+])
 
 // FR-AUTH-08/09 — hashed refresh token, atomic rotation
 export const refreshTokens = pgTable('refresh_tokens', {
@@ -39,7 +44,7 @@ export const refreshTokens = pgTable('refresh_tokens', {
   tokenHash: text('token_hash').notNull().unique(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
-  replacedByTokenId: uuid('replaced_by_token_id'),
+  replacedByTokenId: uuid('replaced_by_token_id'), // audit trail เท่านั้น ไม่ต้องทำ FK
   userAgent: text('user_agent'),
   ip: inet('ip'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
