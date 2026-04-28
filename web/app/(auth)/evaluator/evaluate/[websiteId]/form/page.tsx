@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { use } from 'react';
 import { useRouter } from 'next/navigation';
 import { EvaluationForm, getWebsiteById } from '../../../_shared';
 
-export default function Page({ params }: { params: { websiteId: string } }) {
+export default function Page({ params }: { params: Promise<{ websiteId: string }> }) {
+  const { websiteId } = use(params);
   const router = useRouter();
-  const website = getWebsiteById(params.websiteId);
+  const website = getWebsiteById(websiteId);
 
   if (!website) {
     router.push('/evaluator');

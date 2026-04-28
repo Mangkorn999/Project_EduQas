@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Prompt", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Prompt", sans-serif;
+
+  --color-psu-navy: #001d59;
+  --color-psu-gold: #fed65b;
+  --color-psu-blue-container: #003087;
+  --color-surface-container: #e5eeff;
+  --color-on-surface: #0b1c30;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased bg-[#f8f9ff] text-on-surface;
+  }
+}
+
+.transition-smooth {
+  @apply transition-all duration-300 ease-in-out;
+}
