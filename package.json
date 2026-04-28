@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.18.3",
   "workspaces": [
-    "api",
+    "backend/api",
     "web"
   ],
   "scripts": {
