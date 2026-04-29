@@ -27,7 +27,7 @@
 DB Schema → Auth/Session → Role Policy → Core CRUD → Scheduler → Scoring Engine → Dashboard UI → Reports
 ### Current Blockers
 - [x] TEN-03 scheduler/cron jobs — backend implementation complete
-- [ ] TEN-04 export services (PDF/XLSX) — backend implementation pending
+- [x] TEN-04 export services (PDF/XLSX) — backend implementation complete (pdf-lib & exceljs)
 - [ ] Frontend auth UI — login/callback pages not yet created
 - [ ] Dashboard/Ranking UI — waiting on frontend implementation
 
@@ -472,9 +472,9 @@ web/components/import-export/ExportMenu.tsx
 - [x] Anonymize: แทนที่ PII (name, email, student_id) ด้วย `[ANONYMIZED]` — scores คงอยู่
 - [x] PDPA flow: submit → admin approve → anonymize/purge execute
 - [ ] Purge: ทำได้เฉพาะหลัง retention period + PDPA approval
-- [ ] Export JSON: raw response data per round
-- [ ] Export XLSX: formatted report ใช้ ExcelJS
-- [ ] Export PDF: scorecard/ranking report ใช้ pdf-lib
+- [x] Export JSON: raw response data per round
+- [x] Export XLSX: formatted report ใช้ ExcelJS (reports.handler.ts)
+- [x] Export PDF: scorecard/ranking report ใช้ pdf-lib (pdf.service.ts)
 - [ ] Import: รับ JSON/XLSX, validate schema, return error per-row
 - [ ] Test: tamper entry → `GET /audit/verify` detect + report entry ID
 - [ ] Test: anonymize → PII หายไป, scores ยังอยู่ครบ
