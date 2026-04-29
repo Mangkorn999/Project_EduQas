@@ -8,6 +8,7 @@ import {
   approvePdpaRequest,
   rejectPdpaRequest,
 } from './pdpa.service'
+import { createAuditLog } from '../audit/audit.service'
 
 export default async function pdpaRoutes(app: FastifyInstance) {
   app.post(
@@ -20,6 +21,8 @@ export default async function pdpaRoutes(app: FastifyInstance) {
 
       try {
         const data = await submitPdpaRequest(user.sub, reason)
+        // บันทึกการส่งคำร้อง PDPA
+        await createAuditLog({ userId: user.sub, ip: request.ip }, 'pdpa.submit', 'pdpa_request', data.id, null, { reason })
         return reply.code(201).send({ data })
       } catch (err: any) {
         if (err.message === 'pending_request_exists') {
@@ -49,6 +52,8 @@ export default async function pdpaRoutes(app: FastifyInstance) {
 
       try {
         const data = await approvePdpaRequest(id, user.sub)
+        // บันทึกการอนุมัติคำร้อง PDPA และ Anonymize ข้อมูลผู้ใช้
+        await createAuditLog({ userId: user.sub, ip: request.ip }, 'pdpa.approve', 'pdpa_request', id, { status: 'pending' }, { status: 'approved' })
         return { data }
       } catch (err: any) {
         if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Request not found' } })
@@ -71,6 +76,8 @@ export default async function pdpaRoutes(app: FastifyInstance) {
 
       try {
         const data = await rejectPdpaRequest(id, user.sub, reason)
+        // บันทึกการปฏิเสธคำร้อง PDPA
+        await createAuditLog({ userId: user.sub, ip: request.ip }, 'pdpa.reject', 'pdpa_request', id, { status: 'pending' }, { status: 'rejected', reason })
         return { data }
       } catch (err: any) {
         if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Request not found' } })
