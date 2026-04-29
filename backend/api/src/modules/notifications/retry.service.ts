@@ -53,7 +53,7 @@ export class EmailRetryService {
       .innerJoin(users, eq(notifications.userId, users.id))
       .where(eq(notificationLog.id, logId))
 
-    if (!log || log.log.status === 'delivered') return
+    if (!log || log.log.status === 'sent') return
 
     try {
       // 🚀 พยายามส่งอีเมล
@@ -63,7 +63,7 @@ export class EmailRetryService {
       await db
         .update(notificationLog)
         .set({
-          status: 'delivered',
+          status: 'sent',
           deliveredAt: new Date(),
           errorMessage: null,
           updatedAt: new Date(),
