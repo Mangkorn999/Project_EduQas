@@ -12,8 +12,8 @@ import {
 import { getPostLoginPath } from '@/lib/auth/role-routing';
 import type { UserRole } from '@/lib/auth/AuthContext';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
-const REAL_LOGIN_URL = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || `${BASE_URL}/auth/login`;
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const REAL_LOGIN_URL = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'http://localhost:3001/auth/psu';
 
 export default function LoginPage() {
   const router = useRouter();

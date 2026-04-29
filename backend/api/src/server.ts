@@ -185,7 +185,7 @@ export async function buildServer() {
 export async function start() {
   try {
     const app = await buildServer()
-    const port = Number(process.env.PORT) || 3000
+    const port = Number(process.env.PORT) || 3001
     await app.listen({ port, host: '0.0.0.0' })
     console.log(`Server is listening on port ${port}`)
   } catch (err) {
