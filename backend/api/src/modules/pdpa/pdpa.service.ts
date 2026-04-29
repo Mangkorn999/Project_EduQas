@@ -101,3 +101,33 @@ export async function rejectPdpaRequest(requestId: string, reviewedById: string,
 
   return updated
 }
+
+export async function purgePdpaData(requestId: string, adminId: string) {
+  const [request] = await db
+    .select()
+    .from(pdpaRequests)
+    .where(eq(pdpaRequests.id, requestId))
+
+  if (!request) throw new Error('not_found')
+  // We'll allow it from approved or completed status.
+  if (request.status !== 'completed' && request.status !== 'approved') {
+    throw new Error('invalid_status_for_purge')
+  }
+
+  // Set deletedAt for the user to hard-remove them from active queries
+  await db
+    .update(users)
+    .set({
+      deletedAt: new Date(),
+    })
+    .where(eq(users.id, request.userId))
+
+  // Mark request as purged
+  const [updated] = await db
+    .update(pdpaRequests)
+    .set({ status: 'completed', completedAt: new Date() }) 
+    .where(eq(pdpaRequests.id, requestId))
+    .returning()
+
+  return updated
+}

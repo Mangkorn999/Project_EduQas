@@ -33,6 +33,6 @@ export const roleOverrides = pgTable('role_overrides', {
   // 1 user มี active override ได้แค่ 1 อัน
   uniqueIndex('role_overrides_user_active_uniq')
     .on(t.userId)
-    .where(sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > now()`),
+    .where(sql`${t.expiresAt} IS NULL`),
 ])
 

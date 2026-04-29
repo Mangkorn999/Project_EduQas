@@ -42,7 +42,7 @@ export async function createAuditLog(
   entityId?: string,
   oldValue?: unknown,
   newValue?: unknown,
-): Promise<void> {
+): Promise<typeof auditLog.$inferSelect> {
   try {
     const lastRow = await db
       .select({ hash: auditLog.hash })
@@ -58,7 +58,8 @@ export async function createAuditLog(
     const newId = crypto.randomUUID()
     const userId = ctx.userId ?? ''
     const ip = ctx.ip ?? ''
-    const now = new Date().toISOString()
+    const now = new Date()
+    const isoTimestamp = now.toISOString()
 
     const hash = computeHash(
       prevHash,
@@ -70,10 +71,10 @@ export async function createAuditLog(
       oldValue,
       newValue,
       ip,
-      now,
+      isoTimestamp,
     )
 
-    await db.insert(auditLog).values({
+    const [inserted] = await db.insert(auditLog).values({
       uuid: newId,
       userId: ctx.userId ?? null,
       action,
@@ -84,9 +85,13 @@ export async function createAuditLog(
       ip: ctx.ip ?? null,
       prevHash,
       hash,
-    })
+      createdAt: now,
+    }).returning()
+
+    return inserted
   } catch (err) {
     process.stderr.write(`[audit] createAuditLog error: ${String(err)}\n`)
+    throw err
   }
 }
 

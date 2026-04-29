@@ -86,7 +86,7 @@ export class ResponsesService {
 
       if (form.status !== 'open') {
         const err: any = new Error('Form is not open for submission')
-        err.statusCode = 422
+        err.statusCode = 409
         err.code = 'form_not_open'
         throw err
       }
@@ -214,7 +214,7 @@ export class ResponsesService {
 
       if (!form || form.status !== 'open') {
         const err: any = new Error('Form is not open for submission')
-        err.statusCode = 422
+        err.statusCode = 409
         err.code = 'form_not_open'
         throw err
       }
