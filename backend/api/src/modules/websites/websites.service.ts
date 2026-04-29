@@ -1,5 +1,6 @@
+import ExcelJS from 'exceljs'
 import { db } from '../../../../db'
-import { websites } from '../../../../db/schema'
+import { websites, faculties } from '../../../../db/schema'
 import { eq, and, isNull, ilike } from 'drizzle-orm'
 
 export class WebsitesService {
@@ -76,8 +77,64 @@ export class WebsitesService {
     } catch {
       throw new Error('invalid_url')
     }
-    
-    // Optional: Head request to check if reachable could go here
-    // For now we just rely on format. URL validator job handles Reachability checks.
+  }
+
+  async importWebsitesXlsx(buffer: Uint8Array) {
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer as any)
+
+    const worksheet = workbook.worksheets[0]
+    if (!worksheet) throw new Error('empty_workbook')
+
+    const facultyCache = new Map<string, string>()
+    const created: number[] = []
+    const updated: number[] = []
+    const errors: { row: number; reason: string }[] = []
+
+    const rows: ExcelJS.Row[] = []
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) rows.push(row)
+    })
+
+    for (const row of rows) {
+      const rowNumber = row.number
+      const name = String(row.getCell(1).value ?? '').trim()
+      const url = String(row.getCell(2).value ?? '').trim()
+      const category = String(row.getCell(3).value ?? '').trim() || undefined
+      const facultyCode = String(row.getCell(4).value ?? '').trim()
+
+      if (!name || !url || !facultyCode) {
+        errors.push({ row: rowNumber, reason: 'missing required fields: name, url, faculty_code' })
+        continue
+      }
+
+      try { new URL(url) } catch {
+        errors.push({ row: rowNumber, reason: `invalid URL: ${url}` })
+        continue
+      }
+
+      let ownerFacultyId = facultyCache.get(facultyCode)
+      if (!ownerFacultyId) {
+        const [faculty] = await db.select().from(faculties).where(eq(faculties.code, facultyCode))
+        if (!faculty) {
+          errors.push({ row: rowNumber, reason: `faculty not found for code: ${facultyCode}` })
+          continue
+        }
+        facultyCache.set(facultyCode, faculty.id)
+        ownerFacultyId = faculty.id
+      }
+
+      const [existing] = await db.select().from(websites).where(and(eq(websites.url, url), isNull(websites.deletedAt)))
+
+      if (existing) {
+        await db.update(websites).set({ name, category, ownerFacultyId }).where(eq(websites.id, existing.id))
+        updated.push(rowNumber)
+      } else {
+        await db.insert(websites).values({ name, url, category, ownerFacultyId })
+        created.push(rowNumber)
+      }
+    }
+
+    return { created: created.length, updated: updated.length, errors }
   }
 }
