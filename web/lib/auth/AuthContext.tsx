@@ -1,45 +1,77 @@
 'use client';
 
-import { createContext, useMemo, useState } from 'react';
+import { createContext, useMemo, useState, useEffect } from 'react';
 
 export type AuthUser = {
   id: string;
   name: string;
   faculty: string;
-  role: 'student' | 'staff' | 'teacher';
+  role: 'student' | 'staff' | 'teacher' | 'admin' | 'super_admin' | 'executive';
 };
 
 type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const mockUser: AuthUser = {
-  id: 'mock-user-1',
-  name: 'สมชาย รักไทย',
-  faculty: 'คณะวิศวกรรมศาสตร์',
-  role: 'staff',
-};
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export function AuthProvider({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [user, setUser] = useState<AuthUser | null>(mockUser);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchSession() {
+      try {
+        const res = await fetch(`${API_URL}/auth/me`, {
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUser({
+            id: data.id,
+            name: data.displayName,
+            faculty: data.facultyId ?? '',
+            role: data.role,
+          });
+        }
+      } catch {
+        // Ignore - user not authenticated
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchSession();
+  }, []);
+
+  const logout = async () => {
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      // Ignore logout errors
+    }
+    setUser(null);
+  };
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       isAuthenticated: Boolean(user),
-      isLoading: false,
-      logout: () => setUser(null),
+      isLoading,
+      logout,
     }),
-    [user]
+    [user, isLoading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

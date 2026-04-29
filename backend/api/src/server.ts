@@ -67,6 +67,10 @@ export async function buildServer() {
 
   await server.register(jwt, {
     secret: process.env.JWT_SECRET || 'super-secret-jwt-key',
+    cookie: {
+      cookieName: 'accessToken',
+      signed: false,
+    },
   })
 
   await server.register(multipart, {

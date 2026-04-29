@@ -1,17 +1,19 @@
 import type { UserRole } from './AuthContext';
 
-export function getPostLoginPath(role?: UserRole | null) {
+type BackendRole = 'super_admin' | 'admin' | 'executive' | 'teacher' | 'staff' | 'student';
+
+export function getPostLoginPath(role?: UserRole | BackendRole | null) {
   switch (role) {
     case 'super_admin':
-      return '/super-admin';
     case 'admin':
-      return '/admin';
+      return '/admin/audit';
     case 'executive':
-      return '/executive';
+    case 'teacher':
+    case 'staff':
+    case 'student':
     case 'user':
-      return '/user';
     default:
-      return '/login';
+      return '/evaluator';
   }
 }
 

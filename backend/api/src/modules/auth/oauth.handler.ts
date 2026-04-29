@@ -258,12 +258,22 @@ export default async function authRoutes(app: FastifyInstance) {
         psuPassportId: user.psuPassportId,
       })
 
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+
       reply.setCookie('refreshToken', rawToken, {
         path: '/api/v1/auth',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60,
+      })
+
+      reply.setCookie('accessToken', accessToken, {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 15 * 60,
       })
 
       await createAuditLog(
@@ -275,7 +285,7 @@ export default async function authRoutes(app: FastifyInstance) {
         { role: effectiveRole },
       )
 
-      return { accessToken }
+      return reply.redirect(`${frontendUrl}/callback`)
     } catch (error: any) {
       request.log.error(
         { err: error, stack: error?.stack },
