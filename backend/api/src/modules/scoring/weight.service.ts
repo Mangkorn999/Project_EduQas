@@ -1,9 +1,10 @@
 /**
- * Weight & Normalization Service
+ * Weight, Normalization & Response Rate Service
  *
- * ทำหน้าที่ normalize ค่าคะแนนจาก question types ต่างๆ ให้อยู่ในช่วง [0, 1]
- * เพื่อให้สูตร weighted average ใน score.service.ts ทำงานได้ถูกต้อง
- * ตาม scoring-and-ranking.md §3.1
+ * 1) Normalize ค่าคะแนนจาก question types ต่างๆ เป็น [0, 1]
+ * 2) คำนวณ response rate สำหรับ ranking eligibility
+ *
+ * ตาม scoring-and-ranking.md §3.1 และ §4
  */
 
 type QuestionType = 'rating' | 'scale_5' | 'scale_10' | 'number' | 'boolean'

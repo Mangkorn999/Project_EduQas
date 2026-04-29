@@ -164,8 +164,8 @@ Request body (submit):
 | `GET` | `/api/v1/notifications/unread-count` | Bearer | |
 | `PUT` | `/api/v1/notifications/:id/read` | Bearer | Mark one as read |
 | `PUT` | `/api/v1/notifications/read-all` | Bearer | Mark all as read |
-| `GET` | `/api/v1/notifications/delivery-status` `[P2]` | `super_admin` | Admin panel view (FR-NOTIF-10) |
-| `POST` | `/api/v1/notifications/:id/resend` `[P2]` | `super_admin` | Manual resend (FR-NOTIF-11, FR-NOTIF-13) |
+| `GET` | `/api/v1/notifications/delivery-status` | `super_admin` | Admin panel view (FR-NOTIF-10) |
+| `POST` | `/api/v1/notifications/:id/resend` | `super_admin` | Manual resend (FR-NOTIF-11, FR-NOTIF-13) — 429 if resent within 24h |
 
 ## 10. Reports `[P1]` for Excel / JSON, `[P2]` for PDF
 
