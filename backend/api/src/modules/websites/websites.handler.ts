@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { WebsitesService } from './websites.service'
 import { authenticate } from '../../middleware/authenticate'
 import { authorize } from '../../middleware/authorize'
+import { createAuditLog } from '../audit/audit.service'
 
 export default async function websitesRoutes(app: FastifyInstance) {
   const service = new WebsitesService()
@@ -44,6 +45,8 @@ export default async function websitesRoutes(app: FastifyInstance) {
       
       try {
         const data = await service.createWebsite({ ...body, ownerFacultyId })
+        // บันทึกการเพิ่มเว็บไซต์ใหม่
+        await createAuditLog({ userId: user.userId, ip: request.ip }, 'website.create', 'website', data.id, null, { name: body.name, url: body.url })
         return reply.code(201).send({ data })
       } catch (err: any) {
         return reply.code(400).send({ error: { code: 'validation_error', message: err.message } })
@@ -64,6 +67,8 @@ export default async function websitesRoutes(app: FastifyInstance) {
       
       try {
         const data = await service.updateWebsite(id, scope, request.body as any)
+        // บันทึกการอัปเดตเว็บไซต์
+        await createAuditLog({ userId: user.userId, ip: request.ip }, 'website.update', 'website', id, null, request.body)
         return { data }
       } catch (err: any) {
         if (err.message === 'not_found') return reply.code(403).send({ error: { code: 'forbidden', message: 'No access' } })
@@ -79,6 +84,8 @@ export default async function websitesRoutes(app: FastifyInstance) {
 
     try {
       await service.softDeleteWebsite(id, scope)
+      // บันทึกการลบเว็บไซต์
+      await createAuditLog({ userId: user.userId, ip: request.ip }, 'website.delete', 'website', id)
       return { success: true }
     } catch (err: any) {
        return reply.code(403).send({ error: { code: 'forbidden', message: 'No access' } })
