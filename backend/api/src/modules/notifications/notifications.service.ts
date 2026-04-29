@@ -2,6 +2,9 @@ import { db } from '../../../../db'
 import { notifications, notificationLog } from '../../../../db/schema'
 import { eq, and, isNull, count, desc, sql, gt } from 'drizzle-orm'
 import { getPaginationOffset, paginatedResponse } from '../../utils/pagination'
+import { EventEmitter } from 'events'
+
+export const emailQueueEmitter = new EventEmitter()
 
 export class NotificationsService {
   async listNotifications(userId: string, page: number, limit: number) {
@@ -122,8 +125,10 @@ export class NotificationsService {
       })
       .returning()
 
-    // TODO: Trigger email send job
-    // For now, just mark as pending
+    // Trigger email send job
+    emailQueueEmitter.emit('enqueue', log.id)
+    console.log(`[notifications] Enqueued email job for notificationLog ${log.id}`)
+
     return log
   }
 

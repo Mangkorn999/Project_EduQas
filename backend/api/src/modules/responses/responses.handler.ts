@@ -4,6 +4,7 @@ import { ResponsesService } from './responses.service'
 import { authenticate } from '../../middleware/authenticate'
 import { authorize } from '../../middleware/authorize'
 import { paginationSchema } from '../../utils/pagination'
+import { createAuditLog } from '../audit/audit.service'
 
 const answerSchema = z.object({
   questionId: z.string().uuid(),
@@ -61,6 +62,8 @@ export default async function responsesRoutes(app: FastifyInstance) {
 
       try {
         const data = await responsesService.upsertResponse(formId, user.userId, answers)
+        // บันทึกการส่งคำตอบ
+        await createAuditLog({ userId: user.userId, ip: request.ip }, 'response.submit', 'response', data.id, null, { formId })
         return reply.code(201).send({ data })
       } catch (err: any) {
         const status = err.statusCode ?? 500
@@ -101,6 +104,8 @@ export default async function responsesRoutes(app: FastifyInstance) {
 
       try {
         const data = await responsesService.updateResponse(responseId, user.userId, answers)
+        // บันทึกการแก้ไขคำตอบ
+        await createAuditLog({ userId: user.userId, ip: request.ip }, 'response.update', 'response', responseId)
         return { data }
       } catch (err: any) {
         const status = err.statusCode ?? 500
