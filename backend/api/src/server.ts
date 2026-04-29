@@ -21,7 +21,7 @@ import notificationsRoutes from './modules/notifications/notifications.handler'
 import assignmentsRoutes from './modules/assignments/assignments.handler'
 import reportsRoutes from './modules/reports/reports.handler'
 import pdpaRoutes from './modules/pdpa/pdpa.handler'
-import { startScheduler } from './scheduler'
+import { startScheduler } from './modules/scheduler/scheduler.module'
 import { db } from '../../db'
 import { sql } from 'drizzle-orm'
 
