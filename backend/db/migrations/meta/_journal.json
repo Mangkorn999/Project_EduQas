@@ -50,6 +50,13 @@
       "when": 1777403902490,
       "tag": "0006_massive_tattoo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777460344017,
+      "tag": "0007_woozy_piledriver",
+      "breakpoints": true
     }
   ]
 }

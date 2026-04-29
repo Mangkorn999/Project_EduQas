@@ -8,7 +8,7 @@ export const users = pgTable('users', {
   psuPassportId: text('psu_passport_id').notNull().unique(),
   email: text('email').notNull(),
   role: roleEnum('role').notNull().default('student'),
-  facultyId: uuid('faculty_id').notNull().references(() => faculties.id),
+  facultyId: uuid('faculty_id').references(() => faculties.id),
   displayName: text('display_name').notNull(),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),

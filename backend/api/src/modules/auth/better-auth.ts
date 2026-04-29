@@ -2,9 +2,14 @@ import { betterAuth } from 'better-auth'
 import { genericOAuth } from 'better-auth/plugins'
 
 // Must match backend role enum (see `backend/db/schema/enums.ts`)
-type InternalRole = 'super_admin' | 'admin' | 'executive' | 'teacher' | 'staff' | 'student'
+type InternalRole =
+  | 'super_admin'
+  | 'admin'
+  | 'executive'
+  | 'teacher'
+  | 'staff'
+  | 'student'
 
-const FALLBACK_FACULTY_ID = '00000000-0000-0000-0000-000000000001'
 
 const allowedRoles = new Set<InternalRole>([
   'super_admin',
@@ -16,13 +21,14 @@ const allowedRoles = new Set<InternalRole>([
 ])
 
 function normalizeRole(input: unknown): InternalRole {
-  const raw = typeof input === 'string' ? input : null
+  const raw = typeof input === 'string' ? input.trim() : ''
   if (!raw) return 'student'
-  return (allowedRoles.has(raw as InternalRole) ? (raw as InternalRole) : 'student') satisfies InternalRole
+  return allowedRoles.has(raw as InternalRole) ? (raw as InternalRole) : 'student'
 }
 
-function normalizeFacultyId(input: unknown): string {
-  return typeof input === 'string' && input.trim() ? input : FALLBACK_FACULTY_ID
+function normalizeFacultyId(input: unknown): string | null {
+  const raw = typeof input === 'string' ? input.trim() : ''
+  return raw || null
 }
 
 const PSU_CLIENT_ID = process.env.PSU_CLIENT_ID
@@ -39,32 +45,12 @@ if (!BETTER_AUTH_SECRET) throw new Error('Missing env var: BETTER_AUTH_SECRET')
 
 export const psuBetterAuth = betterAuth({
   appName: 'EILA',
-  // Better Auth needs an explicit URL for server-side sign-in initiation.
-  // See `better-auth` docs: it checks BETTER_AUTH_URL / baseURL.
   baseURL: BETTER_AUTH_URL,
-
-  // Better Auth secret (required in production).
   secret: BETTER_AUTH_SECRET,
 
-  account: {
-    // We'll read user session info via `auth.api.getSession`, but enabling this
-    // keeps Better Auth flexible if it falls back to cookie-only strategies.
-    storeAccountCookie: true,
-  },
-
+  // Keep the config minimal and OAuth-friendly.
+  // The important part for callback flows is SameSite=Lax.
   advanced: {
-    // Ensure Better Auth session cookie is also sent to our `/auth/callback` route.
-    // Without this, cookie Path scoping can prevent `/auth/callback` from seeing session.
-    cookies: {
-      session_token: {
-        attributes: {
-          path: '/',
-        },
-      },
-    },
-    // SameSite must be 'lax' (not 'strict') because OAuth callbacks are cross-site
-    // top-level GET navigations from PSU (eila.psu.ac.th) back to localhost.
-    // 'strict' would cause the browser to drop OAuth state/PKCE cookies on redirect.
     defaultCookieAttributes: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -76,8 +62,15 @@ export const psuBetterAuth = betterAuth({
   user: {
     additionalFields: {
       psuPassportId: { type: 'string', required: true },
-      facultyId: { type: 'string', required: false, defaultValue: FALLBACK_FACULTY_ID },
-      role: { type: 'string', required: false, defaultValue: 'student' },
+      facultyId: {
+        type: 'string',
+        required: false,
+      },
+      role: {
+        type: 'string',
+        required: false,
+        defaultValue: 'student',
+      },
     },
   },
 
@@ -92,21 +85,41 @@ export const psuBetterAuth = betterAuth({
           scopes: ['openid', 'profile', 'email'],
           pkce: true,
           mapProfileToUser: (profile: any) => {
-            // PSU user info shape is expected to follow repo design docs / mock.
-            const psuPassportId =
-              profile?.psu_passport_id ?? profile?.psuPassportId ?? profile?.sub ?? profile?.id
+            const email =
+              typeof profile?.email === 'string' && profile.email.trim()
+                ? profile.email.trim()
+                : ''
 
-            const email = profile?.email
-            const name = profile?.name ?? profile?.displayName ?? profile?.given_name ?? 'Unnamed PSU User'
+            const name =
+              typeof profile?.name === 'string' && profile.name.trim()
+                ? profile.name.trim()
+                : typeof profile?.displayName === 'string' && profile.displayName.trim()
+                  ? profile.displayName.trim()
+                  : typeof profile?.given_name === 'string' && profile.given_name.trim()
+                    ? profile.given_name.trim()
+                    : 'Unnamed PSU User'
+
+            const resolvedPassportId =
+              profile?.psu_passport_id ??
+              profile?.psuPassportId ??
+              profile?.sub ??
+              profile?.id ??
+              email
+
+            const psuPassportId = String(resolvedPassportId ?? '').trim()
+            if (!psuPassportId) {
+              throw new Error('PSU profile did not contain a usable passport ID')
+            }
 
             const role = normalizeRole(profile?.role)
             const facultyId = normalizeFacultyId(profile?.faculty_id ?? profile?.facultyId)
 
             return {
-              id: String(psuPassportId ?? email ?? 'psu-user'),
-              email,
+              // Better Auth needs a stable unique id
+              id: psuPassportId,
+              email: email || `${psuPassportId}@psu.local`,
               name,
-              psuPassportId: String(psuPassportId),
+              psuPassportId,
               role,
               facultyId,
             }
@@ -116,4 +129,3 @@ export const psuBetterAuth = betterAuth({
     }),
   ],
 })
-
