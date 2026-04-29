@@ -8,6 +8,7 @@ import { SessionService } from './session.service'
 import { OTPService } from './otp.service'
 import { authenticate } from '../../middleware/authenticate'
 import { authorize } from '../../middleware/authorize'
+import { createAuditLog } from '../audit/audit.service'
 
 export default async function authRoutes(app: FastifyInstance) {
   const tokenService = new TokenService(app)
@@ -86,6 +87,9 @@ export default async function authRoutes(app: FastifyInstance) {
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60
     })
+
+    // FR-AUDIT-01: บันทึกการ login สำเร็จ เพื่อ track ว่าใครเข้าระบบเมื่อไหร่
+    await createAuditLog({ userId: user.id, ip: request.ip }, 'auth.login', 'user', user.id, null, { role: effectiveRole })
 
     return { accessToken }
   })
@@ -184,6 +188,8 @@ export default async function authRoutes(app: FastifyInstance) {
       const requester = request.user as any
       try {
         await otpService.verifyRoleOverrideOTP(userId, requester.userId, otp, overrideRole, reason)
+        // FR-AUTH-15: บันทึก role override ที่สำเร็จ เพราะเป็น action ที่มี impact สูง
+        await createAuditLog({ userId: requester.userId, ip: request.ip }, 'auth.role_override', 'user', userId, null, { overrideRole, reason })
         return { success: true }
       } catch (err: any) {
         return reply.code(400).send({ error: { code: 'business_rule', message: err.message } })

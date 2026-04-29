@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { RoundsService } from './rounds.service'
 import { authenticate } from '../../middleware/authenticate'
 import { authorize } from '../../middleware/authorize'
+import { createAuditLog } from '../audit/audit.service'
 
 export default async function roundsRoutes(app: FastifyInstance) {
   const service = new RoundsService()
@@ -64,6 +65,8 @@ export default async function roundsRoutes(app: FastifyInstance) {
           facultyId: body.scope === 'faculty' ? facultyId : null,
           createdById: user.userId
         }, body.websiteIds)
+        // FR-ROUND-08: บันทึกการสร้างรอบประเมิน
+        await createAuditLog({ userId: user.userId, ip: request.ip }, 'round.create', 'round', data.id, null, { name: body.name, scope: body.scope })
         return reply.code(201).send({ data })
       } catch (err: any) {
         return reply.code(400).send({ error: { code: 'validation_error', message: err.message } })
@@ -92,6 +95,8 @@ export default async function roundsRoutes(app: FastifyInstance) {
       
       try {
         const data = await service.updateRound(id, scope, request.body as any, (request.body as any).websiteIds)
+        // FR-ROUND-08: บันทึกการแก้ไขรอบประเมิน
+        await createAuditLog({ userId: user.userId, ip: request.ip }, 'round.update', 'round', id, null, request.body)
         return { data }
       } catch (err: any) {
         if (err.message === 'not_found') return reply.code(403).send({ error: { code: 'forbidden', message: 'No access' } })
@@ -107,6 +112,8 @@ export default async function roundsRoutes(app: FastifyInstance) {
     
     try {
       await service.closeRound(id, scope)
+      // FR-ROUND-08: บันทึกการปิดรอบประเมิน
+      await createAuditLog({ userId: user.userId, ip: request.ip }, 'round.close', 'round', id, { status: 'active' }, { status: 'closed' })
       return { success: true }
     } catch (err: any) {
        return reply.code(403).send({ error: { code: 'forbidden', message: 'No access' } })
