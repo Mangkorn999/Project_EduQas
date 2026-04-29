@@ -1,13 +1,10 @@
 import Fastify from 'fastify'
-import path from 'path'
-import dotenv from 'dotenv'
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
-
 import cors from '@fastify/cors'
 import cookie = require('@fastify/cookie')
 import jwt from '@fastify/jwt'
 import multipart from '@fastify/multipart'
 import fastifyEnv from '@fastify/env'
+import { envSchema } from './config/env'
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
 import csrfMiddleware from './modules/security/csrf.middleware'
 import rateLimitMiddleware from './modules/security/ratelimit.middleware'
@@ -57,31 +54,10 @@ server.setErrorHandler((error: Error & { statusCode?: number; code?: string; det
   })
 })
 
-const schema = {
-  type: 'object',
-  required: ['DATABASE_URL', 'JWT_SECRET', 'COOKIE_SECRET'],
-  properties: {
-    PORT: { type: 'string', default: '3000' },
-    DATABASE_URL: { type: 'string' },
-    JWT_SECRET: { type: 'string' },
-    COOKIE_SECRET: { type: 'string' },
-    CORS_ORIGIN: { type: 'string', default: '*' },
-    NODE_ENV: { type: 'string', default: 'development' },
-    DISABLE_SCHEDULER: { type: 'string' },
-    SMTP_HOST: { type: 'string' },
-    SMTP_PORT: { type: 'string' },
-    SMTP_USER: { type: 'string' },
-    SMTP_PASS: { type: 'string' },
-    SMTP_FROM: { type: 'string' },
-  },
-}
-
 export async function buildServer() {
   await server.register(fastifyEnv, {
-    schema,
-    dotenv: {
-      path: path.resolve(__dirname, '../../../.env'),
-    },
+    schema: envSchema,
+    dotenv: false, // We load it manually in db/index.ts now
     data: process.env,
   })
 
