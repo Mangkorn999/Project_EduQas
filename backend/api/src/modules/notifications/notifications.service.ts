@@ -1,6 +1,6 @@
 import { db } from '../../../../db'
-import { notifications } from '../../../../db/schema'
-import { eq, and, isNull, count, desc } from 'drizzle-orm'
+import { notifications, notificationLog } from '../../../../db/schema'
+import { eq, and, isNull, count, desc, sql, gt } from 'drizzle-orm'
 import { getPaginationOffset, paginatedResponse } from '../../utils/pagination'
 
 export class NotificationsService {
@@ -53,6 +53,78 @@ export class NotificationsService {
       .update(notifications)
       .set({ readAt: new Date() })
       .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)))
+  }
+
+  // FR-NOTIF-10 — delivery status สำหรับ super_admin
+  async getDeliveryStatus(page: number, limit: number) {
+    const offset = getPaginationOffset(page, limit)
+
+    const [rows, [{ value: total }]] = await Promise.all([
+      db
+        .select({
+          id: notifications.id,
+          userId: notifications.userId,
+          kind: notifications.kind,
+          subject: notifications.subject,
+          body: notifications.body,
+          createdAt: notifications.createdAt,
+          logId: notificationLog.id,
+          channel: notificationLog.channel,
+          status: notificationLog.status,
+          attempt: notificationLog.attempt,
+          errorMessage: notificationLog.errorMessage,
+          deliveredAt: notificationLog.deliveredAt,
+        })
+        .from(notifications)
+        .leftJoin(notificationLog, eq(notifications.id, notificationLog.notificationId))
+        .orderBy(desc(notifications.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db.select({ value: count() }).from(notifications),
+    ])
+
+    return paginatedResponse(rows, Number(total), page, limit)
+  }
+
+  // FR-NOTIF-11/13 — resend failed notification (max 1 ครั้งต่อ 24h)
+  async resendNotification(notificationId: string, userId: string) {
+    const [notification] = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.id, notificationId))
+
+    if (!notification) throw new Error('not_found')
+
+    // Check if already resent in last 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const recentResends = await db
+      .select()
+      .from(notificationLog)
+      .where(
+        and(
+          eq(notificationLog.notificationId, notificationId),
+          gt(notificationLog.createdAt, twentyFourHoursAgo)
+        )
+      )
+
+    if (recentResends.length > 0) {
+      throw new Error('rate_limited')
+    }
+
+    // Create new log entry for resend
+    const [log] = await db
+      .insert(notificationLog)
+      .values({
+        notificationId,
+        channel: 'email',
+        status: 'pending',
+        attempt: 1,
+      })
+      .returning()
+
+    // TODO: Trigger email send job
+    // For now, just mark as pending
+    return log
   }
 
   async createNotification(data: {
