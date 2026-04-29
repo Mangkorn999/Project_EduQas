@@ -192,41 +192,6 @@ export default async function templatesRoutes(app: FastifyInstance) {
     },
   )
 
-  app.post(
-    '/forms/from-template/:templateId',
-    {
-      preHandler: [authenticate, authorize(['super_admin', 'admin'])],
-      schema: {
-        body: z.object({
-          title: z.string().min(1),
-          roundId: z.string().uuid().optional(),
-          websiteUrl: z.string().url().optional(),
-          websiteName: z.string().optional(),
-          scope: z.enum(['faculty', 'university']),
-          ownerFacultyId: z.string().uuid().optional(),
-        }),
-      },
-    },
-    async (request, reply) => {
-      const { templateId } = request.params as any
-      const user = request.user as any
-      const body = request.body as any
-
-      const ownerFacultyId =
-        user.role === 'admin' ? user.facultyId : (body.ownerFacultyId ?? user.facultyId)
-
-      try {
-        const data = await service.createFormFromTemplate(templateId, {
-          ...body,
-          ownerFacultyId,
-          createdById: user.sub,
-        })
-        return reply.code(201).send({ data })
-      } catch (err: any) {
-        if (err.message === 'not_found')
-          return reply.code(404).send({ error: { code: 'not_found', message: 'Template not found' } })
-        return reply.code(400).send({ error: { code: 'validation_error', message: err.message } })
-      }
-    },
-  )
+  // Note: POST /forms/from-template/:templateId moved to forms.handler.ts
+  // to serve at correct path /api/v1/forms/from-template/:templateId
 }

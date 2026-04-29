@@ -4,6 +4,7 @@ import { FormsService } from './forms.service'
 import { CriteriaService } from './criteria.service'
 import { QuestionsService } from './questions.service'
 import { SnapshotService } from './snapshot.service'
+import { TemplatesService } from '../templates/templates.service'
 import { authenticate } from '../../middleware/authenticate'
 import { authorize } from '../../middleware/authorize'
 
@@ -12,6 +13,7 @@ export default async function formsRoutes(app: FastifyInstance) {
   const criteriaService = new CriteriaService()
   const questionsService = new QuestionsService()
   const snapshotService = new SnapshotService()
+  const templatesService = new TemplatesService()
 
   // ─── Forms ────────────────────────────────────────────────────────────────────
 
@@ -294,12 +296,151 @@ export default async function formsRoutes(app: FastifyInstance) {
     const { id: formId, vid: versionId } = request.params as any
     const user = request.user as any
     const facultyScope = user.role === 'admin' ? user.facultyId : undefined
-    
+
     try {
       await snapshotService.rollbackToVersion(formId, versionId, facultyScope)
       return { success: true }
     } catch (err: any) {
       return reply.code(400).send({ error: { code: 'rollback_error', message: err.message } })
+    }
+  })
+
+  // ─── Close ────────────────────────────────────────────────────────────────────
+
+  app.post('/:id/close', {
+    preHandler: [authenticate, authorize(['super_admin', 'admin'])]
+  }, async (request, reply) => {
+    const { id } = request.params as any
+    const user = request.user as any
+    const facultyScope = user.role === 'admin' ? user.facultyId : undefined
+
+    try {
+      const data = await formsService.closeForm(id, facultyScope)
+      return { data }
+    } catch (err: any) {
+      if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
+      if (err.message === 'already_closed') return reply.code(422).send({ error: { code: 'business_rule', message: 'Form is already closed' } })
+      return reply.code(400).send({ error: { code: 'validation_error', message: err.message } })
+    }
+  })
+
+  // ─── Duplicate ────────────────────────────────────────────────────────────────
+
+  app.post('/:id/duplicate', {
+    preHandler: [authenticate, authorize(['super_admin', 'admin'])]
+  }, async (request, reply) => {
+    const { id } = request.params as any
+    const user = request.user as any
+    const facultyScope = user.role === 'admin' ? user.facultyId : undefined
+
+    try {
+      const data = await formsService.duplicateForm(id, facultyScope, user.userId)
+      return reply.code(201).send({ data })
+    } catch (err: any) {
+      if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
+      return reply.code(400).send({ error: { code: 'validation_error', message: err.message } })
+    }
+  })
+
+  // ─── Export JSON ──────────────────────────────────────────────────────────────
+
+  app.get('/:id/export.json', {
+    preHandler: [authenticate, authorize(['super_admin', 'admin'])]
+  }, async (request, reply) => {
+    const { id } = request.params as any
+    const user = request.user as any
+    const facultyScope = user.role === 'admin' ? user.facultyId : undefined
+
+    try {
+      const data = await formsService.exportForm(id, facultyScope)
+      return reply
+        .header('Content-Disposition', `attachment; filename="form-${id}.json"`)
+        .send(data)
+    } catch (err: any) {
+      if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
+      return reply.code(500).send({ error: { code: 'internal_error', message: err.message } })
+    }
+  })
+
+  // ─── Import JSON ──────────────────────────────────────────────────────────────
+
+  app.post('/import.json', {
+    preHandler: [authenticate, authorize(['super_admin', 'admin'])],
+    schema: {
+      body: z.object({
+        form: z.object({
+          title: z.string().min(1),
+          description: z.string().optional(),
+          scope: z.enum(['faculty', 'university']),
+        }),
+        criteria: z.array(z.object({
+          id: z.string().optional(),
+          name: z.string().min(1),
+          dimension: z.string().optional(),
+          weight: z.number().int().min(1).optional(),
+        })).optional().default([]),
+        questions: z.array(z.object({
+          questionType: z.enum(['short_text', 'long_text', 'single_choice', 'multi_choice', 'rating', 'scale_5', 'scale_10', 'boolean', 'date', 'number']),
+          label: z.string().min(1),
+          criterionId: z.string().optional(),
+          helpText: z.string().optional(),
+          isRequired: z.boolean().optional(),
+          config: z.any().optional(),
+          sortOrder: z.number().int().optional(),
+        })).optional().default([]),
+      })
+    }
+  }, async (request, reply) => {
+    const user = request.user as any
+    const body = request.body as any
+    const facultyScope = user.role === 'admin' ? user.facultyId : undefined
+
+    if (user.role === 'admin' && body.form.scope === 'university') {
+      return reply.code(403).send({ error: { code: 'forbidden', message: 'Admin cannot import university-scope forms' } })
+    }
+
+    try {
+      const data = await formsService.importFormJson(
+        { ...body.form, criteria: body.criteria, questions: body.questions },
+        user.userId,
+        facultyScope
+      )
+      return reply.code(201).send({ data })
+    } catch (err: any) {
+      return reply.code(400).send({ error: { code: 'import_error', message: err.message } })
+    }
+  })
+
+  // ─── From Template ────────────────────────────────────────────────────────────
+
+  app.post('/from-template/:templateId', {
+    preHandler: [authenticate, authorize(['super_admin', 'admin'])],
+    schema: {
+      body: z.object({
+        title: z.string().min(1),
+        roundId: z.string().uuid().optional(),
+        websiteUrl: z.string().url().optional(),
+        websiteName: z.string().optional(),
+        scope: z.enum(['faculty', 'university']),
+        ownerFacultyId: z.string().uuid().optional(),
+      }),
+    },
+  }, async (request, reply) => {
+    const { templateId } = request.params as any
+    const user = request.user as any
+    const body = request.body as any
+    const ownerFacultyId = user.role === 'admin' ? user.facultyId : (body.ownerFacultyId ?? user.facultyId)
+
+    try {
+      const data = await templatesService.createFormFromTemplate(templateId, {
+        ...body,
+        ownerFacultyId,
+        createdById: user.userId,
+      })
+      return reply.code(201).send({ data })
+    } catch (err: any) {
+      if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Template not found' } })
+      return reply.code(400).send({ error: { code: 'validation_error', message: err.message } })
     }
   })
 }

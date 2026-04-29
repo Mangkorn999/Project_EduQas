@@ -76,7 +76,7 @@ export default async function websitesRoutes(app: FastifyInstance) {
     const { id } = request.params as any
     const user = request.user as any
     const scope = user.role === 'admin' ? user.facultyId : undefined
-    
+
     try {
       await service.softDeleteWebsite(id, scope)
       return { success: true }
@@ -84,4 +84,28 @@ export default async function websitesRoutes(app: FastifyInstance) {
        return reply.code(403).send({ error: { code: 'forbidden', message: 'No access' } })
     }
   })
+
+  app.post(
+    '/import',
+    { preHandler: [authenticate, authorize(['super_admin'])] },
+    async (request, reply) => {
+      const data = await request.file()
+      if (!data) {
+        return reply.code(400).send({ error: { code: 'validation_error', message: 'No file uploaded' } })
+      }
+
+      const chunks: Uint8Array[] = []
+      for await (const chunk of data.file) {
+        chunks.push(chunk as Uint8Array)
+      }
+      const buffer = Buffer.concat(chunks)
+
+      try {
+        const result = await service.importWebsitesXlsx(buffer)
+        return { data: result }
+      } catch (err: any) {
+        return reply.code(400).send({ error: { code: 'import_error', message: err.message } })
+      }
+    }
+  )
 }
