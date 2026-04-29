@@ -62,10 +62,13 @@ export const psuBetterAuth = betterAuth({
         },
       },
     },
+    // SameSite must be 'lax' (not 'strict') because OAuth callbacks are cross-site
+    // top-level GET navigations from PSU (eila.psu.ac.th) back to localhost.
+    // 'strict' would cause the browser to drop OAuth state/PKCE cookies on redirect.
     defaultCookieAttributes: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       path: '/',
     },
   },

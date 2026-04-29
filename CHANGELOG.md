@@ -12,3 +12,5 @@
 ### 🔒 Security
 - Fixed PSU OAuth `redirect_uri` mismatch: env files now use the actual Better Auth callback
   path `http://localhost:3001/api/auth/oauth2/callback/psu` instead of the incorrect `/auth/callback`
+- Fixed OAuth callback cookie loss: changed `sameSite` from `strict` to `lax` in Better Auth
+  and CSRF middleware so OAuth state/PKCE cookies survive cross-site redirects from PSU
