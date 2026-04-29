@@ -10,9 +10,12 @@
 
 import cron from 'node-cron'
 import { db } from '../../../../db'
-import { rounds, forms, websites, notifications, notificationLog } from '../../../../db/schema'
-import { eq, and, isNull, lt, gt, or, sql } from 'drizzle-orm'
+import { rounds, forms, websites, notifications, notificationLog, users, formTargetRoles, responses } from '../../../../db/schema'
+import { eq, and, isNull, lt, gt, or, sql, inArray, notExists, isNotNull } from 'drizzle-orm'
 import { roundStatusEnum, formStatusEnum, notificationStatusEnum } from '../../../../db/schema/enums'
+import { NotificationsService } from '../notifications/notifications.service'
+
+const notificationsService = new NotificationsService()
 
 // Idempotency store — FR-NOTIF-06
 const JOB_RUNS = new Map<string, Date>()
@@ -146,9 +149,44 @@ async function runReminderJob() {
 
   for (const form of formsClosingSoon) {
     try {
-      // TODO: Get assignees who haven't submitted yet
-      // For now, just log
-      console.log(`[scheduler] Reminder: form ${form.id} closing soon`)
+      // Get assignees who haven't submitted yet
+      const targetRolesObj = await db.select({ role: formTargetRoles.role }).from(formTargetRoles).where(eq(formTargetRoles.formId, form.id))
+      const roles = targetRolesObj.map(r => r.role)
+      if (roles.length === 0) continue
+
+      const conditions = [
+        inArray(users.role, roles),
+        isNull(users.deletedAt),
+        notExists(
+          db.select().from(responses).where(
+            and(
+              eq(responses.formId, form.id),
+              eq(responses.respondentId, users.id),
+              isNotNull(responses.submittedAt)
+            )
+          )
+        )
+      ]
+      if (form.ownerFacultyId) {
+        conditions.push(eq(users.facultyId, form.ownerFacultyId))
+      }
+
+      const assignees = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(and(...conditions))
+
+      for (const assignee of assignees) {
+        await notificationsService.createNotification({
+          userId: assignee.id,
+          kind: 'reminder',
+          subject: `แจ้งเตือน: ใกล้หมดเวลาประเมินแบบฟอร์ม ${form.title}`,
+          body: `แบบฟอร์มประเมินนี้จะปิดรับคำตอบในวันที่ ${form.closeAt?.toLocaleDateString('th-TH')}`,
+          relatedFormId: form.id,
+          idempotencyKey: `reminder:${form.id}:${assignee.id}:${now.toISOString().split('T')[0]}`
+        })
+      }
+      console.log(`[scheduler] Reminder sent for form ${form.id} to ${assignees.length} assignees`)
     } catch (err) {
       console.error(`[scheduler] Error sending reminder for form ${form.id}:`, err)
     }
@@ -211,8 +249,18 @@ async function runUrlCheckJob() {
 
       // FR-WEB-09: Notify super_admin if unreachable
       if (status === 'unreachable') {
-        // TODO: Create notification for super_admin
-        console.log(`[scheduler] Website ${website.id} is unreachable - notify super_admin`)
+        const superAdmins = await db.select({ id: users.id }).from(users).where(and(eq(users.role, 'super_admin'), isNull(users.deletedAt)))
+        for (const admin of superAdmins) {
+          await notificationsService.createNotification({
+            userId: admin.id,
+            kind: 'alert',
+            subject: `แจ้งเตือน: เว็บไซต์ไม่สามารถเข้าถึงได้`,
+            body: `ระบบตรวจสอบพบว่าเว็บไซต์ ${website.url} (ID: ${website.id}) ไม่สามารถเข้าถึงได้ โปรดตรวจสอบ`,
+            relatedWebsiteId: website.id,
+            idempotencyKey: `url-check-alert:${website.id}:${admin.id}:${now.toISOString().split('T')[0]}`
+          })
+        }
+        console.log(`[scheduler] Website ${website.id} is unreachable - notified ${superAdmins.length} super_admins`)
       }
     } catch (err) {
       console.error(`[scheduler] Error checking website ${website.id}:`, err)
