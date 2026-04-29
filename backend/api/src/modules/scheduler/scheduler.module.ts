@@ -14,6 +14,7 @@ import { rounds, forms, websites, notifications, notificationLog, users, formTar
 import { eq, and, isNull, lt, gt, or, sql, inArray, notExists, isNotNull } from 'drizzle-orm'
 import { roundStatusEnum, formStatusEnum, notificationStatusEnum } from '../../../../db/schema/enums'
 import { NotificationsService } from '../notifications/notifications.service'
+import { EmailRetryService } from '../notifications/retry.service'
 
 const notificationsService = new NotificationsService()
 
@@ -281,6 +282,9 @@ export function startScheduler() {
 
   // URL check: run daily at 03:00 (NFR-AVAIL-06, FR-AUDIT-06)
   cron.schedule('0 3 * * *', runUrlCheckJob, { timezone: 'Asia/Bangkok' })
+
+  // Initialize Email Retry Service (FR-NOTIF-13)
+  new EmailRetryService()
 
   console.log('[scheduler] Scheduler started successfully')
 }
