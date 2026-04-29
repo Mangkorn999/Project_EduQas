@@ -1,5 +1,5 @@
 import { db } from '../../../../db'
-import { forms } from '../../../../db/schema'
+import { forms, evaluationCriteria, formQuestions } from '../../../../db/schema'
 import { eq, and, isNull } from 'drizzle-orm'
 
 export class FormsService {
@@ -71,8 +71,146 @@ export class FormsService {
     const [existing] = await db.select().from(forms).where(and(...filters))
     if (!existing) throw new Error('not_found')
 
-    await db.update(forms).set({
-      deletedAt: new Date()
-    }).where(eq(forms.id, id))
+    await db.update(forms).set({ deletedAt: new Date() }).where(eq(forms.id, id))
+  }
+
+  async closeForm(id: string, facultyScope?: string) {
+    const filters = [eq(forms.id, id), isNull(forms.deletedAt)]
+    if (facultyScope) filters.push(eq(forms.ownerFacultyId, facultyScope))
+
+    const [existing] = await db.select().from(forms).where(and(...filters))
+    if (!existing) throw new Error('not_found')
+    if (existing.status === 'closed') throw new Error('already_closed')
+
+    const [updated] = await db.update(forms).set({ status: 'closed' }).where(eq(forms.id, id)).returning()
+    return updated
+  }
+
+  async duplicateForm(id: string, facultyScope: string | undefined, userId: string) {
+    const filters = [eq(forms.id, id), isNull(forms.deletedAt)]
+    if (facultyScope) filters.push(eq(forms.ownerFacultyId, facultyScope))
+
+    const [source] = await db.select().from(forms).where(and(...filters))
+    if (!source) throw new Error('not_found')
+
+    const criteria = await db.select().from(evaluationCriteria).where(eq(evaluationCriteria.formId, id))
+    const questions = await db.select().from(formQuestions).where(eq(formQuestions.formId, id))
+
+    return db.transaction(async (tx) => {
+      const [newForm] = await tx.insert(forms).values({
+        title: `${source.title} (copy)`,
+        description: source.description,
+        roundId: source.roundId,
+        websiteTargetId: source.websiteTargetId,
+        websiteUrl: source.websiteUrl,
+        websiteName: source.websiteName,
+        websiteOwnerFaculty: source.websiteOwnerFaculty,
+        scope: source.scope,
+        status: 'draft',
+        ownerFacultyId: source.ownerFacultyId,
+        createdById: userId,
+        openAt: source.openAt,
+        closeAt: source.closeAt,
+      }).returning()
+
+      if (criteria.length > 0) {
+        const criteriaIdMap = new Map<string, string>()
+        for (const c of criteria) {
+          const [nc] = await tx.insert(evaluationCriteria).values({
+            formId: newForm.id,
+            name: c.name,
+            dimension: c.dimension,
+            weight: c.weight,
+          }).returning()
+          criteriaIdMap.set(c.id, nc.id)
+        }
+
+        if (questions.length > 0) {
+          await tx.insert(formQuestions).values(
+            questions.map((q) => ({
+              formId: newForm.id,
+              criterionId: q.criterionId ? (criteriaIdMap.get(q.criterionId) ?? null) : null,
+              questionType: q.questionType,
+              label: q.label,
+              helpText: q.helpText,
+              isRequired: q.isRequired,
+              sortOrder: q.sortOrder,
+              config: q.config,
+            }))
+          )
+        }
+      } else if (questions.length > 0) {
+        await tx.insert(formQuestions).values(
+          questions.map((q) => ({
+            formId: newForm.id,
+            criterionId: null,
+            questionType: q.questionType,
+            label: q.label,
+            helpText: q.helpText,
+            isRequired: q.isRequired,
+            sortOrder: q.sortOrder,
+            config: q.config,
+          }))
+        )
+      }
+
+      return newForm
+    })
+  }
+
+  async exportForm(id: string, facultyScope?: string) {
+    const filters = [eq(forms.id, id), isNull(forms.deletedAt)]
+    if (facultyScope) filters.push(eq(forms.ownerFacultyId, facultyScope))
+
+    const [form] = await db.select().from(forms).where(and(...filters))
+    if (!form) throw new Error('not_found')
+
+    const criteria = await db.select().from(evaluationCriteria).where(eq(evaluationCriteria.formId, id))
+    const questions = await db.select().from(formQuestions).where(eq(formQuestions.formId, id)).orderBy(formQuestions.sortOrder)
+
+    return { form, criteria, questions }
+  }
+
+  async importFormJson(
+    data: { title: string; description?: string; scope: 'faculty' | 'university'; criteria: any[]; questions: any[] },
+    userId: string,
+    facultyId?: string
+  ) {
+    return db.transaction(async (tx) => {
+      const [newForm] = await tx.insert(forms).values({
+        title: data.title,
+        description: data.description,
+        scope: data.scope,
+        ownerFacultyId: facultyId,
+        createdById: userId,
+        status: 'draft',
+      }).returning()
+
+      const criteriaIdMap = new Map<string, string>()
+      for (const c of (data.criteria ?? [])) {
+        const [nc] = await tx.insert(evaluationCriteria).values({
+          formId: newForm.id,
+          name: c.name,
+          dimension: c.dimension ?? null,
+          weight: c.weight ?? 1,
+        }).returning()
+        criteriaIdMap.set(c.id ?? c.name, nc.id)
+      }
+
+      for (const q of (data.questions ?? [])) {
+        await tx.insert(formQuestions).values({
+          formId: newForm.id,
+          criterionId: q.criterionId ? (criteriaIdMap.get(q.criterionId) ?? null) : null,
+          questionType: q.questionType,
+          label: q.label,
+          helpText: q.helpText ?? null,
+          isRequired: q.isRequired ?? false,
+          sortOrder: q.sortOrder ?? 0,
+          config: q.config ?? null,
+        })
+      }
+
+      return { id: newForm.id }
+    })
   }
 }
