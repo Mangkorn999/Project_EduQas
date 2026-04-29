@@ -4,6 +4,7 @@ import { TemplatesService } from './templates.service'
 import { authenticate } from '../../middleware/authenticate'
 import { authorize } from '../../middleware/authorize'
 import { paginationSchema } from '../../utils/pagination'
+import { createAuditLog } from '../audit/audit.service'
 
 export default async function templatesRoutes(app: FastifyInstance) {
   const service = new TemplatesService()
@@ -50,6 +51,8 @@ export default async function templatesRoutes(app: FastifyInstance) {
           ownerFacultyId,
           ownerUserId: user.sub,
         })
+        // บันทึกการสร้าง Template
+        await createAuditLog({ userId: user.sub, ip: request.ip }, 'template.create', 'template', data.id, null, { title: body.title, scope: body.scope })
         return reply.code(201).send({ data })
       } catch (err: any) {
         return reply.code(400).send({ error: { code: 'validation_error', message: err.message } })
@@ -127,6 +130,8 @@ export default async function templatesRoutes(app: FastifyInstance) {
         }
 
         await service.softDeleteTemplate(id)
+        // บันทึกการลบ Template
+        await createAuditLog({ userId: user.userId, ip: request.ip }, 'template.delete', 'template', id)
         return { success: true }
       } catch (err: any) {
         if (err.message === 'not_found')
@@ -154,6 +159,8 @@ export default async function templatesRoutes(app: FastifyInstance) {
         }
 
         const data = await service.deprecateTemplate(id)
+        // บันทึกการยกเลิก (deprecate) Template
+        await createAuditLog({ userId: user.userId, ip: request.ip }, 'template.deprecate', 'template', id, { isDeprecated: false }, { isDeprecated: true })
         return { data }
       } catch (err: any) {
         if (err.message === 'not_found')
