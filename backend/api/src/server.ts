@@ -1,4 +1,8 @@
 import Fastify from 'fastify'
+import path from 'path'
+import dotenv from 'dotenv'
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
+
 import cors from '@fastify/cors'
 import cookie = require('@fastify/cookie')
 import jwt from '@fastify/jwt'
@@ -75,7 +79,9 @@ const schema = {
 export async function buildServer() {
   await server.register(fastifyEnv, {
     schema,
-    dotenv: true,
+    dotenv: {
+      path: path.resolve(__dirname, '../../../.env'),
+    },
     data: process.env,
   })
 
