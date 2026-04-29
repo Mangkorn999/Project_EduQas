@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import cookie = require('@fastify/cookie')
@@ -7,6 +8,8 @@ import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod
 import csrfMiddleware from './modules/security/csrf.middleware'
 import rateLimitMiddleware from './modules/security/ratelimit.middleware'
 import authRoutes from './modules/auth/oauth.handler'
+import { fromNodeHeaders } from 'better-auth/node'
+import { psuBetterAuth } from './modules/auth/better-auth'
 import websitesRoutes from './modules/websites/websites.handler'
 import roundsRoutes from './modules/rounds/rounds.handler'
 import formsRoutes from './modules/forms/forms.handler'
@@ -72,6 +75,50 @@ export async function buildServer() {
 
   await server.register(csrfMiddleware)
   await server.register(rateLimitMiddleware)
+
+  // PSU OAuth/OIDC via Better Auth (mounted under /api/auth/*)
+  // We proxy all /api/auth/* requests to Better Auth's request handler.
+  server.route({
+    method: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    url: '/api/auth/*',
+    handler: async (request, reply) => {
+      const host = request.headers.host ?? 'localhost'
+      const url = new URL(request.url, `http://${host}`)
+      const headers = fromNodeHeaders(request.headers as any)
+
+      const init: RequestInit = {
+        method: request.method,
+        headers,
+      }
+
+      if (request.body !== undefined) {
+        if (typeof request.body === 'string' || Buffer.isBuffer(request.body)) {
+          init.body = request.body as any
+        } else {
+          init.body = JSON.stringify(request.body)
+        }
+      }
+
+      const req = new Request(url.toString(), init)
+      const res = await psuBetterAuth.handler(req)
+
+      reply.status(res.status)
+      res.headers.forEach((value, key) => {
+        reply.header(key, value)
+      })
+
+      const contentType = res.headers.get('content-type') ?? ''
+      try {
+        if (contentType.includes('application/json')) {
+          return reply.send(await res.json())
+        }
+        const text = await res.text()
+        return reply.send(text)
+      } catch {
+        return reply.send()
+      }
+    },
+  })
 
   // Auth (no /api/v1 prefix per SRS Appendix B)
   await server.register(authRoutes, { prefix: '/auth' })

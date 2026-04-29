@@ -1,14 +1,39 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { db } from '../../../../db'
-import { users } from '../../../../db/schema'
-import { eq } from 'drizzle-orm'
+import { roleOverrides, users } from '../../../../db/schema'
+import { and, eq, sql } from 'drizzle-orm'
 import { TokenService } from './token.service'
 import { SessionService } from './session.service'
 import { OTPService } from './otp.service'
 import { authenticate } from '../../middleware/authenticate'
 import { authorize } from '../../middleware/authorize'
 import { createAuditLog } from '../audit/audit.service'
+import { fromNodeHeaders } from 'better-auth/node'
+import { psuBetterAuth } from './better-auth'
+
+type InternalRole = 'super_admin' | 'admin' | 'executive' | 'teacher' | 'staff' | 'student'
+
+const FALLBACK_FACULTY_ID = '00000000-0000-0000-0000-000000000001'
+
+const allowedRoles = new Set<InternalRole>([
+  'super_admin',
+  'admin',
+  'executive',
+  'teacher',
+  'staff',
+  'student',
+])
+
+function normalizeRole(input: unknown): InternalRole {
+  const raw = typeof input === 'string' ? input : null
+  if (!raw) return 'student'
+  return (allowedRoles.has(raw as InternalRole) ? (raw as InternalRole) : 'student') satisfies InternalRole
+}
+
+function normalizeFacultyId(input: unknown): string {
+  return typeof input === 'string' && input.trim() ? input : FALLBACK_FACULTY_ID
+}
 
 export default async function authRoutes(app: FastifyInstance) {
   const tokenService = new TokenService(app)
@@ -26,70 +51,130 @@ export default async function authRoutes(app: FastifyInstance) {
   }
 
   app.get('/psu', async (request, reply) => {
-    // Generate code_verifier and state here in a real implementation
-    // For now, redirect to dummy PSU Passport
-    return reply.redirect('https://passport.psu.ac.th/authorize?client_id=demo&response_type=code&redirect_uri=/api/v1/auth/callback')
+    // Start PSU OAuth/OIDC sign-in via Better Auth.
+    // We then complete login inside our `/auth/callback` endpoint.
+    const result = await (psuBetterAuth as any).api.signInWithOAuth2({
+      body: {
+        providerId: 'psu',
+        callbackURL: '/auth/callback',
+        requestSignUp: true,
+        // Prefer returning the URL so we can control redirect status ourselves.
+        disableRedirect: true,
+      },
+    })
+
+    const url =
+      result?.data?.url ?? result?.data?.authorizationUrl ?? result?.data?.redirectTo ?? result?.url ?? result?.data
+
+    if (typeof url !== 'string' || !url) {
+      request.log.error({ result }, 'better-auth signInWithOAuth2 did not return a redirect URL')
+      return reply.code(500).send({ error: { code: 'internal_error', message: 'OAuth initiation failed' } })
+    }
+
+    return reply.redirect(url)
   })
 
   app.get('/callback', async (request, reply) => {
-    const { code } = request.query as { code: string }
-    if (!code) {
-      return reply.code(400).send({ error: { code: 'validation_error', message: 'Missing code' } })
+    // Completion endpoint called after Better Auth finishes the OAuth callback.
+    // At this point, we can read Better Auth session info to get PSU claims.
+    const session = await (psuBetterAuth as any).api.getSession({
+      headers: fromNodeHeaders(request.headers as any),
+    })
+
+    const psuUser = session?.user as
+      | {
+          psuPassportId?: string
+          facultyId?: string
+          role?: string
+          email?: string
+          name?: string
+        }
+      | undefined
+
+    if (!psuUser?.psuPassportId || !psuUser.email) {
+      return reply.code(401).send({
+        error: { code: 'unauthenticated', message: 'Missing Better Auth session (PSU claims)' },
+      })
     }
 
-    // In a real implementation: Exchange code for PSU Passport profile
-    // Mock profile for demonstration:
-    const profile = {
-      psu_passport_id: '12345',
-      email: 'student@psu.ac.th',
-      name: 'Somchai Student',
-      role: 'student',
-      faculty_id: '00000000-0000-0000-0000-000000000001' // FALLBACK_ID
-    }
+    const psuPassportId = String(psuUser.psuPassportId)
+    const derivedRole = normalizeRole(psuUser.role)
+    const derivedFacultyId = normalizeFacultyId(psuUser.facultyId)
+    const email = String(psuUser.email)
+    const displayName = String(psuUser.name ?? email)
 
-    // FR-USER-02: Upsert user
-    let [user] = await db.select().from(users).where(eq(users.psuPassportId, profile.psu_passport_id))
-    
+    // Upsert user based on PSU identity.
+    let [user] = await db.select().from(users).where(eq(users.psuPassportId, psuPassportId)).limit(1)
+
     if (!user) {
-      [user] = await db.insert(users).values({
-        psuPassportId: profile.psu_passport_id,
-        email: profile.email,
-        displayName: profile.name,
-        role: profile.role as 'student' | 'teacher' | 'staff',
-        facultyId: profile.faculty_id
-      }).returning()
+      ;[user] = await db
+        .insert(users)
+        .values({
+          psuPassportId,
+          email,
+          displayName,
+          role: derivedRole as any,
+          facultyId: derivedFacultyId,
+          lastLoginAt: new Date(),
+        })
+        .returning()
     } else {
-      [user] = await db.update(users).set({
-        email: profile.email,
-        displayName: profile.name,
-        lastLoginAt: new Date()
-      }).where(eq(users.id, user.id)).returning()
+      ;[user] = await db
+        .update(users)
+        .set({
+          email,
+          displayName,
+          role: derivedRole as any,
+          facultyId: derivedFacultyId,
+          lastLoginAt: new Date(),
+        })
+        .where(eq(users.id, user.id))
+        .returning()
     }
 
-    // Note: Role overrides check would go here before issuing tokens
-    const effectiveRole = user.role // Simplify for now
+    // FR-AUTH-PRIORITY: Resolve role with priority:
+    // 1) active role_overrides
+    // 2) PSU claims (derivedRole)
+    // 3) fallback student (inside derivedRole normalization)
+    const [override] = await db
+      .select({ overrideRole: roleOverrides.overrideRole })
+      .from(roleOverrides)
+      .where(
+        and(
+          eq(roleOverrides.userId, user.id),
+          sql`(${roleOverrides.expiresAt} IS NULL OR ${roleOverrides.expiresAt} > now())`,
+        ),
+      )
+      .limit(1)
 
-    // Issue tokens
+    const effectiveRole = (override?.overrideRole ?? derivedRole) as typeof user.role
+
+    // Issue tokens (role in JWT will be effectiveRole per priority rule).
     const { rawToken } = await sessionService.createSession(user.id, request.ip, request.headers['user-agent'])
     const accessToken = tokenService.generateAccessToken({
       userId: user.id,
       role: effectiveRole,
       facultyId: user.facultyId,
-      psuPassportId: user.psuPassportId
+      psuPassportId: user.psuPassportId,
     })
 
-    // Return tokens. Refresh token should ideally be in an HttpOnly cookie per design doc, but we return both for now
-    // "Recommendation: keep the access token in JS memory... and the refresh token in an HttpOnly cookie"
+    // Refresh token in HttpOnly cookie.
     reply.setCookie('refreshToken', rawToken, {
       path: '/api/v1/auth',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60
+      maxAge: 7 * 24 * 60 * 60,
     })
 
-    // FR-AUDIT-01: บันทึกการ login สำเร็จ เพื่อ track ว่าใครเข้าระบบเมื่อไหร่
-    await createAuditLog({ userId: user.id, ip: request.ip }, 'auth.login', 'user', user.id, null, { role: effectiveRole })
+    await createAuditLog(
+      { userId: user.id, ip: request.ip },
+      'auth.login',
+      'user',
+      user.id,
+      null,
+      { role: effectiveRole },
+    )
 
     return { accessToken }
   })
@@ -158,8 +243,8 @@ export default async function authRoutes(app: FastifyInstance) {
       id: user.id,
       email: user.email,
       displayName: user.displayName,
-      role: user.role, // effective role
-      facultyId: user.facultyId
+      role: payload.role, // effective role (after `role_overrides`)
+      facultyId: payload.facultyId,
     }
   })
 
