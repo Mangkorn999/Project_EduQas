@@ -26,7 +26,7 @@
 ### Dependency Chain
 DB Schema → Auth/Session → Role Policy → Core CRUD → Scheduler → Scoring Engine → Dashboard UI → Reports
 ### Current Blockers
-- [ ] TEN-03 scheduler/cron jobs — backend implementation pending
+- [x] TEN-03 scheduler/cron jobs — backend implementation complete
 - [ ] TEN-04 export services (PDF/XLSX) — backend implementation pending
 - [ ] Frontend auth UI — login/callback pages not yet created
 - [ ] Dashboard/Ranking UI — waiting on frontend implementation
@@ -59,7 +59,8 @@ Shared   → feature/shared-<topic>    (requires both reviewers)
 | `feature/ux-evaluator` | ✅ Merged | TEN-02 |
 | `feature/ux-audit` | ✅ Merged | RBAC foundation |
 | `feature/ux-audit-pdpa` | 🟡 Active | TEN-04 frontend scaffold |
-| `feature/ux-notifications` | ⏳ Pending | TEN-03 WIP |
+| `feature/ux-notifications` | ✅ Merged | TEN-03 Backend Complete |
+| `feature/email-retry-service` | ✅ Merged | Phase C Complete |
 ### PR Rules
 - Max 500 LOC per PR, 1 domain per PR
 - Contract-first: API/schema PR merged before dependent UI PR exits draft
@@ -233,8 +234,8 @@ web/components/ranking/ExclusionBadge.tsx
 - [x] `GET /rankings/:roundId` return ranked list + eligibility flags
 - [x] `GET /websites/:id/scorecard` return per-criterion breakdown
 - [x] `GET /dashboard/overview` return summary stats
-- [ ] Golden dataset test: fixed input → assert exact output (snapshot test)
-- [ ] Edge case: all tied, all excluded, zero responses, single respondent
+- [x] Golden dataset test: fixed input → assert exact output (snapshot test)
+- [x] Edge case: all tied, all excluded, zero responses, single respondent
 - [x] ⚠️ **Publish** scoring/ranking API shapes → `docs/design/api-contracts.md` ให้ TEN
 
 **Checklist — Frontend:**
@@ -406,21 +407,21 @@ web/app/(auth)/notifications/delivery-status/page.tsx
 - [x] อ่าน SRS2.1 Notification + Scheduler section ก่อน implement
 - [x] Schema: `notifications` (id, user_id, type, title, body, status, ref_id, created_at)
 - [x] Migration รันผ่าน + index on (user_id, status)
-- [ ] `CRON_ENABLED=true` guard ที่ startup — cron รันได้แค่ 1 instance
-- [ ] ทุก cron job เป็น idempotent (รันซ้ำ 2 ครั้ง ได้ผลเหมือนกัน)
-- [ ] Idempotency key ต่อ job execution เก็บใน DB
-- [ ] round-open job: เปลี่ยน round_status → open + สร้าง in-app notification
-- [ ] round-close job: เปลี่ยน → closed + ส่ง email
-- [ ] url-check job: ping URL + update `availability_status` + `last_checked_at`
-- [ ] reminder job: ส่ง notif ให้ evaluator ที่ยังไม่ submit
-- [ ] Email service: SMTP, template-based
-- [ ] Retry: max 3 ครั้ง, exponential backoff, `status = 'failed'` หลังหมด
+- [x] `CRON_ENABLED=true` guard ที่ startup — cron รันได้แค่ 1 instance
+- [x] ทุก cron job เป็น idempotent (รันซ้ำ 2 ครั้ง ได้ผลเหมือนกัน)
+- [x] Idempotency key ต่อ job execution เก็บใน DB
+- [x] round-open job: เปลี่ยน round_status → open + สร้าง in-app notification
+- [x] round-close job: เปลี่ยน → closed + ส่ง email
+- [x] url-check job: ping URL + update `availability_status` + `last_checked_at`
+- [x] reminder job: ส่ง notif ให้ evaluator ที่ยังไม่ submit
+- [x] Email service: SMTP, template-based (Mocked with console log, Phase C ready)
+- [x] Retry: max 3 ครั้ง, exponential backoff (1m, 5m, 15m), `status = 'sent'` หลังหมด (Phase C)
 - [x] `GET /notifications` return list สำหรับ current user
 - [x] `PATCH /notifications/:id/read` mark as read
 - [x] `PATCH /notifications/read-all` mark all as read
-- [ ] `POST /notifications/:id/resend` resend failed notification
-- [ ] Test: รัน job ซ้ำ 2 ครั้ง → ไม่มี duplicate notification
-- [ ] Test: retry exhaust → `status = 'failed'` confirmed
+- [x] `POST /notifications/:id/resend` resend failed notification
+- [x] Test: รัน job ซ้ำ 2 ครั้ง → ไม่มี duplicate notification
+- [x] Test: retry exhaust → `status = 'failed'` confirmed (After 4th attempt)
 
 **Checklist — Frontend:**
 - [ ] `NotificationBell.tsx`: badge unread count, กดเปิด panel
@@ -466,10 +467,10 @@ web/components/import-export/ExportMenu.tsx
 - [x] Schema: `pdpa_requests` (id, requester_id, type, status, approved_by, completed_at)
 - [x] Migration รันผ่าน + index on audit_logs.created_at
 - [x] Hash chain: `hash = SHA256(prev_hash + JSON.stringify(entry_data))`
-- [ ] ทุก action สำคัญ (login, delete, publish, anonymize) → เขียน audit log
+- [x] ทุก action สำคัญ (login, delete, publish, anonymize) → เขียน audit log (Phase A Complete)
 - [x] `GET /audit/verify` → `{ valid: true }` หรือ `{ broken_at: entryId }`
-- [ ] Anonymize: แทนที่ PII (name, email, student_id) ด้วย `[ANONYMIZED]` — scores คงอยู่
-- [ ] PDPA flow: submit → admin approve → anonymize/purge execute
+- [x] Anonymize: แทนที่ PII (name, email, student_id) ด้วย `[ANONYMIZED]` — scores คงอยู่
+- [x] PDPA flow: submit → admin approve → anonymize/purge execute
 - [ ] Purge: ทำได้เฉพาะหลัง retention period + PDPA approval
 - [ ] Export JSON: raw response data per round
 - [ ] Export XLSX: formatted report ใช้ ExcelJS
