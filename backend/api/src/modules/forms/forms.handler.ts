@@ -7,6 +7,7 @@ import { SnapshotService } from './snapshot.service'
 import { TemplatesService } from '../templates/templates.service'
 import { authenticate } from '../../middleware/authenticate'
 import { authorize } from '../../middleware/authorize'
+import { createAuditLog } from '../audit/audit.service'
 
 export default async function formsRoutes(app: FastifyInstance) {
   const formsService = new FormsService()
@@ -81,6 +82,8 @@ export default async function formsRoutes(app: FastifyInstance) {
           ownerFacultyId,
           createdById: user.userId
         })
+        // FR-AUDIT-01: บันทึกการสร้าง form
+        await createAuditLog({ userId: user.userId, ip: request.ip }, 'form.create', 'form', data.id, null, { title: body.title, scope: body.scope })
         return reply.code(201).send({ data })
       } catch (err: any) {
         return reply.code(400).send({ error: { code: 'validation_error', message: err.message } })
@@ -124,6 +127,8 @@ export default async function formsRoutes(app: FastifyInstance) {
     
     try {
       await formsService.softDeleteForm(id, facultyScope)
+      // FR-AUDIT-01: บันทึกการลบ form
+      await createAuditLog({ userId: user.userId, ip: request.ip }, 'form.delete', 'form', id)
       return { success: true }
     } catch (err: any) {
        return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
@@ -276,6 +281,8 @@ export default async function formsRoutes(app: FastifyInstance) {
     
     try {
       const data = await snapshotService.publishForm(id, facultyScope)
+      // FR-FORM-25: บันทึกการ publish form (เปลี่ยน draft → open)
+      await createAuditLog({ userId: user.userId, ip: request.ip }, 'form.publish', 'form', id, { status: 'draft' }, { status: 'open' })
       return { data }
     } catch (err: any) {
       return reply.code(400).send({ error: { code: 'publish_error', message: err.message } })
@@ -299,6 +306,8 @@ export default async function formsRoutes(app: FastifyInstance) {
 
     try {
       await snapshotService.rollbackToVersion(formId, versionId, facultyScope)
+      // FR-FORM-20: บันทึกการ rollback form
+      await createAuditLog({ userId: user.userId, ip: request.ip }, 'form.rollback', 'form', formId, null, { restoredVersionId: versionId })
       return { success: true }
     } catch (err: any) {
       return reply.code(400).send({ error: { code: 'rollback_error', message: err.message } })
@@ -316,6 +325,8 @@ export default async function formsRoutes(app: FastifyInstance) {
 
     try {
       const data = await formsService.closeForm(id, facultyScope)
+      // FR-AUDIT-01: บันทึกการปิด form
+      await createAuditLog({ userId: user.userId, ip: request.ip }, 'form.close', 'form', id, { status: 'open' }, { status: 'closed' })
       return { data }
     } catch (err: any) {
       if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
@@ -335,6 +346,8 @@ export default async function formsRoutes(app: FastifyInstance) {
 
     try {
       const data = await formsService.duplicateForm(id, facultyScope, user.userId)
+      // FR-AUDIT-01: บันทึกการ duplicate form
+      await createAuditLog({ userId: user.userId, ip: request.ip }, 'form.duplicate', 'form', data.id, null, { sourceFormId: id })
       return reply.code(201).send({ data })
     } catch (err: any) {
       if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
