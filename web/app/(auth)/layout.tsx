@@ -22,9 +22,9 @@ export default function AuthLayout({
 }>) {
   const pathname = usePathname();
   const useAppShell =
-    pathname.startsWith('/evaluator') || 
+    pathname.startsWith('/evaluator') ||
     pathname.startsWith('/forms') ||
-    pathname === '/profile' || 
+    pathname === '/profile' ||
     pathname === '/notifications';
 
   if (!useAppShell) {
