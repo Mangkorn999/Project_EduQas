@@ -6,6 +6,7 @@ import { SessionService } from '../auth/session.service'
 import { authenticate } from '../../middleware/authenticate'
 import { authorize } from '../../middleware/authorize'
 import { paginationSchema, paginatedResponse } from '../../utils/pagination'
+import { createAuditLog } from '../audit/audit.service'
 
 export default async function usersRoutes(app: FastifyInstance) {
   const service = new UsersService()
@@ -43,6 +44,9 @@ export default async function usersRoutes(app: FastifyInstance) {
       const body = request.body as any
       try {
         const user = await service.createUser(body)
+        const requestUser = request.user as any
+        // บันทึกการสร้างผู้ใช้
+        await createAuditLog({ userId: requestUser.userId, ip: request.ip }, 'user.create', 'user', user.id, null, { email: body.email, role: body.role })
         return reply.code(201).send({ data: user })
       } catch (err: any) {
         return reply.code(400).send({ error: { code: 'validation_error', message: err.message } })
@@ -71,6 +75,9 @@ export default async function usersRoutes(app: FastifyInstance) {
         if (needsRevoke) {
           await sessionService.revokeAll(userId)
         }
+        const requestUser = request.user as any
+        // บันทึกการแก้ไขผู้ใช้ (รวมถึงการเปลี่ยน role โดย admin/super_admin)
+        await createAuditLog({ userId: requestUser.userId, ip: request.ip }, 'user.update', 'user', id, null, body)
         return { data: user }
       } catch (err: any) {
         if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'User not found' } })
@@ -88,6 +95,9 @@ export default async function usersRoutes(app: FastifyInstance) {
       try {
         const { userId } = await service.softDeleteUser(id)
         await sessionService.revokeAll(userId)
+        const requestUser = request.user as any
+        // บันทึกการลบผู้ใช้
+        await createAuditLog({ userId: requestUser.userId, ip: request.ip }, 'user.delete', 'user', id)
         return { success: true }
       } catch (err: any) {
         if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'User not found' } })
