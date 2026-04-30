@@ -223,6 +223,7 @@ export default async function formsRoutes(app: FastifyInstance) {
         label: z.string().optional(),
         helpText: z.string().optional(),
         isRequired: z.boolean().optional(),
+        questionType: z.enum(['short_text', 'long_text', 'single_choice', 'multi_choice', 'rating', 'scale_5', 'scale_10', 'boolean', 'date', 'number']).optional(),
         config: z.any().optional(),
         sortOrder: z.number().int().optional()
       })
