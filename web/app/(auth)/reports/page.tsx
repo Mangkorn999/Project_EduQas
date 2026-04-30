@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, FileJson, FileSpreadsheet, FileText, Download } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 type ExportFormat = 'json' | 'xlsx' | 'pdf';
 type ExportStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -99,13 +100,15 @@ export default function ReportsPage() {
                   status={exportStatus.xlsx}
                   onClick={() => handleExport('xlsx')}
                 />
-                <ExportButton
-                  icon={FileText}
-                  label="PDF"
-                  description="รายงานทางการพร้อมลายเซ็น"
-                  status={exportStatus.pdf}
-                  onClick={() => handleExport('pdf')}
-                />
+                <PermissionGate permission="report.export_pdf">
+                  <ExportButton
+                    icon={FileText}
+                    label="PDF"
+                    description="รายงานทางการพร้อมลายเซ็น"
+                    status={exportStatus.pdf}
+                    onClick={() => handleExport('pdf')}
+                  />
+                </PermissionGate>
               </div>
             </motion.div>
           )}

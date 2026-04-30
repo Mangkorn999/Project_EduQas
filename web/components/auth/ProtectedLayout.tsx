@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { getPostLoginPath } from '@/lib/auth/role-routing';
+import { getRoutePermission } from '@/lib/auth/route-permissions';
+import { hasPermission, type UserRole } from '@/lib/permissions';
 
 interface ProtectedLayoutProps {
   children: React.ReactNode;
@@ -17,18 +19,30 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   useEffect(() => {
     if (isLoading) return;
 
-    const PUBLIC_ROUTES = ['/login', '/callback'];
+    const PUBLIC_ROUTES = ['/login', '/callback', '/403'];
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
+    // ยังไม่ login → redirect ไป login พร้อม redirect param
     if (!isAuthenticated && !isPublicRoute) {
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 
+    // login อยู่แล้วแต่เข้าหน้า login → ส่งไปหน้า default ของ role
     if (isAuthenticated && pathname === '/login') {
       router.replace(getPostLoginPath(user?.role ?? 'student'));
+      return;
     }
-  }, [isAuthenticated, isLoading, pathname, user?.role, router]);
+
+    // Route permission check — ถ้า user ไม่มีสิทธิ์เข้าหน้านี้ → redirect /403
+    if (isAuthenticated && user) {
+      const requiredPermission = getRoutePermission(pathname);
+      if (requiredPermission && !hasPermission(user.role as UserRole, requiredPermission)) {
+        router.replace('/403');
+        return;
+      }
+    }
+  }, [isAuthenticated, isLoading, pathname, user?.role, router, user]);
 
   if (isLoading) {
     return (

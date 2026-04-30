@@ -20,11 +20,13 @@ export function saveDevRole(role: string) {
   window.sessionStorage.setItem(DEV_ROLE_STORAGE_KEY, role);
 }
 
-export function readDevRole(): string | null {
+type DevRole = 'super_admin' | 'admin' | 'executive' | 'teacher' | 'staff' | 'student';
+
+export function readDevRole(): DevRole | null {
   if (!isDevEnvironment || typeof window === 'undefined') return null;
   const raw = window.sessionStorage.getItem(DEV_ROLE_STORAGE_KEY);
   if (raw && ['super_admin', 'admin', 'executive', 'teacher', 'staff', 'student'].includes(raw)) {
-    return raw;
+    return raw as DevRole;
   }
   return null;
 }

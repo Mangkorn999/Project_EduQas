@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 const createFormSchema = z.object({
   title: z.string().min(1, 'กรุณาระบุหัวข้อแบบฟอร์ม'),
@@ -96,15 +97,17 @@ export default function FormsPage() {
           <p className="text-gray-500 mt-1">สร้างและแก้ไขแบบฟอร์มสำหรับรอบการประเมินต่างๆ</p>
         </motion.div>
 
-        <motion.button
-          initial={{ x: 20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          onClick={() => setIsModalOpen(true)}
-          className="bg-psu-navy text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-psu-blue-container transition-all shadow-md active:scale-95"
-        >
-          <Plus className="h-5 w-5" />
-          สร้าง Form ใหม่
-        </motion.button>
+        <PermissionGate permission="form.create">
+          <motion.button
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            onClick={() => setIsModalOpen(true)}
+            className="bg-psu-navy text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-psu-blue-container transition-all shadow-md active:scale-95"
+          >
+            <Plus className="h-5 w-5" />
+            สร้าง Form ใหม่
+          </motion.button>
+        </PermissionGate>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -191,12 +194,14 @@ export default function FormsPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={(e) => onDeleteForm(form.id, e)}
-                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
+                        <PermissionGate permission="form.create">
+                          <button
+                            onClick={(e) => onDeleteForm(form.id, e)}
+                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </PermissionGate>
                         <ChevronRight className="h-5 w-5 text-gray-300 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </td>

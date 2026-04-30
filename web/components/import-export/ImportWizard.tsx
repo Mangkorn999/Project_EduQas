@@ -15,7 +15,7 @@ export interface ImportWizardProps {
 }
 
 export function ImportWizard({ onImport, onClose }: ImportWizardProps) {
-  const [step, setStep] = <ImportStep>'upload';
+  const [step, setStep] = useState<ImportStep>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [format, setFormat] = useState<ImportFormat | null>(null);
   const [data, setData] = useState<any[]>([]);

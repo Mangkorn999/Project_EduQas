@@ -2,20 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  LayoutDashboard,
-  ClipboardCheck,
-  ClipboardList,
-  BarChart3,
-  BookOpen,
-  HelpCircle,
-  Bell,
-  Monitor,
-} from 'lucide-react';
+import { Bell, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProtectedLayout } from '@/components/auth/ProtectedLayout';
 import { UserMenu } from '@/components/auth/UserMenu';
 import { useAuthStore } from '@/lib/stores/authStore';
+import { NAV_ITEMS } from '@/lib/nav-config';
+import { hasPermission, type UserRole } from '@/lib/permissions';
 
 export default function AuthLayout({
   children,
@@ -30,11 +23,19 @@ export default function AuthLayout({
     pathname.startsWith('/forms') ||
     pathname === '/profile' ||
     pathname === '/notifications' ||
-    pathname.startsWith('/admin');
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/reports');
 
   if (!useAppShell) {
     return <ProtectedLayout>{children}</ProtectedLayout>;
   }
+
+  // กรอง nav items ตาม permission ของ user — ถ้าไม่มีสิทธิ์ จะไม่ render เลย (ไม่ใช่ CSS hide)
+  const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (!item.permission) return true;
+    if (!user) return false;
+    return hasPermission(user.role as UserRole, item.permission);
+  });
 
   return (
     <ProtectedLayout>
@@ -48,33 +49,32 @@ export default function AuthLayout({
           </div>
 
           <nav className="flex-1 px-4 space-y-1">
-            {[
-              { icon: LayoutDashboard, label: 'หน้าหลัก', href: '/evaluator', active: pathname === '/evaluator' },
-              { icon: ClipboardList, label: 'จัดการ Form', href: '/forms', active: pathname.startsWith('/forms') },
-              { icon: ClipboardCheck, label: 'รายการประเมิน', href: '/evaluator' },
-              { icon: BarChart3, label: 'สรุปผล', href: '/evaluator' },
-              { icon: BookOpen, label: 'คู่มือการใช้งาน', href: '/profile' },
-              { icon: HelpCircle, label: 'ติดต่อสอบถาม', href: '/notifications' },
-            ].map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={cn(
-                  'flex w-full items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group text-sm font-medium',
-                  item.active
-                    ? 'bg-blue-50 text-psu-navy border-l-4 border-psu-gold'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                )}
-              >
-                <item.icon
+            {visibleNavItems.map((item) => {
+              const isActive = item.matchPrefix
+                ? pathname.startsWith(item.matchPrefix)
+                : pathname === item.href;
+
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
                   className={cn(
-                    'h-5 w-5',
-                    item.active ? 'text-psu-navy' : 'text-gray-400 group-hover:text-gray-600'
+                    'flex w-full items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group text-sm font-medium',
+                    isActive
+                      ? 'bg-blue-50 text-psu-navy border-l-4 border-psu-gold'
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                   )}
-                />
-                {item.label}
-              </Link>
-            ))}
+                >
+                  <item.icon
+                    className={cn(
+                      'h-5 w-5',
+                      isActive ? 'text-psu-navy' : 'text-gray-400 group-hover:text-gray-600'
+                    )}
+                  />
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         </aside>
         <div className="flex-1">
