@@ -59,6 +59,7 @@ export async function buildServer() {
   await server.register(cors, {
     origin: process.env.CORS_ORIGIN ?? true,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
 
   await server.register(cookie, {

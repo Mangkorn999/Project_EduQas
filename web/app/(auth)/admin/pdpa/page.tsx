@@ -28,13 +28,13 @@ export default function PdpaPage() {
 
   const handleApprove = async (id: string) => {
     // TODO: Replace with actual API call when backend is ready
-    // await apiPost(`/pdpa/${id}/approve`);
+    // await apiPost(`/api/v1/pdpa/${id}/approve`);
     alert(`อนุมัติคำขอ ${id} แล้ว`);
   };
 
   const handleReject = async (id: string) => {
     // TODO: Replace with actual API call when backend is ready
-    // await apiPost(`/pdpa/${id}/reject`);
+    // await apiPost(`/api/v1/pdpa/${id}/reject`);
     alert(`ปฏิเสธคำขอ ${id} แล้ว`);
   };
 

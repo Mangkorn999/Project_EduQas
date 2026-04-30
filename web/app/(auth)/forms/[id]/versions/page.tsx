@@ -16,7 +16,7 @@ export default function VersionsPage({ params }: { params: Promise<{ id: string 
   const fetchVersions = async () => {
     try {
       setLoading(true);
-      const res = await apiGet(`/forms/${id}/versions`);
+      const res = await apiGet(`/api/v1/forms/${id}/versions`);
       setVersions(res.data);
     } catch (err) {
       console.error(err);
@@ -32,7 +32,7 @@ export default function VersionsPage({ params }: { params: Promise<{ id: string 
   const handleRollback = async (versionId: string, versionNumber: number) => {
     if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการ Rollback กลับไปที่ Version ${versionNumber}? ข้อมูลปัจจุบันจะถูกเขียนทับและกลายเป็นร่างใหม่`)) return;
     try {
-      await apiPost(`/forms/${id}/versions/${versionId}/rollback`, {});
+      await apiPost(`/api/v1/forms/${id}/versions/${versionId}/rollback`, {});
       router.push(`/forms/${id}/builder`);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Rollback ไม่สำเร็จ');
