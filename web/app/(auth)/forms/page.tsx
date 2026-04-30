@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Plus, Search, Filter, Trash2, ChevronRight, Calendar, Users, Globe } from 'lucide-react';
+import { Plus, Search, Filter, Trash2, ChevronRight, Calendar, Users, Globe, ExternalLink } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -17,6 +17,7 @@ const createFormSchema = z.object({
   roundId: z.string().uuid('กรุณาเลือกรอบการประเมิน'),
   scope: z.enum(['faculty', 'university']),
   ownerFacultyId: z.string().uuid().optional(),
+  websiteTargetId: z.string().uuid().optional(),
 });
 
 type CreateFormValues = z.infer<typeof createFormSchema>;
@@ -27,17 +28,17 @@ const statusConfig = {
   closed: { label: 'ปิดรับแล้ว', color: 'bg-red-100 text-red-700 border-red-200' },
 };
 
-
-
 export default function FormsPage() {
   const router = useRouter();
   const [forms, setForms] = useState<any[]>([]);
   const [rounds, setRounds] = useState<{ id: string; name: string }[]>([]);
+  const [websites, setWebsites] = useState<{ id: string; name: string; url: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchingWebsites, setFetchingWebsites] = useState(false);
   const [filter, setFilter] = useState<'all' | 'draft' | 'open' | 'closed'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { register, handleSubmit, watch, formState: { errors }, reset } = useForm<CreateFormValues>({
+  const { register, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm<CreateFormValues>({
     resolver: zodResolver(createFormSchema),
     defaultValues: {
       scope: 'faculty',
@@ -45,6 +46,12 @@ export default function FormsPage() {
   });
 
   const currentScope = watch('scope');
+  const selectedRoundId = watch('roundId');
+  const selectedWebsiteId = watch('websiteTargetId');
+
+  const selectedWebsite = useMemo(() => 
+    websites.find(w => w.id === selectedWebsiteId),
+  [websites, selectedWebsiteId]);
 
   const fetchForms = async () => {
     try {
@@ -67,10 +74,32 @@ export default function FormsPage() {
     }
   };
 
+  const fetchWebsites = async (roundId: string) => {
+    try {
+      setFetchingWebsites(true);
+      const res = await apiGet(`/api/v1/rounds/${roundId}/websites`);
+      setWebsites(res.data ?? []);
+    } catch (err) {
+      console.error('Failed to fetch websites for round:', err);
+      setWebsites([]);
+    } finally {
+      setFetchingWebsites(false);
+    }
+  };
+
   useEffect(() => {
     fetchForms();
     fetchRounds();
   }, []);
+
+  useEffect(() => {
+    if (selectedRoundId) {
+      fetchWebsites(selectedRoundId);
+    } else {
+      setWebsites([]);
+    }
+    setValue('websiteTargetId', undefined);
+  }, [selectedRoundId, setValue]);
 
   const onCreateForm = async (data: CreateFormValues) => {
     try {
@@ -169,6 +198,7 @@ export default function FormsPage() {
                     <td className="px-6 py-4">
                       <p className="font-bold text-psu-navy group-hover:text-blue-700 transition-colors">{form.title}</p>
                       <p className="text-xs text-gray-400 mt-1">แก้ไขล่าสุด: {new Date(form.updatedAt).toLocaleDateString('th-TH')}</p>
+                      {form.websiteName && <p className="text-[10px] text-blue-500 font-medium mt-1">เป้าหมาย: {form.websiteName}</p>}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -233,7 +263,7 @@ export default function FormsPage() {
               <h2 className="text-xl font-bold text-psu-navy">สร้างแบบฟอร์มประเมินใหม่</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">×</button>
             </div>
-            <form onSubmit={handleSubmit(onCreateForm)} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit(onCreateForm)} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">หัวข้อแบบฟอร์ม</label>
                 <input
@@ -248,48 +278,63 @@ export default function FormsPage() {
                 {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">รอบการประเมิน</label>
-                <select
-                  {...register('roundId')}
-                  className={cn(
-                    "w-full px-4 py-3 rounded-xl bg-gray-50 border outline-none focus:ring-2 transition-all appearance-none",
-                    errors.roundId ? "border-red-300 focus:ring-red-100" : "border-gray-100 focus:ring-psu-navy/10"
-                  )}
-                >
-                  <option value="">เลือกสรรรอบการประเมิน</option>
-                  {rounds.length === 0 ? (
-                    <option value="">ไม่มีรอบการประเมิน (กรุณาสร้างรอบก่อน)</option>
-                  ) : (
-                    rounds.map(r => <option key={r.id} value={r.id}>{r.name}</option>)
-                  )}
-                </select>
-                {errors.roundId && <p className="text-red-500 text-xs mt-1">{errors.roundId.message}</p>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">ขอบเขต (Scope)</label>
+                  <select
+                    {...register('scope')}
+                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 outline-none focus:ring-2 focus:ring-psu-navy/10 transition-all appearance-none"
+                  >
+                    <option value="faculty">คณะ/หน่วยงาน</option>
+                    <option value="university">มหาวิทยาลัย</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">รอบการประเมิน</label>
+                  <select
+                    {...register('roundId')}
+                    className={cn(
+                      "w-full px-4 py-3 rounded-xl bg-gray-50 border outline-none focus:ring-2 transition-all appearance-none",
+                      errors.roundId ? "border-red-300 focus:ring-red-100" : "border-gray-100 focus:ring-psu-navy/10"
+                    )}
+                  >
+                    <option value="">เลือกสรรรอบการประเมิน</option>
+                    {rounds.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                  {errors.roundId && <p className="text-red-500 text-xs mt-1">{errors.roundId.message}</p>}
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">ขอบเขต (Scope)</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {(['faculty', 'university'] as const).map((s) => (
-                    <label
-                      key={s}
-                      className={cn(
-                        "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all",
-                        currentScope === s ? "border-psu-navy bg-blue-50 text-psu-navy" : "border-gray-100 bg-gray-50 text-gray-500"
-                      )}
-                    >
-                      <input type="radio" value={s} {...register('scope')} className="accent-psu-navy" />
-                      <span className="text-sm font-medium">{s === 'faculty' ? 'คณะ/หน่วยงาน' : 'มหาวิทยาลัย'}</span>
-                    </label>
-                  ))}
-                </div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">เว็บไซต์เป้าหมาย (จาก Registry)</label>
+                <select
+                  {...register('websiteTargetId')}
+                  disabled={!selectedRoundId || fetchingWebsites}
+                  className={cn(
+                    "w-full px-4 py-3 rounded-xl bg-gray-50 border outline-none focus:ring-2 transition-all appearance-none",
+                    !selectedRoundId ? "opacity-50 cursor-not-allowed" : "border-gray-100 focus:ring-psu-navy/10"
+                  )}
+                >
+                  <option value="">เลือกเว็บไซต์เป้าหมาย (Optional)</option>
+                  {websites.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+                {!selectedRoundId && <p className="text-gray-400 text-[10px] mt-1 italic">กรุณาเลือกรอบการประเมินก่อนเพื่อเลือกเว็บไซต์</p>}
+                {selectedWebsite && (
+                  <div className="mt-2 p-3 bg-blue-50 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <ExternalLink className="h-3 w-3 text-blue-500 shrink-0" />
+                      <span className="text-xs text-blue-600 truncate">{selectedWebsite.url}</span>
+                    </div>
+                    <a href={selectedWebsite.url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-700 underline">เปิดดู</a>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">คำอธิบาย (ถ้ามี)</label>
                 <textarea
                   {...register('description')}
-                  rows={3}
+                  rows={2}
                   className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 outline-none focus:ring-2 focus:ring-psu-navy/10 transition-all resize-none"
                 ></textarea>
               </div>

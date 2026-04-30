@@ -13,6 +13,10 @@ export default async function roundsRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate] 
   }, controller.get)
 
+  app.get('/:id/websites', { 
+    preHandler: [app.authenticate] 
+  }, controller.listWebsites)
+
   app.post('/', {
     preHandler: [app.authenticate, app.authorize('round.create.faculty')],
     schema: { body: createRoundSchema }

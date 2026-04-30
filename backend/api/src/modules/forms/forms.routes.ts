@@ -42,6 +42,11 @@ export default async function formsRoutes(app: FastifyInstance) {
   }, controller.deleteCriterion)
 
   // --- Questions ---
+  // NOTE: reorder must be registered BEFORE /:qid so 'reorder' is not treated as a UUID param
+  app.patch('/:id/questions/reorder', {
+    preHandler: [app.authenticate, app.authorize('form.create')],
+    schema: { body: reorderQuestionsSchema }
+  }, controller.reorderQuestions)
   app.post('/:id/questions', {
     preHandler: [app.authenticate, app.authorize('form.create')],
     schema: { body: questionSchema }
@@ -53,10 +58,6 @@ export default async function formsRoutes(app: FastifyInstance) {
   app.delete('/:id/questions/:qid', {
     preHandler: [app.authenticate, app.authorize('form.create')]
   }, controller.deleteQuestion)
-  app.patch('/:id/questions/reorder', {
-    preHandler: [app.authenticate, app.authorize('form.create')],
-    schema: { body: reorderQuestionsSchema }
-  }, controller.reorderQuestions)
 
   // --- Versions & Actions ---
   app.post('/:id/publish', {
