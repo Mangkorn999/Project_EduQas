@@ -24,3 +24,8 @@ out/
 # misc
 .DS_Store
 .vscode/
+
+# AI Skills
+.gemini/
+.claude/
+.cursor/
