@@ -1,0 +1,58 @@
+{
+  "nav": {
+    "forms": "Forms",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "forms": {
+    "title": "All Forms",
+    "subtitle": "Manage evaluation forms for the university",
+    "create": "Create Form",
+    "empty": "No forms yet",
+    "emptyDesc": "Create your first form to get started",
+    "search": "Search forms...",
+    "filter": {
+      "all": "All",
+      "draft": "Draft",
+      "published": "Published",
+      "sent": "Sent"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "sent": "Sent"
+    },
+    "actions": {
+      "edit": "Edit",
+      "preview": "Preview",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    }
+  },
+  "builder": {
+    "autosaved": "Auto-saved",
+    "saving": "Saving...",
+    "publish": "Publish",
+    "send": "Send",
+    "addQuestion": "Add Question",
+    "questionTypes": {
+      "short": "Short Text",
+      "long": "Long Answer",
+      "multiple": "Multiple Choice",
+      "checkbox": "Checkbox",
+      "rating": "Rating Scale",
+      "number": "Number"
+    }
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "back": "Back",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "success": "Success"
+  }
+}
