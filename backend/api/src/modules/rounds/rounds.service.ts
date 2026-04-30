@@ -1,5 +1,5 @@
 import { db } from '../../../../db'
-import { rounds, roundWebsites, forms } from '../../../../db/schema'
+import { rounds, roundWebsites, forms, websites } from '../../../../db/schema'
 import { eq, and, isNull, ne } from 'drizzle-orm'
 
 export class RoundsService {
@@ -72,5 +72,18 @@ export class RoundsService {
         .set({ status: 'closed', updatedAt: new Date() })
         .where(and(eq(forms.roundId, id), ne(forms.status, 'closed'), isNull(forms.deletedAt)))
     })
+  }
+
+  async listWebsites(roundId: string) {
+    return db.select({
+      id: websites.id,
+      name: websites.name,
+      url: websites.url,
+      category: websites.category,
+      ownerFacultyId: websites.ownerFacultyId,
+    })
+    .from(roundWebsites)
+    .innerJoin(websites, eq(roundWebsites.websiteId, websites.id))
+    .where(and(eq(roundWebsites.roundId, roundId), isNull(websites.deletedAt)))
   }
 }

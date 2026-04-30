@@ -80,4 +80,10 @@ export class RoundsController {
        return reply.code(403).send({ error: { code: 'forbidden', message: 'No access' } })
     }
   }
+
+  listWebsites = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as any
+    const data = await this.service.listWebsites(id)
+    return { data }
+  }
 }

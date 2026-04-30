@@ -30,8 +30,16 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   {
     icon: LayoutDashboard,
+    label: 'Dashboard',
+    href: '/dashboard',
+    permission: 'dashboard.faculty', // only admins/execs
+    matchPrefix: '/dashboard',
+  },
+  {
+    icon: LayoutDashboard,
     label: 'หน้าหลัก',
     href: '/evaluator',
+    permission: 'evaluate.assigned', // only teacher/staff/student
     matchPrefix: '/evaluator',
   },
   {

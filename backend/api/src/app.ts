@@ -102,6 +102,47 @@ export async function buildApp(opts: FastifyServerOptions = {}) {
     },
   })
 
+  // Global Error Handler for API Standardization (WP1)
+  app.setErrorHandler((error: any, request, reply) => {
+    // 1. Zod Validation Errors
+    if (error.validation) {
+      return reply.status(400).send({
+        error: {
+          code: 'validation_error',
+          message: 'Invalid request data',
+          details: error.validation
+        }
+      })
+    }
+
+    // 2. Custom Business Logic Errors (e.g., thrown from Services)
+    if (error.message === 'not_found') {
+      return reply.status(404).send({ error: { code: 'not_found', message: 'Resource not found' } })
+    }
+    if (error.message.includes('forbidden') || error.message.includes('Unauthorized')) {
+      return reply.status(403).send({ error: { code: 'forbidden', message: error.message } })
+    }
+
+    // 3. Sensible HTTP Errors
+    if (error.statusCode) {
+      return reply.status(error.statusCode).send({
+        error: {
+          code: error.name.toLowerCase().replace(/\s+/g, '_'),
+          message: error.message
+        }
+      })
+    }
+
+    // 4. Unknown Internal Server Errors
+    request.log.error(error)
+    reply.status(500).send({
+      error: {
+        code: 'internal_error',
+        message: 'An unexpected error occurred'
+      }
+    })
+  })
+
   // Register Modules
   await app.register(authRoutes, { prefix: '/auth' })
   await app.register(facultiesRoutes, { prefix: '/api/v1/faculties' })

@@ -13,25 +13,38 @@ function getToken() {
  */
 async function handleResponse(response: Response) {
   // Handle unauthorized - redirect to login
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     if (typeof window !== 'undefined') {
-      // Clear invalid tokens
       localStorage.removeItem('token');
       localStorage.removeItem('access_token');
       
-      // Prevent redirect loops if already on login page
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login?error=session_expired';
       }
     }
-    throw new Error('Session expired. Please login again.');
+    throw new Error(response.status === 401 ? 'Session expired.' : 'Forbidden Access.');
   }
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error?.message || data.message || 'Something went wrong');
+  // Parse JSON response
+  let json;
+  try {
+    json = await response.json();
+  } catch (err) {
+    throw new Error('Invalid JSON response from server');
   }
-  return data;
+
+  // Handle API Errors
+  if (!response.ok) {
+    const errorMsg = json.error?.message || json.message || 'Something went wrong';
+    throw new Error(errorMsg);
+  }
+
+  // Handle Success (Enforce NFR-API envelope if backend missed it)
+  if (json !== null && typeof json === 'object' && 'data' in json) {
+    return json; // Already has { data: ... }
+  } else {
+    return { data: json }; // Wrap raw responses for consistency
+  }
 }
 
 /**
