@@ -260,20 +260,22 @@ export default async function authRoutes(app: FastifyInstance) {
 
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
 
+      // Set refreshToken cookie - MUST match route prefix (/auth) for browser to send it on /auth/me calls
       reply.setCookie('refreshToken', rawToken, {
-        path: '/api/v1/auth',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60,
+        path: '/auth', // Critical: matches Fastify route prefix in server.ts (line 128)
+        httpOnly: true, // JS cannot read - XSS proof
+        secure: process.env.NODE_ENV === 'production', // Send over HTTPS only in prod
+        sameSite: 'lax', // Allow cross-site on top-level nav (OAuth redirect), block CSRF
+        maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
       })
 
+      // accessToken for API auth - path '/' for all routes
       reply.setCookie('accessToken', accessToken, {
         path: '/',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 15 * 60,
+        maxAge: 15 * 60, // 15 minutes
       })
 
       await createAuditLog(
@@ -327,10 +329,10 @@ export default async function authRoutes(app: FastifyInstance) {
       })
 
       reply.setCookie('refreshToken', rawToken, {
-        path: '/api/v1/auth',
+        path: '/auth', // Match route prefix
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax', // Consistent with login callback
         maxAge: 7 * 24 * 60 * 60,
       })
 
@@ -353,14 +355,14 @@ export default async function authRoutes(app: FastifyInstance) {
       const hash = tokenService.hashRefreshToken(token)
       await sessionService.revokeToken(hash)
     }
-    reply.clearCookie('refreshToken', { path: '/api/v1/auth' })
+    reply.clearCookie('refreshToken', { path: '/auth' })
     return { success: true }
   })
 
   app.post('/revoke-all', { preHandler: [authenticate] }, async (request, reply) => {
     const payload = request.user as any
     await sessionService.revokeAll(payload.userId)
-    reply.clearCookie('refreshToken', { path: '/api/v1/auth' })
+    reply.clearCookie('refreshToken', { path: '/auth' })
     return { success: true }
   })
 
@@ -450,6 +452,48 @@ export default async function authRoutes(app: FastifyInstance) {
           error: { code: 'business_rule', message: err.message },
         })
       }
+    },
+  )
+
+  // Simple role switcher for development/testing
+  // Production should use OTP flow above
+  app.post(
+    '/set-role',
+    {
+      preHandler: [authenticate],
+      schema: {
+        body: z.object({
+          role: z.enum(['super_admin', 'admin', 'executive', 'teacher', 'staff', 'student']),
+        }),
+      },
+    },
+    async (request, reply) => {
+      const { role } = request.body as { role: string }
+      const payload = request.user as { userId: string; role: string }
+
+      // Update user role in DB
+      const [updatedUser] = await db
+        .update(users)
+        .set({ role: role as any })
+        .where(eq(users.id, payload.userId))
+        .returning()
+
+      if (!updatedUser) {
+        return reply.code(404).send({
+          error: { code: 'not_found', message: 'User not found' },
+        })
+      }
+
+      await createAuditLog(
+        { userId: payload.userId, ip: request.ip },
+        'auth.role_change',
+        'user',
+        payload.userId,
+        null,
+        { previousRole: payload.role, newRole: role },
+      )
+
+      return { success: true, role }
     },
   )
 }

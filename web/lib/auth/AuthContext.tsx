@@ -5,6 +5,7 @@ import { createContext, useMemo, useState, useEffect } from 'react';
 export type AuthUser = {
   id: string;
   name: string;
+  email?: string;
   faculty: string;
   role: 'student' | 'staff' | 'teacher' | 'admin' | 'super_admin' | 'executive';
 };
@@ -39,6 +40,7 @@ export function AuthProvider({
           setUser({
             id: data.id,
             name: data.displayName,
+            email: data.email,
             faculty: data.facultyId ?? '',
             role: data.role,
           });
