@@ -26,7 +26,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await apiGet(`/forms/${formId}`);
+      const res = await apiGet(`/api/v1/forms/${formId}`);
       setForm(res.data);
       setCriteria(res.data.criteria || []);
       setQuestions(res.data.questions || []);
@@ -45,7 +45,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
   const handleSaveForm = async () => {
     try {
       setSaving(true);
-      await apiPatch(`/forms/${formId}`, { title: form.title });
+      await apiPatch(`/api/v1/forms/${formId}`, { title: form.title });
       setSaving(false);
     } catch (err) {
       alert('บันทึกไม่สำเร็จ');
@@ -56,7 +56,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
   const handlePublish = async () => {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการ Publish แบบฟอร์มนี้? (แบบฟอร์มจะถูกล็อกและเปิดใช้งานจริง)')) return;
     try {
-      await apiPost(`/forms/${formId}/publish`, {});
+      await apiPost(`/api/v1/forms/${formId}/publish`, {});
       router.push('/forms');
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Publish ไม่สำเร็จ');
@@ -65,7 +65,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
 
   const handleAddCriterion = async () => {
     try {
-      const res = await apiPost(`/forms/${formId}/criteria`, {
+      const res = await apiPost(`/api/v1/forms/${formId}/criteria`, {
         name: 'หัวข้อการประเมินใหม่',
         weight: 0
       });
@@ -77,7 +77,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
 
   const handleUpdateCriterion = async (id: string, data: any) => {
     try {
-      const res = await apiPatch(`/forms/${formId}/criteria/${id}`, data);
+      const res = await apiPatch(`/api/v1/forms/${formId}/criteria/${id}`, data);
       setCriteria(criteria.map((c: any) => c.id === id ? res.data : c));
     } catch (err) {
       console.error(err);
@@ -87,7 +87,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
   const handleDeleteCriterion = async (id: string) => {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบเกณฑ์นี้? คำถามที่ผูกอยู่จะกลายเป็น Feedback เท่านั้น')) return;
     try {
-      await apiDelete(`/forms/${formId}/criteria/${id}`);
+      await apiDelete(`/api/v1/forms/${formId}/criteria/${id}`);
       setCriteria(criteria.filter(c => c.id !== id));
       setQuestions(questions.map((q: any) => q.criterionId === id ? { ...q, criterionId: null } : q));
     } catch (err) {
@@ -97,7 +97,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
 
   const handleAddQuestion = async () => {
     try {
-      const res = await apiPost(`/forms/${formId}/questions`, {
+      const res = await apiPost(`/api/v1/forms/${formId}/questions`, {
         questionType: 'short_text',
         label: 'คำถามใหม่',
         sortOrder: questions.length
@@ -111,7 +111,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
 
   const handleUpdateQuestion = async (data: any) => {
     try {
-      const res = await apiPatch(`/forms/${formId}/questions/${data.id}`, data);
+      const res = await apiPatch(`/api/v1/forms/${formId}/questions/${data.id}`, data);
       setQuestions(questions.map((q: any) => q.id === data.id ? res.data : q));
       setSelectedQuestionId(null);
     } catch (err) {
@@ -121,7 +121,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
 
   const handleDeleteQuestion = async (id: string) => {
     try {
-      await apiDelete(`/forms/${formId}/questions/${id}`);
+      await apiDelete(`/api/v1/forms/${formId}/questions/${id}`);
       setQuestions(questions.filter(q => q.id !== id));
       setSelectedQuestionId(null);
     } catch (err) {
@@ -133,7 +133,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
     const originalItems = [...questions];
     setQuestions(newItems);
     try {
-      await apiPatch(`/forms/${formId}/questions/reorder`, 
+      await apiPatch(`/api/v1/forms/${formId}/questions/reorder`, 
         newItems.map((q, i) => ({ id: q.id, sortOrder: i }))
       );
     } catch (err) {

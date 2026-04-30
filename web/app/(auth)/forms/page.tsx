@@ -27,15 +27,12 @@ const statusConfig = {
   closed: { label: 'ปิดรับแล้ว', color: 'bg-red-100 text-red-700 border-red-200' },
 };
 
-// Mock rounds for now
-const MOCK_ROUNDS = [
-  { id: '00000000-0000-0000-0000-000000000001', name: 'รอบที่ 1/2568' },
-  { id: '00000000-0000-0000-0000-000000000002', name: 'รอบที่ 2/2568' },
-];
+
 
 export default function FormsPage() {
   const router = useRouter();
   const [forms, setForms] = useState<any[]>([]);
+  const [rounds, setRounds] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'draft' | 'open' | 'closed'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,7 +49,7 @@ export default function FormsPage() {
   const fetchForms = async () => {
     try {
       setLoading(true);
-      const res = await apiGet('/forms');
+      const res = await apiGet('/api/v1/forms');
       setForms(res.data);
     } catch (err) {
       console.error('Failed to fetch forms:', err);
@@ -61,13 +58,23 @@ export default function FormsPage() {
     }
   };
 
+  const fetchRounds = async () => {
+    try {
+      const res = await apiGet('/api/v1/rounds');
+      setRounds(res.data ?? []);
+    } catch (err) {
+      console.error('Failed to fetch rounds:', err);
+    }
+  };
+
   useEffect(() => {
     fetchForms();
+    fetchRounds();
   }, []);
 
   const onCreateForm = async (data: CreateFormValues) => {
     try {
-      const res = await apiPost('/forms', data);
+      const res = await apiPost('/api/v1/forms', data);
       setIsModalOpen(false);
       reset();
       router.push(`/forms/${res.data.id}/builder`);
@@ -80,7 +87,7 @@ export default function FormsPage() {
     e.stopPropagation();
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบแบบฟอร์มนี้? (การลบจะเป็นการ Soft Delete)')) return;
     try {
-      await apiDelete(`/forms/${id}`);
+      await apiDelete(`/api/v1/forms/${id}`);
       fetchForms();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'ลบแบบฟอร์มไม่สำเร็จ');
@@ -166,7 +173,7 @@ export default function FormsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="h-4 w-4 text-gray-400" />
-                        {MOCK_ROUNDS.find(r => r.id === form.roundId)?.name || 'ไม่ระบุรอบ'}
+                        {rounds.find(r => r.id === form.roundId)?.name || 'ไม่ระบุรอบ'}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -251,7 +258,11 @@ export default function FormsPage() {
                   )}
                 >
                   <option value="">เลือกสรรรอบการประเมิน</option>
-                  {MOCK_ROUNDS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  {rounds.length === 0 ? (
+                    <option value="">ไม่มีรอบการประเมิน (กรุณาสร้างรอบก่อน)</option>
+                  ) : (
+                    rounds.map(r => <option key={r.id} value={r.id}>{r.name}</option>)
+                  )}
                 </select>
                 {errors.roundId && <p className="text-red-500 text-xs mt-1">{errors.roundId.message}</p>}
               </div>

@@ -32,7 +32,7 @@ export default function AuditLogPage() {
 
   const handleVerifyChain = async () => {
     // TODO: Replace with actual API call when backend is ready
-    // const res = await apiGet('/audit/verify');
+    // const res = await apiGet('/api/v1/audit-log/verify');
     setVerificationResult({ valid: true });
   };
 

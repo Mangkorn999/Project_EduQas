@@ -28,7 +28,7 @@ export default function ReportsPage() {
     setExportStatus(prev => ({ ...prev, [format]: 'loading' }));
 
     // TODO: Replace with actual API call when backend is ready
-    // const res = await apiPost('/export', { roundId: selectedRound, format });
+    // const res = await apiPost('/api/v1/reports/export', { roundId: selectedRound, format });
     setTimeout(() => {
       setExportStatus(prev => ({ ...prev, [format]: 'success' }));
       setTimeout(() => {
