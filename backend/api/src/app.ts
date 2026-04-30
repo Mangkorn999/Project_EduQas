@@ -34,8 +34,14 @@ export async function buildApp(opts: FastifyServerOptions = {}) {
   // Register Core Plugins
   await app.register(sensible)
   await app.register(cors, {
-    origin: env.CORS_ORIGIN ?? true,
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001'
+    ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
   await app.register(cookie, {
     secret: env.COOKIE_SECRET,
