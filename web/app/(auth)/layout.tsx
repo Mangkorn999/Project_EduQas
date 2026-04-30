@@ -15,7 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ProtectedLayout } from '@/components/auth/ProtectedLayout';
 import { UserMenu } from '@/components/auth/UserMenu';
-import { useAuth } from '@/lib/auth/useAuth';
+import { useAuthStore } from '@/lib/stores/authStore';
 
 export default function AuthLayout({
   children,
@@ -23,7 +23,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user } = useAuthStore();
 
   const useAppShell =
     pathname.startsWith('/evaluator') ||

@@ -1,4 +1,4 @@
-import type { UserRole } from './AuthContext';
+import type { UserRole } from '@/lib/stores/authStore';
 
 type BackendRole = 'super_admin' | 'admin' | 'executive' | 'teacher' | 'staff' | 'student';
 

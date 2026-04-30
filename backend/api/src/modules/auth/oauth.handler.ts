@@ -355,14 +355,24 @@ export default async function authRoutes(app: FastifyInstance) {
       const hash = tokenService.hashRefreshToken(token)
       await sessionService.revokeToken(hash)
     }
-    reply.clearCookie('refreshToken', { path: '/auth' })
+    reply.clearCookie('refreshToken', {
+      path: '/auth',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    })
     return { success: true }
   })
 
   app.post('/revoke-all', { preHandler: [authenticate] }, async (request, reply) => {
     const payload = request.user as any
     await sessionService.revokeAll(payload.userId)
-    reply.clearCookie('refreshToken', { path: '/auth' })
+    reply.clearCookie('refreshToken', {
+      path: '/auth',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    })
     return { success: true }
   })
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
-import { useAuth } from '@/lib/auth/useAuth';
+import { useAuthStore } from '@/lib/stores/authStore';
 import { getPostLoginPath } from '@/lib/auth/role-routing';
 import { DevRoleSelector } from '@/components/auth/DevRoleSelector';
 
@@ -11,7 +11,7 @@ const REAL_LOGIN_URL = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'http://localho
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuthStore();
   const [redirectUrl, setRedirectUrl] = useState(REAL_LOGIN_URL);
 
   useEffect(() => {

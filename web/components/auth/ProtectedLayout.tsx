@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/lib/auth/useAuth';
+import { useAuthStore } from '@/lib/stores/authStore';
 import { getPostLoginPath } from '@/lib/auth/role-routing';
 
 interface ProtectedLayoutProps {
@@ -12,13 +12,23 @@ interface ProtectedLayoutProps {
 export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuthStore();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (isLoading) return;
+
+    const PUBLIC_ROUTES = ['/login', '/callback'];
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+
+    if (!isAuthenticated && !isPublicRoute) {
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+      return;
     }
-  }, [isAuthenticated, isLoading, router, pathname]);
+
+    if (isAuthenticated && pathname === '/login') {
+      router.replace(getPostLoginPath(user?.role ?? 'student'));
+    }
+  }, [isAuthenticated, isLoading, pathname, user?.role, router]);
 
   if (isLoading) {
     return (

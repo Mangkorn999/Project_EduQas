@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { AuthProvider } from '@/lib/auth/AuthContext';
+import AuthInitializer from '@/components/AuthInitializer';
 
 export const metadata: Metadata = {
   title: 'PSU EILA',
@@ -15,7 +15,8 @@ export default function RootLayout({
   return (
     <html lang="th">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthInitializer />
+        {children}
       </body>
     </html>
   );

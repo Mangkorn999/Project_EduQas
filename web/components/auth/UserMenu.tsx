@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useAuth } from '@/lib/auth/useAuth';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/stores/authStore';
 import { ChevronDown, LogOut, User, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,7 +31,8 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ onRoleChange }: UserMenuProps) {
-  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { user, logout, setUserRole } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -49,30 +51,10 @@ export function UserMenu({ onRoleChange }: UserMenuProps) {
     console.log('[UserMenu] Current user:', user);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      console.log('[UserMenu] Fetching:', `${API_URL}/auth/set-role`);
-
-      const res = await fetch(`${API_URL}/auth/set-role`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ role }),
-      });
-
-      console.log('[UserMenu] Response status:', res.status);
-
-      if (!res.ok) {
-        const error = await res.text();
-        console.error('[UserMenu] Role change failed:', res.status, error);
-        alert('เปลี่ยนบทบาทไม่สำเร็จ: ' + (error || 'Unknown error'));
-        return;
-      }
-
+      await setUserRole(role);
       console.log('[UserMenu] Role changed successfully:', role);
       onRoleChange?.(role);
       setIsOpen(false);
-
-      // Reload to refresh auth context
       window.location.reload();
     } catch (err) {
       console.error('[UserMenu] Role change exception:', err);
@@ -85,7 +67,7 @@ export function UserMenu({ onRoleChange }: UserMenuProps) {
     await logout();
     console.log('[UserMenu] Logout completed');
     setIsOpen(false);
-    window.location.href = '/login';
+    router.push('/login');
   };
 
   if (!user) return null;
