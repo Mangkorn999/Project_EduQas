@@ -386,8 +386,8 @@ export default async function authRoutes(app: FastifyInstance) {
       id: user.id,
       email: user.email,
       displayName: user.displayName,
-      role: payload.role,
-      facultyId: payload.facultyId,
+      role: user.role,
+      facultyId: user.facultyId,
     }
   })
 
@@ -493,6 +493,22 @@ export default async function authRoutes(app: FastifyInstance) {
           error: { code: 'not_found', message: 'User not found' },
         })
       }
+
+      // Re-issue accessToken cookie so frontend gets the new role immediately
+      const accessToken = tokenService.generateAccessToken({
+        userId: updatedUser.id,
+        role: updatedUser.role,
+        facultyId: updatedUser.facultyId,
+        psuPassportId: updatedUser.psuPassportId,
+      })
+
+      reply.setCookie('accessToken', accessToken, {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 15 * 60,
+      })
 
       await createAuditLog(
         { userId: payload.userId, ip: request.ip },
