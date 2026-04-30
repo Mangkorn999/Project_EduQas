@@ -42,12 +42,6 @@ export const NAV_ITEMS: NavItem[] = [
     matchPrefix: '/forms',
   },
   {
-    icon: ClipboardCheck,
-    label: 'รายการประเมิน',
-    href: '/evaluator',
-    permission: 'evaluate.assigned',
-  },
-  {
     icon: BarChart3,
     label: 'สรุปผล / Export',
     href: '/reports',

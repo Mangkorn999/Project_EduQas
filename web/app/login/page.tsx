@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { getPostLoginPath } from '@/lib/auth/role-routing';
-import { DevRoleSelector } from '@/components/auth/DevRoleSelector';
 
 const REAL_LOGIN_URL = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'http://localhost:3001/auth/psu';
 
@@ -43,7 +42,6 @@ export default function LoginPage() {
           <ArrowRight className="h-4 w-4" />
         </a>
 
-        <DevRoleSelector />
       </section>
     </main>
   );
