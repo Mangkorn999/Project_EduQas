@@ -30,3 +30,10 @@ out/
 .claude/
 .cursor/
 .codex/
+
+
+#get token
+get-token.mjs
+# local settings
+.local-settings.json
+.local-settings.js

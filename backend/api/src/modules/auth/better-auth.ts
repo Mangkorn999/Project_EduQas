@@ -1,33 +1,16 @@
 import { betterAuth } from 'better-auth'
 import { genericOAuth } from 'better-auth/plugins'
 
-// Must match backend role enum (see `backend/db/schema/enums.ts`)
-type InternalRole =
-  | 'super_admin'
-  | 'admin'
-  | 'executive'
-  | 'teacher'
-  | 'staff'
-  | 'student'
+type InternalRole = 'super_admin' | 'admin' | 'executive' | 'teacher' | 'staff' | 'student'
 
 const allowedRoles = new Set<InternalRole>([
-  'super_admin',
-  'admin',
-  'executive',
-  'teacher',
-  'staff',
-  'student',
+  'super_admin', 'admin', 'executive', 'teacher', 'staff', 'student',
 ])
 
 function normalizeRole(input: unknown): InternalRole {
   const raw = typeof input === 'string' ? input.trim() : ''
   if (!raw) return 'student'
   return allowedRoles.has(raw as InternalRole) ? (raw as InternalRole) : 'student'
-}
-
-function normalizeFacultyId(input: unknown): string | null {
-  const raw = typeof input === 'string' ? input.trim() : ''
-  return raw || null
 }
 
 function firstString(...values: unknown[]): string | null {
@@ -37,16 +20,26 @@ function firstString(...values: unknown[]): string | null {
   return null
 }
 
-const PSU_CLIENT_ID = process.env.PSU_CLIENT_ID
+// ─── FIX: ตัด "คณะ..." ออกจาก office_name_th ────────────────────────────────
+// PSU ส่ง office_name_th = "สาขาวิชาวิทยาศาสตร์การคำนวณ คณะวิทยาศาสตร์"
+// ตัดเอาเฉพาะส่วนที่ขึ้นต้นด้วย "คณะ" → "คณะวิทยาศาสตร์"
+function extractFacultyFromOffice(officeName: unknown): string | null {
+  if (typeof officeName !== 'string' || !officeName.trim()) return null
+  const idx = officeName.indexOf('คณะ')
+  if (idx >= 0) return officeName.slice(idx).trim()
+  return null
+}
+
+const PSU_CLIENT_ID     = process.env.PSU_CLIENT_ID
 const PSU_CLIENT_SECRET = process.env.PSU_CLIENT_SECRET
-const PSU_OPENID_URL = process.env.PSU_OPENID_URL
-const BETTER_AUTH_URL = process.env.BETTER_AUTH_URL
+const PSU_OPENID_URL    = process.env.PSU_OPENID_URL
+const BETTER_AUTH_URL   = process.env.BETTER_AUTH_URL
 const BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET
 
-if (!PSU_CLIENT_ID) throw new Error('Missing env var: PSU_CLIENT_ID')
-if (!PSU_CLIENT_SECRET) throw new Error('Missing env var: PSU_CLIENT_SECRET')
-if (!PSU_OPENID_URL) throw new Error('Missing env var: PSU_OPENID_URL')
-if (!BETTER_AUTH_URL) throw new Error('Missing env var: BETTER_AUTH_URL')
+if (!PSU_CLIENT_ID)      throw new Error('Missing env var: PSU_CLIENT_ID')
+if (!PSU_CLIENT_SECRET)  throw new Error('Missing env var: PSU_CLIENT_SECRET')
+if (!PSU_OPENID_URL)     throw new Error('Missing env var: PSU_OPENID_URL')
+if (!BETTER_AUTH_URL)    throw new Error('Missing env var: BETTER_AUTH_URL')
 if (!BETTER_AUTH_SECRET) throw new Error('Missing env var: BETTER_AUTH_SECRET')
 
 export const psuBetterAuth = betterAuth({
@@ -54,8 +47,6 @@ export const psuBetterAuth = betterAuth({
   baseURL: BETTER_AUTH_URL,
   secret: BETTER_AUTH_SECRET,
 
-  // Keep the config minimal and OAuth-friendly.
-  // The important part for callback flows is SameSite=Lax.
   advanced: {
     defaultCookieAttributes: {
       httpOnly: true,
@@ -68,31 +59,12 @@ export const psuBetterAuth = betterAuth({
   user: {
     additionalFields: {
       psuPassportId: { type: 'string', required: true },
-      facultyId: {
-        type: 'string',
-        required: false,
-      },
-      facultyCode: {
-        type: 'string',
-        required: false,
-      },
-      facultyName: {
-        type: 'string',
-        required: false,
-      },
-      facultyNameTh: {
-        type: 'string',
-        required: false,
-      },
-      facultyNameEn: {
-        type: 'string',
-        required: false,
-      },
-      role: {
-        type: 'string',
-        required: false,
-        defaultValue: 'student',
-      },
+      facultyId:     { type: 'string', required: false },
+      facultyCode:   { type: 'string', required: false },
+      facultyName:   { type: 'string', required: false },
+      facultyNameTh: { type: 'string', required: false },
+      facultyNameEn: { type: 'string', required: false },
+      role:          { type: 'string', required: false, defaultValue: 'student' },
     },
   },
 
@@ -104,75 +76,85 @@ export const psuBetterAuth = betterAuth({
           clientId: PSU_CLIENT_ID,
           clientSecret: PSU_CLIENT_SECRET,
           discoveryUrl: PSU_OPENID_URL,
-          scopes: ['openid', 'profile', 'email'],
+          scopes: ['openid', 'profile', 'email', 'psu_info'],
           pkce: true,
+
           mapProfileToUser: (profile: any) => {
-            const email =
-              typeof profile?.email === 'string' && profile.email.trim()
-                ? profile.email.trim()
-                : ''
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('[auth] RAW PSU PROFILE:', JSON.stringify(profile, null, 2))
+            }
 
-            const name =
-              typeof profile?.name === 'string' && profile.name.trim()
-                ? profile.name.trim()
-                : typeof profile?.displayName === 'string' && profile.displayName.trim()
-                  ? profile.displayName.trim()
-                  : typeof profile?.given_name === 'string' && profile.given_name.trim()
-                    ? profile.given_name.trim()
-                    : 'Unnamed PSU User'
+            const psuClaim = (profile?.psu ?? {}) as Record<string, unknown>
 
+            // ── Email & Name ──────────────────────────────────────────────────
+            const email = typeof profile?.email === 'string' && profile.email.trim()
+              ? profile.email.trim() : ''
+
+            const name = firstString(
+              profile?.name,
+              profile?.displayName,
+              profile?.given_name,
+            ) ?? 'Unnamed PSU User'
+
+            // ── PSU Passport ID ───────────────────────────────────────────────
             const resolvedPassportId =
-              profile?.psu_passport_id ??
-              profile?.psuPassportId ??
+              psuClaim?.username ??          // "6610210631" ← PSU ส่งมาใน psu claim
+              psuClaim?.id ??
+              psuClaim?.preferred_username ??
+              profile?.preferred_username ??
               profile?.sub ??
-              profile?.id ??
               email
 
             const psuPassportId = String(resolvedPassportId ?? '').trim()
-            if (!psuPassportId) {
-              throw new Error('PSU profile did not contain a usable passport ID')
-            }
+            if (!psuPassportId) throw new Error('PSU profile did not contain a usable passport ID')
 
-            const role = normalizeRole(profile?.role)
-            const facultyId = normalizeFacultyId(profile?.faculty_id ?? profile?.facultyId)
+            // ── Role ──────────────────────────────────────────────────────────
+            const groups: string[] = Array.isArray(profile?.groups) ? profile.groups : []
+            const roleFromGroups = groups.find(g => allowedRoles.has(g as InternalRole))
+            const role = normalizeRole(psuClaim?.role ?? profile?.role ?? roleFromGroups)
+
+            // ── Faculty ───────────────────────────────────────────────────────
+            // PSU ส่ง faculty_id = "08" (ตัวเลข ไม่ใช่ UUID)
+            // → เซฟใน facultyCode เพื่อใช้ค้นหาใน faculties table ด้วย code
+            // → ห้ามเซฟใน facultyId เพราะ DB ใช้ UUID
             const facultyCode = firstString(
-              profile?.faculty_code,
-              profile?.facultyCode,
-              profile?.faculty,
-              profile?.department_code,
-              profile?.departmentCode
+              psuClaim?.faculty_code as string,  // ถ้ามีในอนาคต
+              psuClaim?.faculty_id as string,    // "08" ← treat as code ไม่ใช่ UUID
             )
-            const facultyName = firstString(
-              profile?.faculty_name,
-              profile?.facultyName,
-              profile?.organization,
-              profile?.department,
-              profile?.division
-            )
+
+            // ตัดชื่อ "คณะ..." ออกจาก office_name_th
+            // "สาขาวิชาวิทยาศาสตร์การคำนวณ คณะวิทยาศาสตร์" → "คณะวิทยาศาสตร์"
+            const facultyFromOffice = extractFacultyFromOffice(psuClaim?.office_name_th)
+            const deptFromOffice    = extractFacultyFromOffice(psuClaim?.office_name_en)
+
             const facultyNameTh = firstString(
-              profile?.faculty_name_th,
-              profile?.facultyNameTh,
-              profile?.organization_th,
-              profile?.department_th,
-              facultyName
+              psuClaim?.faculty_name_th as string,
+              facultyFromOffice,                  // fallback จาก office_name_th
             )
             const facultyNameEn = firstString(
-              profile?.faculty_name_en,
-              profile?.facultyNameEn,
-              profile?.organization_en,
-              profile?.department_en
+              psuClaim?.faculty_name_en as string,
+              deptFromOffice,
             )
 
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('[auth] Resolved faculty from PSU:', {
+                facultyCode,
+                facultyNameTh,
+                facultyNameEn,
+                psuFacultyId: psuClaim?.faculty_id,   // "08"
+                officeNameTh: psuClaim?.office_name_th,
+              })
+            }
+
             return {
-              // Better Auth needs a stable unique id
               id: psuPassportId,
               email: email || `${psuPassportId}@psu.local`,
               name,
               psuPassportId,
               role,
-              facultyId,
-              facultyCode,
-              facultyName,
+              facultyId:     null,          // PSU ไม่ส่ง UUID ของเรามา — resolve ใน controller
+              facultyCode,                  // "08" ← ใช้ค้นหาใน faculties table
+              facultyName:   facultyNameTh,
               facultyNameTh,
               facultyNameEn,
             }
