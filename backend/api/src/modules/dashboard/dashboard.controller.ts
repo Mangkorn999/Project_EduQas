@@ -3,6 +3,7 @@ import { and, count, eq, isNull } from 'drizzle-orm'
 import { forms } from '../../../../db/schema'
 import { scoreAllWebsitesInRound, scoreWebsite } from '../scoring/score.service'
 import { checkEligibility } from '../ranking/eligibility.service'
+import { canAccessFaculty } from '../../lib/permissions'
 
 export class DashboardController {
   overview = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -57,7 +58,7 @@ export class DashboardController {
     const ws = await scoreWebsite(id, roundId)
     if (!ws) return reply.code(404).send({ error: { code: 'not_found', message: 'Website not found in this round' } })
 
-    if (user.role === 'admin' && ws.ownerFacultyId !== user.facultyId) {
+    if (!canAccessFaculty(user.role, user.facultyId, ws.ownerFacultyId)) {
       return reply.code(403).send({ error: { code: 'forbidden', message: 'Access denied to this website' } })
     }
 
@@ -81,10 +82,14 @@ export class DashboardController {
 
   trend = async (request: FastifyRequest, reply: FastifyReply) => {
     const { websiteId, roundIds } = request.query as any
+    const user = request.user as any
     const trendData: any[] = []
 
     for (const roundId of roundIds) {
       const ws = await scoreWebsite(websiteId, roundId)
+      if (ws && !canAccessFaculty(user.role, user.facultyId, ws.ownerFacultyId)) {
+        return reply.code(403).send({ error: { code: 'forbidden', message: 'Access denied to this website' } })
+      }
       trendData.push({
         roundId,
         score: ws?.score ?? null,

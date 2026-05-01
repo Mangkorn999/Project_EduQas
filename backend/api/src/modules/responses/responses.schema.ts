@@ -10,3 +10,11 @@ export const answerSchema = z.object({
 export const answersBodySchema = z.object({
   answers: z.array(answerSchema),
 })
+
+export const formIdParamsSchema = z.object({
+  formId: z.string().uuid(),
+})
+
+export const responseIdParamsSchema = z.object({
+  responseId: z.string().uuid(),
+})

@@ -2,6 +2,7 @@ import { FastifyReply, FastifyRequest } from 'fastify'
 import ExcelJS from 'exceljs'
 import { eq, and, isNull, isNotNull } from 'drizzle-orm'
 import { forms, responses, responseAnswers, formQuestions, users } from '../../../../db/schema'
+import { canAccessFaculty } from '../../lib/permissions'
 
 export class ReportsController {
   exportResponsesXlsx = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -12,7 +13,7 @@ export class ReportsController {
     const [form] = await db.select().from(forms).where(and(eq(forms.id, formId), isNull(forms.deletedAt)))
     if (!form) return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
 
-    if (user.role === 'admin' && form.ownerFacultyId !== user.facultyId) {
+    if (!canAccessFaculty(user.role, user.facultyId, form.ownerFacultyId)) {
       return reply.code(403).send({ error: { code: 'forbidden', message: 'Access denied' } })
     }
 

@@ -1,5 +1,34 @@
 import { z } from 'zod'
 
+export const formIdParamsSchema = z.object({
+  id: z.string().uuid(),
+})
+
+export const criterionParamsSchema = z.object({
+  id: z.string().uuid(),
+  cid: z.string().uuid(),
+})
+
+export const questionParamsSchema = z.object({
+  id: z.string().uuid(),
+  qid: z.string().uuid(),
+})
+
+export const versionParamsSchema = z.object({
+  id: z.string().uuid(),
+  vid: z.string().uuid(),
+})
+
+export const templateParamsSchema = z.object({
+  templateId: z.string().uuid(),
+})
+
+export const listFormsQuerySchema = z.object({
+  roundId: z.string().uuid().optional(),
+  status: z.enum(['draft', 'open', 'closed']).optional(),
+  ownerFacultyId: z.string().uuid().optional(),
+})
+
 export const formSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),

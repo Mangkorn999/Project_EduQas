@@ -29,10 +29,6 @@ function todayKey(prefix: string): string {
 
 // ─── Round Open Job ────────────────────────────────────────────────────────────
 async function runRoundOpenJob() {
-  const key = todayKey('round-open')
-  if (JOB_RUNS.has(key)) return // already run today
-  JOB_RUNS.set(key, new Date())
-
   const now = new Date()
   console.log('[scheduler] Running round-open job at', now.toISOString())
 
@@ -76,10 +72,6 @@ async function runRoundOpenJob() {
 
 // ─── Round Close Job ───────────────────────────────────────────────────────────
 async function runRoundCloseJob() {
-  const key = todayKey('round-close')
-  if (JOB_RUNS.has(key)) return
-  JOB_RUNS.set(key, new Date())
-
   const now = new Date()
   console.log('[scheduler] Running round-close job at', now.toISOString())
 
@@ -273,9 +265,9 @@ async function runUrlCheckJob() {
 export function startScheduler() {
   console.log('[scheduler] Starting scheduler...')
 
-  // Round open/close: check every minute at :00
-  cron.schedule('0 * * * *', runRoundOpenJob, { timezone: 'Asia/Bangkok' })
-  cron.schedule('0 * * * *', runRoundCloseJob, { timezone: 'Asia/Bangkok' })
+  // Round open/close: check every minute. Status filters keep these jobs idempotent.
+  cron.schedule('* * * * *', runRoundOpenJob, { timezone: 'Asia/Bangkok' })
+  cron.schedule('* * * * *', runRoundCloseJob, { timezone: 'Asia/Bangkok' })
 
   // Reminder: check every hour at :30
   cron.schedule('30 * * * *', runReminderJob, { timezone: 'Asia/Bangkok' })

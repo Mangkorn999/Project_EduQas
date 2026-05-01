@@ -3,6 +3,7 @@ import { db } from '../../../../db'
 import { notificationLog, notifications, users } from '../../../../db/schema'
 import { eq, and, inArray, isNull, lt } from 'drizzle-orm'
 import { emailQueueEmitter } from './notifications.service'
+import { sendEmail } from './email.service'
 
 /**
  * FR-NOTIF-13: Email Retry Service
@@ -37,6 +38,19 @@ export class EmailRetryService {
     return true
   }
 
+  private async sendEmailWithConfiguredTransport(to: string, subject: string, body: string): Promise<void> {
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      await sendEmail(to, subject, body)
+      return
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('SMTP is not configured')
+    }
+
+    await this.sendEmailMock(to, subject, body)
+  }
+
   /**
    * Process and send an email by its log ID
    */
@@ -57,7 +71,7 @@ export class EmailRetryService {
 
     try {
       // 🚀 พยายามส่งอีเมล
-      await this.sendEmailMock(log.user.email, log.notification.subject, log.notification.body)
+      await this.sendEmailWithConfiguredTransport(log.user.email, log.notification.subject, log.notification.body)
 
       // ถ้าสำเร็จ
       await db

@@ -34,12 +34,14 @@ export async function buildApp(opts: FastifyServerOptions = {}) {
   // Register Core Plugins
   await app.register(sensible)
   await app.register(cors, {
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001'
-    ],
+    origin: env.CORS_ORIGIN
+      ? env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+      : [
+          'http://localhost:3000',
+          'http://localhost:3001',
+          'http://127.0.0.1:3000',
+          'http://127.0.0.1:3001',
+        ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
@@ -57,7 +59,6 @@ export async function buildApp(opts: FastifyServerOptions = {}) {
 
   await app.register(autoload, {
     dir: join(__dirname, 'hooks'),
-    ignorePattern: /error\.hook\.(ts|js)$/,
   })
 
   // Better Auth Proxy (needed for OAuth callback and internal sessions)
@@ -101,47 +102,6 @@ export async function buildApp(opts: FastifyServerOptions = {}) {
         return reply.send()
       }
     },
-  })
-
-  // Global Error Handler for API Standardization (WP1)
-  app.setErrorHandler((error: any, request, reply) => {
-    // 1. Zod Validation Errors
-    if (error.validation) {
-      return reply.status(400).send({
-        error: {
-          code: 'validation_error',
-          message: 'Invalid request data',
-          details: error.validation
-        }
-      })
-    }
-
-    // 2. Custom Business Logic Errors (e.g., thrown from Services)
-    if (error.message === 'not_found') {
-      return reply.status(404).send({ error: { code: 'not_found', message: 'Resource not found' } })
-    }
-    if (error.message.includes('forbidden') || error.message.includes('Unauthorized')) {
-      return reply.status(403).send({ error: { code: 'forbidden', message: error.message } })
-    }
-
-    // 3. Sensible HTTP Errors
-    if (error.statusCode) {
-      return reply.status(error.statusCode).send({
-        error: {
-          code: error.name.toLowerCase().replace(/\s+/g, '_'),
-          message: error.message
-        }
-      })
-    }
-
-    // 4. Unknown Internal Server Errors
-    request.log.error(error)
-    reply.status(500).send({
-      error: {
-        code: 'internal_error',
-        message: 'An unexpected error occurred'
-      }
-    })
   })
 
   // Register Modules

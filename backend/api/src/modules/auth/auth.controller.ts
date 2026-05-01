@@ -590,9 +590,22 @@ export class AuthController {
 
       if (!user) throw new Error('user_not_found')
 
+      const [override] = await request.server.db
+        .select({ overrideRole: roleOverrides.overrideRole })
+        .from(roleOverrides)
+        .where(
+          and(
+            eq(roleOverrides.userId, user.id),
+            sql`(${roleOverrides.expiresAt} IS NULL OR ${roleOverrides.expiresAt} > now())`,
+          ),
+        )
+        .limit(1)
+
+      const effectiveRole = (override?.overrideRole ?? user.role) as typeof user.role
+
       const accessToken = this.tokenService.generateAccessToken({
         userId:        user.id,
-        role:          user.role,
+        role:          effectiveRole,
         facultyId:     user.facultyId,
         facultyCode:   user.facultyCode,
         facultyNameTh: user.facultyNameTh,
@@ -636,6 +649,12 @@ export class AuthController {
 
     reply.clearCookie('refreshToken', {
       path:     '/auth',
+      httpOnly: true,
+      secure:   env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    })
+    reply.clearCookie('accessToken', {
+      path:     '/',
       httpOnly: true,
       secure:   env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -692,7 +711,7 @@ export class AuthController {
   // ── setRole (dev only) ────────────────────────────────────────────────────────
 
   setRole = async (request: FastifyRequest, reply: FastifyReply) => {
-    if (!(env.NODE_ENV === 'development' || env.ALLOW_DEV_ROLE_SWITCHING)) {
+    if (env.NODE_ENV !== 'development') {
       return reply.code(403).send({
         error: { code: 'forbidden', message: 'Role switching is disabled outside development' },
       })
@@ -727,7 +746,7 @@ export class AuthController {
     reply.setCookie('accessToken', accessToken, {
       path:     '/',
       httpOnly: true,
-      secure:   env.NODE_ENV === 'production',
+      secure:   false,
       sameSite: 'lax',
       maxAge:   15 * 60,
     })

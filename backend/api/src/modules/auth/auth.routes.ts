@@ -18,7 +18,7 @@ export default async function authRoutes(app: FastifyInstance) {
     schema: { response: { 200: meResponseSchema } },
   }, controller.me)
 
-  if (env.NODE_ENV === 'development' || env.ALLOW_DEV_ROLE_SWITCHING) {
+  if (env.NODE_ENV === 'development') {
     app.post('/set-role', {
       preHandler: [app.authenticate],
       schema: { body: setRoleSchema }
