@@ -74,28 +74,28 @@
 
 .dark {
   /* Dark Theme */
-  --bg-page: #0C0A09;
-  --bg-surface: #1C1917;
-  --bg-subtle: #292524;
-  --bg-muted: #44403C;
+  --bg-page: #0B0F1A;
+  --bg-surface: #111827;
+  --bg-subtle: #1F2937;
+  --bg-muted: #374151;
 
-  --text-primary: #FAFAF9;
-  --text-secondary: #D6D3D1;
-  --text-muted: #A8A29E;
-  --text-disabled: #78716C;
+  --text-primary: #F9FAFB;
+  --text-secondary: #D1D5DB;
+  --text-muted: #9CA3AF;
+  --text-disabled: #6B7280;
 
-  --border: #292524;
-  --border-strong: #44403C;
+  --border: #374151;
+  --border-strong: #4B5563;
 
-  --accent-primary: #FAFAF9;
-  --accent-blue: #FAFAF9;
-  --accent-teal: #4ADE80;
-  --accent-amber: #CA8A04;
-  --accent-red: #F87171;
+  --accent-primary: #00D9FF;
+  --accent-blue: #0047AB;
+  --accent-teal: #10B981;
+  --accent-amber: #F59E0B;
+  --accent-red: #EF4444;
 
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.6);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.7);
 }
 
 body {
@@ -107,7 +107,19 @@ body {
 
 @layer base {
   body {
-    @apply font-prompt;
+    @apply bg-[#f8f9ff] font-prompt text-[#0b1c30];
+  }
+}
+
+@layer components {
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#003087] focus-visible:ring-offset-2;
+  }
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .glassmorphic {
+    @apply bg-white/90 backdrop-blur-md;
   }
 }
 

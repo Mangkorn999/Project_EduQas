@@ -7,6 +7,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       attribute="class"
       defaultTheme="light"
       enableSystem={false}
+      disableTransitionOnChange={false}
+      storageKey="eila-theme"
       themes={['light', 'dark']}
     >
       {children}

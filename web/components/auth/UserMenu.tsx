@@ -77,20 +77,20 @@ export function UserMenu({
           type="button"
           onClick={() => setIsOpen((value) => !value)}
           className={cn(
-            'flex w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-subtle)] px-3 py-3 text-left transition-colors hover:bg-[var(--bg-muted)]',
+            'focus-ring flex w-full cursor-pointer items-center gap-3 rounded-lg border border-white/15 bg-white/10 px-3 py-3 text-left transition-all duration-200 hover:scale-[1.02] hover:bg-white/15 hover:shadow-[0px_12px_24px_rgba(0,29,89,0.12)]',
             collapsed && 'lg:justify-center lg:px-0'
           )}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1C1917] text-white dark:bg-stone-50 dark:text-stone-950">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#00D9FF] text-[#001d59]">
             <User className="h-4 w-4" />
           </span>
           <span className={cn('min-w-0 flex-1', collapsed && 'lg:hidden')}>
-            <span className="block truncate text-sm font-semibold text-[var(--text-primary)]">{user.name}</span>
-            <span className="mt-1 inline-flex max-w-full items-center rounded-full border-2 border-[#CA8A04] bg-amber-50 px-2 py-0.5 text-xs font-semibold text-[#92400E]">
+            <span className="block truncate text-sm font-semibold text-white">{user.name}</span>
+            <span className="mt-1 inline-flex max-w-full items-center rounded-full border border-[#00D9FF]/60 bg-[#00D9FF]/10 px-2 py-0.5 text-xs font-semibold text-[#00D9FF]">
               <span className="truncate">{roleLabel}</span>
             </span>
           </span>
-          <ChevronDown className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform', isOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+          <ChevronDown className={cn('h-4 w-4 text-white/70 transition-transform', isOpen && 'rotate-180', collapsed && 'lg:hidden')} />
         </button>
       ) : (
         <button
@@ -102,7 +102,7 @@ export function UserMenu({
             <User className="h-4 w-4" />
           </span>
           <span className="hidden max-w-[170px] truncate text-sm font-semibold text-[var(--text-primary)] xl:block">{user.name}</span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#CA8A04] bg-amber-50 px-2.5 py-1 text-xs font-semibold text-[#92400E]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-[#7C3AED]/30 bg-[#7C3AED]/10 px-2.5 py-1 text-xs font-semibold text-[#6D28D9]">
             {roleLabel}
             <ChevronDown className={cn('h-3 w-3 transition-transform', isOpen && 'rotate-180')} />
           </span>
@@ -135,7 +135,7 @@ export function UserMenu({
                     className={cn(
                       'min-h-10 rounded-lg px-3 py-2 text-left text-xs transition-colors cursor-pointer',
                       active
-                        ? 'border-2 border-[#CA8A04] bg-amber-50 font-semibold text-[#92400E]'
+                        ? 'border-2 border-[#7C3AED] bg-[#7C3AED]/10 font-semibold text-[#6D28D9]'
                         : 'border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]',
                       changingRole === role && 'opacity-70'
                     )}

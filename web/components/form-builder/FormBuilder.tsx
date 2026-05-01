@@ -61,7 +61,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
 
   // Toast notification state
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);

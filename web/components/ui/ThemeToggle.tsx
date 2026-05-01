@@ -1,35 +1,19 @@
 'use client'
 import { useTheme } from 'next-themes'
 import { Sun, Moon } from 'lucide-react'
-import { useEffect, useState } from 'react'
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  // Avoid hydration mismatch
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    return <div className="w-9 h-9" />
-  }
+  const activeTheme = theme === 'dark' ? 'dark' : 'light'
 
   return (
     <button
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="w-9 h-9 rounded-xl flex items-center justify-center
-        bg-[var(--bg-subtle)] hover:bg-[var(--bg-muted)]
-        border border-[var(--border)]
-        text-[var(--text-secondary)] hover:text-[var(--text-primary)]
-        transition-all duration-200 cursor-pointer"
+      type="button"
+      onClick={() => setTheme(activeTheme === 'dark' ? 'light' : 'dark')}
+      className="focus-ring flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-white/20 bg-white/90 text-[#001d59] shadow-[0_8px_22px_rgba(0,0,0,0.12)] transition-all duration-200 hover:bg-[#00D9FF] hover:text-[#001d59] hover:shadow-[0_8px_22px_rgba(0,217,255,0.28)] dark:bg-white/10 dark:text-white dark:hover:bg-[#7C3AED] dark:hover:text-white dark:hover:shadow-[0_8px_22px_rgba(124,58,237,0.28)]"
       aria-label="Toggle theme"
     >
-      {theme === 'dark'
-        ? <Sun className="h-4 w-4" />
-        : <Moon className="h-4 w-4" />
-      }
+      {activeTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
     </button>
   )
 }
