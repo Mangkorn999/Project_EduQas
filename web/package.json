@@ -18,22 +18,15 @@
     "lucide-react": "^0.542.0",
     "motion": "^12.23.24",
     "next": "16.2.4",
-<<<<<<< HEAD
-=======
     "next-intl": "^4.11.0",
     "next-themes": "^0.4.6",
->>>>>>> feature/ux-login-role-test
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.74.0",
     "tailwind-merge": "^3.5.0",
-<<<<<<< HEAD
-    "zod": "^4.3.6"
-=======
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.25.76",
+    "zod": "^4.3.6",
     "zustand": "^5.0.12"
->>>>>>> feature/ux-login-role-test
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

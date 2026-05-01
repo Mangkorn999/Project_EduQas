@@ -3,12 +3,15 @@ import { db } from '../../../../db'
 import { roleOverrides, users } from '../../../../db/schema'
 import { eq } from 'drizzle-orm'
 import { SessionService } from './session.service'
+import { sendEmail } from '../notifications/email.service'
 
-// Mock SMTP service for now (NFR-AVAIL-08 assumes we have a mail service)
-// In a real implementation, we would inject a mailer
 class MailService {
   async sendOTP(email: string, otp: string) {
-    console.log(`[MAIL] Sending OTP ${otp} to ${email}`)
+    await sendEmail(
+      email,
+      'EILA role override OTP',
+      `<p>Your role override OTP is <strong>${otp}</strong>.</p><p>This code expires in 10 minutes.</p>`,
+    )
   }
 }
 

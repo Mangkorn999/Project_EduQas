@@ -41,14 +41,6 @@ function compareForRanking(
   b: { score: number | null; responseRate: number; websiteName: string },
   direction: 'desc' | 'asc' = 'desc'
 ): number {
-<<<<<<< HEAD
-  const scoreA = a.score ?? -Infinity
-  const scoreB = b.score ?? -Infinity
-
-  // เรียงตาม score หลัก
-  const scoreDiff = direction === 'desc' ? scoreB - scoreA : scoreA - scoreB
-  if (scoreDiff !== 0) return scoreDiff
-=======
   // จัดการ null → ถ้า null ทั้งคู่ถือว่าเสมอกัน, ถ้าฝั่งใดฝั่งหนึ่ง null → อยู่ท้าย
   // เหตุผล: -Infinity - (-Infinity) = NaN ทำให้ sort ไม่ deterministic
   const scoreA = a.score
@@ -65,7 +57,6 @@ function compareForRanking(
     const scoreDiff = direction === 'desc' ? scoreB - scoreA : scoreA - scoreB
     if (scoreDiff !== 0) return scoreDiff
   }
->>>>>>> feature/ux-login-role-test
 
   // Tie-break 1: higher responseRate wins
   const rateDiff = b.responseRate - a.responseRate

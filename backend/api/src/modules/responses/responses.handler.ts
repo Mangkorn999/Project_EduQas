@@ -25,7 +25,7 @@ export default async function responsesRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { formId } = request.params as any
       const user = request.user as any
-      await responsesService.logWebsiteOpen(formId, user.userId)
+      await responsesService.logWebsiteOpen(formId, user)
       return { ok: true }
     }
   )
@@ -41,7 +41,8 @@ export default async function responsesRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { formId } = request.params as any
       const { page, limit } = request.query as any
-      const result = await responsesService.getResponses(formId, page, limit)
+      const user = request.user as any
+      const result = await responsesService.getResponses(formId, page, limit, user)
       return result
     }
   )
@@ -60,7 +61,7 @@ export default async function responsesRoutes(app: FastifyInstance) {
       const { answers } = request.body as any
 
       try {
-        const data = await responsesService.upsertResponse(formId, user.userId, answers)
+        const data = await responsesService.upsertResponse(formId, user, answers)
         return reply.code(201).send({ data })
       } catch (err: any) {
         const status = err.statusCode ?? 500
@@ -77,7 +78,7 @@ export default async function responsesRoutes(app: FastifyInstance) {
       const user = request.user as any
 
       try {
-        const data = await responsesService.getResponse(responseId, user.userId, user.role)
+        const data = await responsesService.getResponse(responseId, user)
         return { data }
       } catch (err: any) {
         const status = err.statusCode ?? 500
@@ -100,7 +101,7 @@ export default async function responsesRoutes(app: FastifyInstance) {
       const { answers } = request.body as any
 
       try {
-        const data = await responsesService.updateResponse(responseId, user.userId, answers)
+        const data = await responsesService.updateResponse(responseId, user, answers)
         return { data }
       } catch (err: any) {
         const status = err.statusCode ?? 500

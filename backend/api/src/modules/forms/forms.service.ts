@@ -1,9 +1,5 @@
 import { db } from '../../../../db'
-<<<<<<< HEAD
-import { forms, evaluationCriteria, formQuestions } from '../../../../db/schema'
-=======
 import { forms, evaluationCriteria, formQuestions, websites, faculties } from '../../../../db/schema'
->>>>>>> feature/ux-login-role-test
 import { eq, and, isNull } from 'drizzle-orm'
 
 export class FormsService {
@@ -34,9 +30,6 @@ export class FormsService {
     createdById: string
     websiteTargetId?: string | null
     description?: string | null
-<<<<<<< HEAD
-  }) {
-=======
     websiteUrl?: string | null
     websiteName?: string | null
     websiteOwnerFaculty?: string | null
@@ -61,7 +54,6 @@ export class FormsService {
       }
     }
 
->>>>>>> feature/ux-login-role-test
     const [form] = await db.insert(forms).values({
       title: data.title,
       roundId: data.roundId,
@@ -70,12 +62,9 @@ export class FormsService {
       createdById: data.createdById,
       websiteTargetId: data.websiteTargetId,
       description: data.description,
-<<<<<<< HEAD
-=======
       websiteUrl,
       websiteName,
       websiteOwnerFaculty,
->>>>>>> feature/ux-login-role-test
     }).returning()
     return form
   }
@@ -91,10 +80,6 @@ export class FormsService {
       // PATCH /forms/:id ← แก้ draft เท่านั้น (status=draft)
       if (existing.status !== 'draft') throw new Error('forbidden_non_draft')
 
-<<<<<<< HEAD
-      const [updated] = await tx.update(forms).set({
-        ...data,
-=======
       let websiteUrl = data.websiteUrl
       let websiteName = data.websiteName
       let websiteOwnerFaculty = data.websiteOwnerFaculty
@@ -122,7 +107,6 @@ export class FormsService {
         websiteUrl: websiteUrl || existing.websiteUrl,
         websiteName: websiteName || existing.websiteName,
         websiteOwnerFaculty: websiteOwnerFaculty || existing.websiteOwnerFaculty,
->>>>>>> feature/ux-login-role-test
         version: existing.version + 1,
         updatedAt: new Date()
       }).where(eq(forms.id, id)).returning()

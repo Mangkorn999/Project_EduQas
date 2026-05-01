@@ -1,16 +1,10 @@
 import { db } from '../../../../db'
-<<<<<<< HEAD
-import { notifications } from '../../../../db/schema'
-import { eq, and, isNull, count, desc } from 'drizzle-orm'
-import { getPaginationOffset, paginatedResponse } from '../../utils/pagination'
-=======
 import { notifications, notificationLog } from '../../../../db/schema'
-import { eq, and, isNull, count, desc, sql, gt } from 'drizzle-orm'
+import { eq, and, isNull, count, desc, gt } from 'drizzle-orm'
 import { getPaginationOffset, paginatedResponse } from '../../utils/pagination'
 import { EventEmitter } from 'events'
 
 export const emailQueueEmitter = new EventEmitter()
->>>>>>> feature/ux-login-role-test
 
 export class NotificationsService {
   async listNotifications(userId: string, page: number, limit: number) {
@@ -64,8 +58,6 @@ export class NotificationsService {
       .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)))
   }
 
-<<<<<<< HEAD
-=======
   // FR-NOTIF-10 — delivery status สำหรับ super_admin
   async getDeliveryStatus(page: number, limit: number) {
     const offset = getPaginationOffset(page, limit)
@@ -140,7 +132,6 @@ export class NotificationsService {
     return log
   }
 
->>>>>>> feature/ux-login-role-test
   async createNotification(data: {
     userId: string
     kind: string

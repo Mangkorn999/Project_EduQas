@@ -5,11 +5,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p ../../tsconfig.json --noImplicitAny false",
-<<<<<<< HEAD
-=======
     "test": "vitest run",
     "test:watch": "vitest",
->>>>>>> feature/ux-login-role-test
     "start": "node ../../dist/backend/api/src/server.js",
     "db:seed": "tsx ../db/seed/0001_faculties.ts",
     "db:generate": "drizzle-kit generate --config=../../drizzle.config.ts",
@@ -17,22 +14,11 @@
     "db:check": "drizzle-kit check --config=../../drizzle.config.ts"
   },
   "dependencies": {
-<<<<<<< HEAD
-=======
     "@fastify/autoload": "^6.3.1",
->>>>>>> feature/ux-login-role-test
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.2.0",
     "@fastify/csrf-protection": "^7.1.0",
     "@fastify/env": "^6.0.0",
-<<<<<<< HEAD
-    "@fastify/jwt": "^10.0.0",
-    "@fastify/multipart": "^10.0.0",
-    "@fastify/rate-limit": "^10.3.0",
-    "drizzle-orm": "^0.45.2",
-    "exceljs": "^4.4.0",
-    "fastify": "^5.8.5",
-=======
     "@fastify/helmet": "^13.0.2",
     "@fastify/jwt": "^10.0.0",
     "@fastify/multipart": "^10.0.0",
@@ -44,7 +30,6 @@
     "exceljs": "^4.4.0",
     "fastify": "^5.8.5",
     "fastify-plugin": "^5.1.0",
->>>>>>> feature/ux-login-role-test
     "fastify-type-provider-zod": "^6.1.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.7",
@@ -57,11 +42,7 @@
     "@types/nodemailer": "^8.0.0",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.21.0",
-<<<<<<< HEAD
-    "typescript": "^6.0.3"
-=======
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
->>>>>>> feature/ux-login-role-test
   }
 }

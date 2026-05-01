@@ -50,11 +50,6 @@
       "when": 1777403902490,
       "tag": "0006_massive_tattoo",
       "breakpoints": true
-<<<<<<< HEAD
-    }
-  ]
-}
-=======
     },
     {
       "idx": 7,
@@ -79,4 +74,3 @@
     }
   ]
 }
->>>>>>> feature/ux-login-role-test

@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { pgTable, text, timestamp, uuid, index, real, boolean } from 'drizzle-orm/pg-core'
-=======
 import { pgTable, text, timestamp, uuid, index, real, boolean, uniqueIndex } from 'drizzle-orm/pg-core'
->>>>>>> feature/ux-login-role-test
 import { sql } from 'drizzle-orm'
 import { users } from './users'
 import { forms, formQuestions, formVersions } from './forms'
@@ -20,10 +16,7 @@ export const evaluatorAssignments = pgTable('evaluator_assignments', {
 }, (t) => [
   index('eval_assignments_user_idx').on(t.userId),
   index('eval_assignments_round_website_idx').on(t.roundId, t.websiteId),
-<<<<<<< HEAD
-=======
   uniqueIndex('eval_assignments_round_website_user_uniq').on(t.roundId, t.websiteId, t.userId),
->>>>>>> feature/ux-login-role-test
 ])
 
 // ─── Responses ────────────────────────────────────────────────────────────────
@@ -46,12 +39,9 @@ export const responses = pgTable('responses', {
 }, (t) => [
   index('responses_form_id_idx').on(t.formId),
   index('responses_respondent_id_idx').on(t.respondentId),
-<<<<<<< HEAD
-=======
   uniqueIndex('responses_form_respondent_active_uniq')
     .on(t.formId, t.respondentId)
     .where(sql`${t.deletedAt} IS NULL`),
->>>>>>> feature/ux-login-role-test
   // Scoring Engine ต้องดึง response ที่ submit แล้วเท่านั้น
   index('responses_submitted_idx').on(t.formId, t.submittedAt).where(sql`${t.submittedAt} IS NOT NULL AND ${t.deletedAt} IS NULL`),
 ])
@@ -71,9 +61,5 @@ export const responseAnswers = pgTable('response_answers', {
 }, (t) => [
   index('response_answers_response_id_idx').on(t.responseId),
   // Index สำหรับ Scoring Engine — join question + ดึง valueNumber
-<<<<<<< HEAD
-  index('response_answers_question_idx').on(t.responseId, t.questionId),
-=======
   uniqueIndex('response_answers_response_question_uniq').on(t.responseId, t.questionId),
->>>>>>> feature/ux-login-role-test
 ])

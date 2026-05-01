@@ -29,29 +29,6 @@ export class EmailRetryService {
   }
 
   /**
-   * จำลองการส่งอีเมล (แทนที่ด้วย SMTP จริงในอนาคต)
-   */
-  private async sendEmailMock(to: string, subject: string, body: string): Promise<boolean> {
-    console.log(`\n📧 [EMAIL SENDING...] To: ${to}\nSubject: ${subject}\nBody: ${body}\n`)
-    // สุ่มล้มเหลว 20% เพื่อทดสอบระบบ Retry ถ้าต้องการ
-    // if (Math.random() < 0.2) throw new Error('SMTP Connection timeout')
-    return true
-  }
-
-  private async sendEmailWithConfiguredTransport(to: string, subject: string, body: string): Promise<void> {
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      await sendEmail(to, subject, body)
-      return
-    }
-
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('SMTP is not configured')
-    }
-
-    await this.sendEmailMock(to, subject, body)
-  }
-
-  /**
    * Process and send an email by its log ID
    */
   async processEmail(logId: string) {
@@ -71,7 +48,7 @@ export class EmailRetryService {
 
     try {
       // 🚀 พยายามส่งอีเมล
-      await this.sendEmailWithConfiguredTransport(log.user.email, log.notification.subject, log.notification.body)
+      await sendEmail(log.user.email, log.notification.subject, log.notification.body)
 
       // ถ้าสำเร็จ
       await db
