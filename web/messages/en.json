@@ -1,0 +1,89 @@
+{
+  "nav": {
+    "forms": "Forms",
+    "dashboard": "Dashboard",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "greeting": "Hello, {name}",
+    "subtitleUniversity": "University-wide website evaluation overview",
+    "subtitleFaculty": "Faculty-level website evaluation overview",
+    "pending": "Pending",
+    "processing": "In Review",
+    "done": "Completed",
+    "websites": "Websites Under Evaluation",
+    "progress": "Progress",
+    "openWebsite": "Open website"
+  },
+  "forms": {
+    "title": "All Forms",
+    "subtitle": "Manage evaluation forms for the university",
+    "create": "Create Form",
+    "empty": "No forms yet",
+    "emptyDesc": "Create your first form to get started",
+    "search": "Search forms...",
+    "filter": {
+      "all": "All",
+      "draft": "Draft",
+      "published": "Published",
+      "sent": "Sent"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "sent": "Sent"
+    },
+    "actions": {
+      "edit": "Edit",
+      "preview": "Preview",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Track evaluation activity and related tasks",
+    "unread": "Unread",
+    "read": "Read"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "User information and assigned roles",
+    "switchRole": "Switch Role",
+    "roleHelp": "Choose the role you want to use. The portal will update navigation and data for that role.",
+    "noFaculty": "No faculty",
+    "roleChangeError": "Unable to change role"
+  },
+  "builder": {
+    "autosaved": "Auto-saved",
+    "saving": "Saving...",
+    "publish": "Publish",
+    "send": "Send",
+    "addQuestion": "Add Question",
+    "questionTypes": {
+      "short": "Short Text",
+      "long": "Long Answer",
+      "multiple": "Multiple Choice",
+      "checkbox": "Checkbox",
+      "rating": "Rating Scale",
+      "number": "Number"
+    }
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "back": "Back",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "success": "Success"
+  }
+}

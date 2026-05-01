@@ -1,5 +1,9 @@
 import { db } from '../../../../db'
+<<<<<<< HEAD
 import { rounds, roundWebsites, forms } from '../../../../db/schema'
+=======
+import { rounds, roundWebsites, forms, websites } from '../../../../db/schema'
+>>>>>>> feature/ux-login-role-test
 import { eq, and, isNull, ne } from 'drizzle-orm'
 
 export class RoundsService {
@@ -73,4 +77,20 @@ export class RoundsService {
         .where(and(eq(forms.roundId, id), ne(forms.status, 'closed'), isNull(forms.deletedAt)))
     })
   }
+<<<<<<< HEAD
+=======
+
+  async listWebsites(roundId: string) {
+    return db.select({
+      id: websites.id,
+      name: websites.name,
+      url: websites.url,
+      category: websites.category,
+      ownerFacultyId: websites.ownerFacultyId,
+    })
+    .from(roundWebsites)
+    .innerJoin(websites, eq(roundWebsites.websiteId, websites.id))
+    .where(and(eq(roundWebsites.roundId, roundId), isNull(websites.deletedAt)))
+  }
+>>>>>>> feature/ux-login-role-test
 }

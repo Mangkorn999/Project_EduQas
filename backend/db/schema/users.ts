@@ -8,7 +8,15 @@ export const users = pgTable('users', {
   psuPassportId: text('psu_passport_id').notNull().unique(),
   email: text('email').notNull(),
   role: roleEnum('role').notNull().default('student'),
+<<<<<<< HEAD
   facultyId: uuid('faculty_id').notNull().references(() => faculties.id),
+=======
+  facultyId: uuid('faculty_id').references(() => faculties.id),
+  facultyCode: text('faculty_code'),
+  facultyNameTh: text('faculty_name_th'),
+  facultyNameEn: text('faculty_name_en'),
+  facultySource: text('faculty_source'),
+>>>>>>> feature/ux-login-role-test
   displayName: text('display_name').notNull(),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
@@ -16,6 +24,10 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdateFn(() => new Date()),
 }, (t) => [
   index('users_faculty_id_idx').on(t.facultyId).where(sql`${t.deletedAt} IS NULL`),
+<<<<<<< HEAD
+=======
+  index('users_faculty_code_idx').on(t.facultyCode).where(sql`${t.deletedAt} IS NULL`),
+>>>>>>> feature/ux-login-role-test
   index('users_role_idx').on(t.role).where(sql`${t.deletedAt} IS NULL`),
 ])
 

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 'use client';
 
 import { useEffect } from 'react';
@@ -28,4 +29,10 @@ export default function HomePage() {
       </div>
     </main>
   );
+=======
+import { redirect } from 'next/navigation';
+
+export default function Home() {
+  redirect('/login');
+>>>>>>> feature/ux-login-role-test
 }

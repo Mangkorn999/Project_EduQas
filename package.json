@@ -16,8 +16,15 @@
     "db:check": "pnpm --filter api db:check"
   },
   "dependencies": {
+<<<<<<< HEAD
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.9"
+=======
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9",
+    "tailwindcss-animate": "^1.0.7"
+>>>>>>> feature/ux-login-role-test
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

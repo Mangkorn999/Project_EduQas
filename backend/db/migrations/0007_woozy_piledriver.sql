@@ -1,0 +1,1 @@
+ALTER TABLE "users" ALTER COLUMN "faculty_id" DROP NOT NULL;

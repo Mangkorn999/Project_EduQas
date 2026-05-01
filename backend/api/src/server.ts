@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import cookie = require('@fastify/cookie')
@@ -143,10 +144,32 @@ export async function start() {
     console.log(`Server is listening on port ${port}`)
   } catch (err) {
     server.log.error(err)
+=======
+import 'dotenv/config'
+import { buildApp } from './app'
+import { env } from './config/env'
+
+async function start() {
+  const app = await buildApp({
+    logger: true,
+    genReqId: () => crypto.randomUUID(),
+  })
+
+  try {
+    const port = env.PORT
+    await app.listen({ port, host: '0.0.0.0' })
+    console.log(`🚀 Server is listening on port ${port}`)
+  } catch (err) {
+    app.log.error(err)
+>>>>>>> feature/ux-login-role-test
     process.exit(1)
   }
 }
 
+<<<<<<< HEAD
 if (require.main === module) {
   start()
 }
+=======
+start()
+>>>>>>> feature/ux-login-role-test

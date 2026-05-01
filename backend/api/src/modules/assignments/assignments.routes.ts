@@ -1,0 +1,28 @@
+import { FastifyInstance } from 'fastify'
+import { AssignmentsController } from './assignments.controller'
+import { bulkAssignSchema } from './assignments.schema'
+
+export default async function assignmentsRoutes(app: FastifyInstance) {
+  const controller = new AssignmentsController()
+
+  app.get(
+    '/rounds/:roundId/assignments',
+    { preHandler: [app.authenticate, app.authorize('website_target.manage.faculty')] },
+    controller.list
+  )
+
+  app.post(
+    '/rounds/:roundId/assignments',
+    {
+      preHandler: [app.authenticate, app.authorize('website_target.manage.faculty')],
+      schema: { body: bulkAssignSchema }
+    },
+    controller.create
+  )
+
+  app.delete(
+    '/rounds/:roundId/assignments/:assignmentId',
+    { preHandler: [app.authenticate, app.authorize('website_target.manage.faculty')] },
+    controller.delete
+  )
+}

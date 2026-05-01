@@ -5,6 +5,13 @@ export interface AccessTokenPayload {
   userId: string
   role: string
   facultyId: string | null
+<<<<<<< HEAD
+=======
+  facultyCode?: string | null
+  facultyNameTh?: string | null
+  facultyNameEn?: string | null
+  facultySource?: string | null
+>>>>>>> feature/ux-login-role-test
   psuPassportId: string
 }
 

@@ -164,8 +164,8 @@ Request body (submit):
 | `GET` | `/api/v1/notifications/unread-count` | Bearer | |
 | `PUT` | `/api/v1/notifications/:id/read` | Bearer | Mark one as read |
 | `PUT` | `/api/v1/notifications/read-all` | Bearer | Mark all as read |
-| `GET` | `/api/v1/notifications/delivery-status` `[P2]` | `super_admin` | Admin panel view (FR-NOTIF-10) |
-| `POST` | `/api/v1/notifications/:id/resend` `[P2]` | `super_admin` | Manual resend (FR-NOTIF-11, FR-NOTIF-13) |
+| `GET` | `/api/v1/notifications/delivery-status` | `super_admin` | Admin panel view (FR-NOTIF-10) |
+| `POST` | `/api/v1/notifications/:id/resend` | `super_admin` | Manual resend (FR-NOTIF-11, FR-NOTIF-13) — 429 if resent within 24h |
 
 ## 10. Reports `[P1]` for Excel / JSON, `[P2]` for PDF
 
@@ -205,16 +205,112 @@ Long-running exports enqueue a job and return 202 with a job id; poll
 
 Formulae and threshold rules live in `scoring-and-ranking.md`.
 
-### 12.1 Ranking response contract additions (FR-RANK-10)
+### 12.1 Dashboard & Ranking Payload Structures
 
-Ranking endpoints should include eligibility status so FE can explain exclusions:
-
+#### `GET /api/v1/dashboard/overview`
 ```json
 {
-  "websiteId": "uuid",
-  "score": 82.41,
-  "responseRate": 0.27,
-  "rankingEligibility": "excluded_low_response"
+  "data": {
+    "totalWebsites": 10,
+    "evaluatedWebsites": 8,
+    "totalResponses": 150,
+    "averageScore": 85.5,
+    "pendingForms": 2,
+    "topRanked": {
+      "websiteId": "uuid",
+      "websiteName": "Name",
+      "score": 95.2
+    }
+  }
+}
+```
+
+#### `GET /api/v1/dashboard/websites/:id` (Scorecard)
+```json
+{
+  "data": {
+    "websiteId": "uuid",
+    "websiteName": "Name",
+    "ownerFacultyId": "uuid",
+    "score": 82.41,
+    "responseCount": 15,
+    "dimensionScores": [
+      { "dimension": "Design", "score": 85.0 }
+    ],
+    "eligibility": {
+      "eligibility": "eligible",
+      "responseRate": 0.35
+    }
+  }
+}
+```
+
+#### `GET /api/v1/dashboard/trend`
+```json
+{
+  "data": [
+    {
+      "roundId": "uuid",
+      "score": 82.41,
+      "responseCount": 15
+    }
+  ]
+}
+```
+
+#### `GET /api/v1/ranking/top`, `/bottom`
+```json
+{
+  "data": [
+    {
+      "rank": 1,
+      "websiteId": "uuid",
+      "websiteName": "Name",
+      "ownerFacultyId": "uuid",
+      "score": 82.41,
+      "responseRate": 0.35,
+      "responseCount": 15,
+      "rankingEligibility": "eligible",
+      "dimensionScores": [
+        { "dimension": "Design", "score": 85.0 }
+      ]
+    }
+  ]
+}
+```
+
+#### `GET /api/v1/ranking/most-improved`
+```json
+{
+  "data": [
+    {
+      "rank": 1,
+      "websiteId": "uuid",
+      "websiteName": "Name",
+      "ownerFacultyId": "uuid",
+      "score": 85.0,
+      "previousScore": 80.0,
+      "delta": 5.0,
+      "responseRate": 0,
+      "responseCount": 15,
+      "rankingEligibility": "eligible",
+      "dimensionScores": []
+    }
+  ]
+}
+```
+
+#### `GET /api/v1/ranking/heatmap`
+```json
+{
+  "data": [
+    {
+      "facultyId": "uuid",
+      "dimensions": [
+        { "dimension": "Design", "score": 85.0 }
+      ]
+    }
+  ]
 }
 ```
 

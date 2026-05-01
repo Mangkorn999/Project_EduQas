@@ -24,3 +24,19 @@ out/
 # misc
 .DS_Store
 .vscode/
+<<<<<<< HEAD
+=======
+
+# AI Skills
+.gemini/
+.claude/
+.cursor/
+.codex/
+
+
+#get token
+get-token.mjs
+# local settings
+.local-settings.json
+.local-settings.js
+>>>>>>> feature/ux-login-role-test

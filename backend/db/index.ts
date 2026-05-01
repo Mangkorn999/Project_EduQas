@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+import 'dotenv/config'
+>>>>>>> feature/ux-login-role-test
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as schema from './schema'
