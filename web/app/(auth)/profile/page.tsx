@@ -41,25 +41,25 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto w-full max-w-5xl space-y-8 font-prompt">
       <section>
-        <h1 className="text-[28px] font-semibold leading-tight text-[var(--text-primary)]">{t('profile.title')}</h1>
-        <p className="mt-2 text-sm text-[var(--text-muted)]">{t('profile.subtitle')}</p>
+        <h1 className="text-[28px] font-semibold leading-tight text-[#0b1c30]">{t('profile.title')}</h1>
+        <p className="mt-2 text-sm text-[#444652]">{t('profile.subtitle')}</p>
       </section>
 
-      <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 shadow-sm">
+      <section className="rounded-xl border border-[#CBD5E1] bg-white p-5 shadow-sm transition-shadow hover:shadow-md sm:p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[#1C1917] text-white dark:bg-stone-50 dark:text-stone-950">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[#003087] text-white ring-4 ring-[#e5eeff]">
             <User className="h-9 w-9" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="text-2xl font-semibold text-[var(--text-primary)]">{user.name}</h2>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-[var(--text-muted)]">
+            <h2 className="text-2xl font-semibold text-[#0b1c30]">{user.name}</h2>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-[#444652]">
               <span className="inline-flex items-center gap-2">
                 <Mail className="h-4 w-4" />
                 {user.email || user.faculty || t('profile.noFaculty')}
               </span>
-              <span className="inline-flex rounded-full border-2 border-[#CA8A04] bg-amber-50 px-3 py-1 text-xs font-semibold text-[#92400E]">
+              <span className="inline-flex rounded-full border-2 border-[#003087] bg-[#e5eeff] px-3 py-1 text-xs font-semibold text-[#001d59]">
                 {getRoleLabel(activeRole, locale)}
               </span>
             </div>
@@ -67,7 +67,7 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/60 dark:bg-transparent dark:hover:bg-red-950/30"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FFD700] px-4 py-2.5 text-sm font-semibold text-[#001d59] shadow-sm transition-colors hover:bg-[#F59E0B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#003087] focus-visible:ring-offset-2"
           >
             <LogOut className="h-4 w-4" />
             {t('nav.logout')}
@@ -75,10 +75,10 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 shadow-sm">
+      <section className="rounded-xl border border-[#CBD5E1] bg-white p-5 shadow-sm transition-shadow hover:shadow-md sm:p-6">
         <div className="mb-5">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">{t('profile.switchRole')}</h2>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">{t('profile.roleHelp')}</p>
+          <h2 className="text-xl font-semibold text-[#0b1c30]">{t('profile.switchRole')}</h2>
+          <p className="mt-1 text-sm text-[#444652]">{t('profile.roleHelp')}</p>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {availableRoles.map((role) => {
@@ -92,8 +92,8 @@ export default function ProfilePage() {
                 className={cn(
                   'min-h-12 rounded-xl px-4 py-3 text-left text-sm transition-colors cursor-pointer',
                   active
-                    ? 'border-2 border-[#CA8A04] bg-amber-50 font-semibold text-[#92400E]'
-                    : 'border border-[var(--border)] bg-white text-[var(--text-muted)] hover:bg-gray-50 dark:bg-[var(--bg-surface)] dark:hover:bg-[var(--bg-subtle)]',
+                    ? 'border-2 border-[#003087] bg-[#e5eeff] font-semibold text-[#001d59]'
+                    : 'border border-[#CBD5E1] bg-white text-[#444652] hover:bg-gray-50',
                   changingRole === role && 'opacity-70'
                 )}
               >
