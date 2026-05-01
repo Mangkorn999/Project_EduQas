@@ -13,6 +13,11 @@ const envSchema = z.object({
   COOKIE_SECRET: z.string().min(32),
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
   CORS_ORIGIN: z.string().optional(),
+  FALLBACK_FACULTY_ID: z.string().uuid().optional(),
+  ALLOW_DEV_ROLE_SWITCHING: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true'),
 })
 
 const result = envSchema.safeParse(process.env)

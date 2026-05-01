@@ -3,6 +3,7 @@ import { FastifyPluginAsync } from 'fastify'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import csrf from '@fastify/csrf-protection'
+import { env } from '../config/env'
 
 const securityPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(helmet, {
@@ -14,10 +15,12 @@ const securityPlugin: FastifyPluginAsync = async (fastify) => {
     timeWindow: '1 minute',
   })
 
-  await fastify.register(csrf, {
-    cookieOpts: { signed: true },
-    getToken: (req) => req.headers['x-csrf-token'] as string,
-  })
+  if (env.NODE_ENV === 'production') {
+    await fastify.register(csrf, {
+      cookieOpts: { signed: true },
+      getToken: (req) => req.headers['x-csrf-token'] as string,
+    })
+  }
 }
 
 export default fp(securityPlugin, { name: 'security' })

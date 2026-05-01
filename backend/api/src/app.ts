@@ -57,6 +57,7 @@ export async function buildApp(opts: FastifyServerOptions = {}) {
 
   await app.register(autoload, {
     dir: join(__dirname, 'hooks'),
+    ignorePattern: /error\.hook\.(ts|js)$/,
   })
 
   // Better Auth Proxy (needed for OAuth callback and internal sessions)

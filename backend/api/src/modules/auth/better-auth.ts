@@ -10,7 +10,6 @@ type InternalRole =
   | 'staff'
   | 'student'
 
-
 const allowedRoles = new Set<InternalRole>([
   'super_admin',
   'admin',
@@ -29,6 +28,13 @@ function normalizeRole(input: unknown): InternalRole {
 function normalizeFacultyId(input: unknown): string | null {
   const raw = typeof input === 'string' ? input.trim() : ''
   return raw || null
+}
+
+function firstString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return null
 }
 
 const PSU_CLIENT_ID = process.env.PSU_CLIENT_ID
@@ -63,6 +69,22 @@ export const psuBetterAuth = betterAuth({
     additionalFields: {
       psuPassportId: { type: 'string', required: true },
       facultyId: {
+        type: 'string',
+        required: false,
+      },
+      facultyCode: {
+        type: 'string',
+        required: false,
+      },
+      facultyName: {
+        type: 'string',
+        required: false,
+      },
+      facultyNameTh: {
+        type: 'string',
+        required: false,
+      },
+      facultyNameEn: {
         type: 'string',
         required: false,
       },
@@ -113,6 +135,33 @@ export const psuBetterAuth = betterAuth({
 
             const role = normalizeRole(profile?.role)
             const facultyId = normalizeFacultyId(profile?.faculty_id ?? profile?.facultyId)
+            const facultyCode = firstString(
+              profile?.faculty_code,
+              profile?.facultyCode,
+              profile?.faculty,
+              profile?.department_code,
+              profile?.departmentCode
+            )
+            const facultyName = firstString(
+              profile?.faculty_name,
+              profile?.facultyName,
+              profile?.organization,
+              profile?.department,
+              profile?.division
+            )
+            const facultyNameTh = firstString(
+              profile?.faculty_name_th,
+              profile?.facultyNameTh,
+              profile?.organization_th,
+              profile?.department_th,
+              facultyName
+            )
+            const facultyNameEn = firstString(
+              profile?.faculty_name_en,
+              profile?.facultyNameEn,
+              profile?.organization_en,
+              profile?.department_en
+            )
 
             return {
               // Better Auth needs a stable unique id
@@ -122,6 +171,10 @@ export const psuBetterAuth = betterAuth({
               psuPassportId,
               role,
               facultyId,
+              facultyCode,
+              facultyName,
+              facultyNameTh,
+              facultyNameEn,
             }
           },
         },

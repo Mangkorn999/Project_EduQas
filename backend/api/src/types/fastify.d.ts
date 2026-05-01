@@ -20,6 +20,10 @@ declare module 'fastify' {
       psuPassportId: string
       role: string
       facultyId: string | null
+      facultyCode?: string | null
+      facultyNameTh?: string | null
+      facultyNameEn?: string | null
+      facultySource?: string | null
       [key: string]: unknown
     }
     jwtVerify<Decoded extends object = object>(options?: object): Promise<Decoded>

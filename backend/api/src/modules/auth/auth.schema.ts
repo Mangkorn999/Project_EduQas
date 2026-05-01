@@ -1,14 +1,27 @@
 import { z } from 'zod'
 
+export const facultyResponseSchema = z.object({
+  id: z.string().uuid().nullable(),
+  code: z.string().nullable(),
+  nameTh: z.string().nullable(),
+  nameEn: z.string().nullable(),
+  source: z.string().nullable(),
+})
+
+export const meResponseSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  displayName: z.string(),
+  role: z.string(),
+  facultyId: z.string().nullable(),
+  facultyNameTh: z.string().nullable(),
+  facultyNameEn: z.string().nullable(),
+  faculty: facultyResponseSchema.nullable(),
+})
+
 export const loginResponseSchema = z.object({
   accessToken: z.string(),
-  user: z.object({
-    id: z.string(),
-    email: z.string(),
-    displayName: z.string(),
-    role: z.string(),
-    facultyId: z.string().nullable(),
-  }),
+  user: meResponseSchema,
 })
 
 export const refreshResponseSchema = z.object({

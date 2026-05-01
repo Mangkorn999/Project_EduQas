@@ -57,6 +57,13 @@
       "when": 1777460344017,
       "tag": "0007_woozy_piledriver",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777616347246,
+      "tag": "0008_auth_faculty_metadata",
+      "breakpoints": true
     }
   ]
 }

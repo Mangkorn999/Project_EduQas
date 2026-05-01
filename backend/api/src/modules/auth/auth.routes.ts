@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { AuthController } from './auth.controller'
-import { setRoleSchema, roleOverrideOTPSchema, roleOverrideVerifySchema } from './auth.schema'
+import { meResponseSchema, setRoleSchema } from './auth.schema'
+import { env } from '../../config/env'
 
 export default async function authRoutes(app: FastifyInstance) {
   const controller = new AuthController(app)
@@ -12,13 +13,17 @@ export default async function authRoutes(app: FastifyInstance) {
   // Session management
   app.post('/refresh', controller.refresh)
   app.post('/logout', { preHandler: [app.authenticate] }, controller.logout)
-  app.get('/me', { preHandler: [app.authenticate] }, controller.me)
-
-  // Role management (Development & Admin)
-  app.post('/set-role', {
+  app.get('/me', {
     preHandler: [app.authenticate],
-    schema: { body: setRoleSchema }
-  }, controller.setRole)
+    schema: { response: { 200: meResponseSchema } },
+  }, controller.me)
+
+  if (env.NODE_ENV === 'development' || env.ALLOW_DEV_ROLE_SWITCHING) {
+    app.post('/set-role', {
+      preHandler: [app.authenticate],
+      schema: { body: setRoleSchema }
+    }, controller.setRole)
+  }
 
   // Note: role-override OTP routes can be added here or in a separate user management module
 }
