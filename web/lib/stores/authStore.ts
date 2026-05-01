@@ -8,6 +8,7 @@ export type AuthUser = {
   email?: string
   faculty: string
   role: UserRole
+  roles?: UserRole[]
 }
 
 type AuthState = {
@@ -45,6 +46,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           email: data.email,
           faculty: data.facultyId ?? '',
           role: data.role,
+          roles: Array.isArray(data.roles) ? data.roles : undefined,
         },
         isAuthenticated: true,
         isLoading: false,

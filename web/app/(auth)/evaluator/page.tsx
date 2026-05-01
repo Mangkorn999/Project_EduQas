@@ -1,111 +1,27 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion } from 'motion/react';
-import { AlertCircle, CalendarClock, ChevronRight } from 'lucide-react';
-import { StatsSection, WebsiteCard, type Website } from './_shared';
-import { useAuthStore } from '@/lib/stores/authStore';
-import { apiGet } from '@/lib/api';
+import Link from 'next/link';
+import {ArrowLeft, FileText} from 'lucide-react';
 
-export default function EvaluatorDashboard() {
-  const router = useRouter();
-  const { user } = useAuthStore();
-  const [websites, setWebsites] = useState<Website[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchForms = async () => {
-      try {
-        setLoading(true);
-        // Phase 1: Fetch all 'open' forms as mock assignments
-        const res = await apiGet('/api/v1/forms?status=open');
-        const activeForms = res.data || [];
-        
-        // Map to Website format used by WebsiteCard
-        const mappedWebsites = activeForms.map((form: any) => ({
-          id: form.id, // Using form id as the evaluation target
-          name: form.websiteName || 'Unnamed Website',
-          url: form.websiteUrl || '#',
-          faculty: form.websiteOwnerFaculty || 'Unknown Faculty',
-          status: 'pending', // all open forms are pending by default until response endpoint is implemented
-          dueDate: form.closeAt ? new Date(form.closeAt).toISOString() : undefined,
-          progress: 0,
-        }));
-        
-        setWebsites(mappedWebsites);
-      } catch (err) {
-        console.error('Failed to fetch assigned forms', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchForms();
-  }, []);
-
-  const handleEvaluate = (site: Website) => {
-    router.push(`/evaluator/evaluate/${site.id}/gate`);
-  };
-
-  const pendingWebsites = websites.filter(s => s.status !== 'completed');
-  const completedWebsites = websites.filter(s => s.status === 'completed');
-
-  if (loading) {
-    return (
-      <main className="p-8 max-w-6xl mx-auto flex justify-center items-center h-64">
-        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      </main>
-    );
-  }
-
+export default function EvaluatorIndexPage() {
   return (
-    <main className="p-8 max-w-6xl mx-auto space-y-8">
-      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-on-surface">สวัสดี, {user?.name || 'ผู้ใช้งาน'} 👋</h1>
-          <p className="text-gray-500 mt-1 flex items-center gap-2">
-            <CalendarClock className="h-4 w-4" /> แบบฟอร์มประเมินที่เปิดรับในขณะนี้
-          </p>
+    <div className="flex min-h-[calc(100vh-120px)] items-center justify-center">
+      <section className="w-full max-w-xl rounded-xl border border-[#E7E5E4] bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-700">
+          <FileText className="h-6 w-6" />
         </div>
-      </motion.div>
-
-      <StatsSection />
-
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-psu-navy flex items-center gap-2">
-            เว็บไซต์ที่รอประเมิน
-            <span className="bg-blue-100 text-blue-700 text-xs py-0.5 px-2 rounded-full">{pendingWebsites.length}</span>
-          </h2>
-        </div>
-        
-        {pendingWebsites.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pendingWebsites.map((site, index) => (
-              <WebsiteCard key={site.id} site={site} index={index} onClick={() => handleEvaluate(site)} />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-12 text-center">
-            <p className="text-gray-500 font-medium">ไม่มีแบบฟอร์มเปิดให้ประเมินในขณะนี้ 🎉</p>
-          </div>
-        )}
-      </div>
-
-      {completedWebsites.length > 0 && (
-        <div className="space-y-6 pt-8 border-t border-gray-100">
-          <h2 className="text-xl font-bold text-gray-500 flex items-center gap-2">
-            เว็บไซต์ที่ประเมินแล้ว
-            <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full">{completedWebsites.length}</span>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-75 hover:opacity-100 transition-opacity">
-            {completedWebsites.map((site, index) => (
-              <WebsiteCard key={site.id} site={site} index={index} onClick={() => handleEvaluate(site)} />
-            ))}
-          </div>
-        </div>
-      )}
-    </main>
+        <h1 className="font-[var(--font-heading)] text-2xl font-semibold text-[#0C0A09]">เลือกเว็บไซต์จากแดชบอร์ด</h1>
+        <p className="mt-2 text-sm leading-6 text-[#78716C]">
+          หน้านี้ใช้สำหรับกรอกแบบประเมินของเว็บไซต์ที่ได้รับมอบหมาย กรุณาเริ่มจากรายการเว็บไซต์ในหน้าแดชบอร์ด
+        </p>
+        <Link
+          href="/dashboard"
+          className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#1C1917] px-4 text-sm font-semibold text-white transition-colors hover:bg-stone-700"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          กลับไปแดชบอร์ด
+        </Link>
+      </section>
+    </div>
   );
 }
-

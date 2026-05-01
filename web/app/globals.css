@@ -4,6 +4,9 @@
 
 @theme {
   --font-sans: var(--font-inter), var(--font-noto-thai), system-ui, sans-serif;
+  --font-heading: var(--font-eb-garamond), var(--font-noto-thai), serif;
+  --font-body: var(--font-crimson), var(--font-noto-thai), serif;
+  --font-ui: var(--font-inter), var(--font-noto-thai), system-ui, sans-serif;
   --font-thai: var(--font-noto-thai), sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
@@ -32,23 +35,23 @@
 
 :root {
   /* Light Theme */
-  --bg-page: #F8FAFC;
+  --bg-page: #FAFAF9;
   --bg-surface: #FFFFFF;
-  --bg-subtle: #F1F5F9;
-  --bg-muted: #E2E8F0;
+  --bg-subtle: #F5F5F4;
+  --bg-muted: #E7E5E4;
 
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #94A3B8;
-  --text-disabled: #CBD5E1;
+  --text-primary: #0C0A09;
+  --text-secondary: #44403C;
+  --text-muted: #78716C;
+  --text-disabled: #A8A29E;
 
-  --border: #E2E8F0;
-  --border-strong: #CBD5E1;
+  --border: #E7E5E4;
+  --border-strong: #D6D3D1;
 
-  --accent-primary: #1E3A5F;   /* PSU Navy */
-  --accent-blue: #2563EB;      /* CTA Blue */
-  --accent-teal: #0D9488;      /* Success/Active */
-  --accent-amber: #D97706;     /* Warning */
+  --accent-primary: #1C1917;
+  --accent-blue: #1C1917;
+  --accent-teal: #15803D;
+  --accent-amber: #CA8A04;
   --accent-red: #DC2626;       /* Error/Danger */
 
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
@@ -58,23 +61,23 @@
 
 .dark {
   /* Dark Theme */
-  --bg-page: #0F172A;
-  --bg-surface: #1E293B;
-  --bg-subtle: #293548;
-  --bg-muted: #334155;
+  --bg-page: #0C0A09;
+  --bg-surface: #1C1917;
+  --bg-subtle: #292524;
+  --bg-muted: #44403C;
 
-  --text-primary: #F8FAFC;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
-  --text-disabled: #475569;
+  --text-primary: #FAFAF9;
+  --text-secondary: #D6D3D1;
+  --text-muted: #A8A29E;
+  --text-disabled: #78716C;
 
-  --border: #1E293B;
-  --border-strong: #334155;
+  --border: #292524;
+  --border-strong: #44403C;
 
-  --accent-primary: #60A5FA;   /* Light Blue (navy becomes light) */
-  --accent-blue: #3B82F6;
-  --accent-teal: #14B8A6;
-  --accent-amber: #F59E0B;
+  --accent-primary: #FAFAF9;
+  --accent-blue: #FAFAF9;
+  --accent-teal: #4ADE80;
+  --accent-amber: #CA8A04;
   --accent-red: #F87171;
 
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
@@ -85,6 +88,16 @@
 body {
   background-color: var(--bg-page);
   color: var(--text-primary);
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+}
+
+.academic-body {
+  font-family: var(--font-body);
 }

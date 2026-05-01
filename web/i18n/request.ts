@@ -1,10 +1,10 @@
 import {getRequestConfig} from 'next-intl/server';
-import {headers} from 'next/headers';
+import {cookies} from 'next/headers';
 
 export default getRequestConfig(async () => {
-  // You can read the locale from headers or cookies if not using path prefix
-  // For now, we'll default to 'th'
-  const locale = 'th';
+  const cookieStore = await cookies();
+  const requestedLocale = cookieStore.get('EILA_LOCALE')?.value;
+  const locale = requestedLocale === 'en' ? 'en' : 'th';
 
   return {
     locale,
