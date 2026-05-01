@@ -220,7 +220,7 @@ export default function AuthLayout({
                     width={32}
                     height={32}
                     priority
-                    className="h-auto object-contain"
+                    className="h-auto w-auto object-contain"
                   />
                 </span>
                 <span className="min-w-0">

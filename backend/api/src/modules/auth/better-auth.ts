@@ -57,13 +57,17 @@ export const psuBetterAuth = betterAuth({
   },
 
   user: {
+    fields: {
+      name: 'display_name',
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    },
     additionalFields: {
-      psuPassportId: { type: 'string', required: true },
-      facultyId:     { type: 'string', required: false },
-      facultyCode:   { type: 'string', required: false },
-      facultyName:   { type: 'string', required: false },
-      facultyNameTh: { type: 'string', required: false },
-      facultyNameEn: { type: 'string', required: false },
+      psuPassportId: { type: 'string', required: true, fieldName: 'psu_passport_id' },
+      facultyId:     { type: 'string', required: false, fieldName: 'faculty_id' },
+      facultyCode:   { type: 'string', required: false, fieldName: 'faculty_code' },
+      facultyNameTh: { type: 'string', required: false, fieldName: 'faculty_name_th' },
+      facultyNameEn: { type: 'string', required: false, fieldName: 'faculty_name_en' },
       role:          { type: 'string', required: false, defaultValue: 'student' },
     },
   },
@@ -154,7 +158,6 @@ export const psuBetterAuth = betterAuth({
               role,
               facultyId:     null,          // PSU ไม่ส่ง UUID ของเรามา — resolve ใน controller
               facultyCode,                  // "08" ← ใช้ค้นหาใน faculties table
-              facultyName:   facultyNameTh,
               facultyNameTh,
               facultyNameEn,
             }
