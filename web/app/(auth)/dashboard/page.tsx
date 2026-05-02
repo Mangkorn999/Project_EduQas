@@ -4,12 +4,8 @@ import Link from 'next/link';
 import {useEffect, useMemo, useState} from 'react';
 import {useTranslations} from 'next-intl';
 import {
-  CheckCircle2,
-  Clock3,
-  ExternalLink,
+  ChevronRight,
   Globe,
-  Hourglass,
-  type LucideIcon,
 } from 'lucide-react';
 import {useAuthStore} from '@/lib/stores/authStore';
 import {apiGet} from '@/lib/api';
@@ -45,81 +41,10 @@ type AdminWebsite = {
   status: AdminWebsiteStatus;
 };
 
-type PendingReview = {
-  id: string;
-  evaluatorName: string;
-  websiteName: string;
-  submittedAt: string;
-};
 
 const EVALUATOR_ROLES: UserRole[] = ['student', 'staff', 'teacher'];
 const ADMIN_ROLES: UserRole[] = ['super_admin', 'admin', 'executive'];
 
-const mockEvaluatorWebsites: EvaluatorWebsite[] = [
-  {
-    id: 'assigned-1',
-    name: 'EILA PSU Portal',
-    url: 'https://eila.psu.ac.th',
-    progress: 0,
-    status: 'not_started',
-  },
-  {
-    id: 'assigned-2',
-    name: 'Faculty of Science',
-    url: 'https://science.psu.ac.th',
-    progress: 58,
-    status: 'in_progress',
-  },
-  {
-    id: 'assigned-3',
-    name: 'Academic Service Center',
-    url: 'https://academic.psu.ac.th',
-    progress: 100,
-    status: 'submitted',
-  },
-];
-
-const mockAdminWebsites: AdminWebsite[] = [
-  {
-    id: 'overview-1',
-    name: 'EILA PSU Portal',
-    url: 'https://eila.psu.ac.th',
-    submitted: 18,
-    totalEvaluators: 24,
-    status: 'in_progress',
-  },
-  {
-    id: 'overview-2',
-    name: 'Faculty of Engineering',
-    url: 'https://engineer.psu.ac.th',
-    submitted: 0,
-    totalEvaluators: 12,
-    status: 'waiting',
-  },
-  {
-    id: 'overview-3',
-    name: 'Prince of Songkla University',
-    url: 'https://www.psu.ac.th',
-    submitted: 32,
-    totalEvaluators: 32,
-    status: 'published',
-  },
-];
-
-const mockPendingReviews: PendingReview[] = [
-  {
-    id: 'review-1',
-    evaluatorName: 'ภคสิน ประจวบสุข',
-    websiteName: 'EILA PSU Portal',
-    submittedAt: '1 พ.ค. 2569',
-  },
-  {
-    id: 'review-2',
-    evaluatorName: 'สมชาย รักไทย',
-    websiteName: 'Faculty of Science',
-    submittedAt: '30 เม.ย. 2569',
-  },
-];
 
 export default function DashboardPage() {
   const t = useTranslations();
@@ -132,8 +57,8 @@ export default function DashboardPage() {
       try {
         const res = await apiGet('/api/v1/forms');
         setForms(res.data || []);
-      } catch (err) {
-        console.error('Failed to fetch forms for dashboard', err);
+      } catch {
+        // forms stay as empty array — UI shows empty state
       } finally {
         setLoading(false);
       }
@@ -154,8 +79,7 @@ export default function DashboardPage() {
       <AdminDashboard
         name={user?.name || 'EILA'}
         loading={loading}
-        websites={adminWebsites.length > 0 ? adminWebsites : mockAdminWebsites}
-        pendingReviews={mockPendingReviews}
+        websites={adminWebsites}
       />
     );
   }
@@ -164,7 +88,7 @@ export default function DashboardPage() {
     <EvaluatorDashboard
       greeting={t('dashboard.greeting', {name: user?.name || 'EILA'})}
       loading={loading}
-      websites={evaluatorWebsites.length > 0 ? evaluatorWebsites : mockEvaluatorWebsites}
+      websites={evaluatorWebsites}
     />
   );
 }
@@ -178,29 +102,31 @@ function EvaluatorDashboard({
   loading: boolean;
   websites: EvaluatorWebsite[];
 }) {
-  const stats = {
-    notStarted: websites.filter((website) => website.status === 'not_started').length,
-    inProgress: websites.filter((website) => website.status === 'in_progress').length,
-    submitted: websites.filter((website) => website.status === 'submitted').length,
-  };
+  const total = websites.length;
+  const submitted = websites.filter((w) => w.status === 'submitted').length;
+  const notEvaluated = websites.filter((w) => w.status !== 'submitted').length;
 
   return (
     <div className="space-y-8">
       <DashboardHeader greeting={greeting} subtitle="เว็บไซต์ที่ได้รับมอบหมายให้ประเมิน" />
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatCard icon={Clock3} label="ยังไม่เริ่ม" value={stats.notStarted} tone="gray" />
-        <StatCard icon={Hourglass} label="กำลังดำเนินการ" value={stats.inProgress} tone="amber" />
-        <StatCard icon={CheckCircle2} label="ส่งแล้ว" value={stats.submitted} tone="green" />
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="ทั้งหมด" value={total} tone="navy" />
+        <StatCard label="ประเมินแล้ว" value={submitted} tone="green" />
+        <StatCard label="ยังไม่ประเมิน" value={notEvaluated} tone="red" />
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-[#E7E5E4] bg-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
         <SectionHeader title="เว็บไซต์ที่ต้องประเมิน" description={loading ? 'กำลังโหลดข้อมูล...' : `${websites.length} รายการ`} />
-        <div className="grid grid-cols-1 divide-y divide-[#E7E5E4]">
-          {websites.map((website) => (
-            <EvaluatorWebsiteRow key={website.id} website={website} />
-          ))}
-        </div>
+        {websites.length === 0 && !loading ? (
+          <p className="px-5 py-10 text-center text-sm text-[#64748B]">ยังไม่มีเว็บไซต์ที่ได้รับมอบหมาย</p>
+        ) : (
+          <div className="divide-y divide-[#E2E8F0]">
+            {websites.map((website) => (
+              <EvaluatorWebsiteRow key={website.id} website={website} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -210,12 +136,10 @@ function AdminDashboard({
   name,
   loading,
   websites,
-  pendingReviews,
 }: {
   name: string;
   loading: boolean;
   websites: AdminWebsite[];
-  pendingReviews: PendingReview[];
 }) {
   const stats = {
     total: websites.length,
@@ -228,41 +152,24 @@ function AdminDashboard({
     <div className="space-y-8">
       <DashboardHeader greeting={`สวัสดี, ${name}`} subtitle="ภาพรวมการประเมินคุณภาพเว็บไซต์" />
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Globe} label="เว็บไซต์ทั้งหมด" value={stats.total} tone="blue" />
-        <StatCard icon={Clock3} label="รอการประเมิน" value={stats.waiting} tone="gray" />
-        <StatCard icon={Hourglass} label="กำลังดำเนินการ" value={stats.inProgress} tone="amber" />
-        <StatCard icon={CheckCircle2} label="เสร็จสมบูรณ์" value={stats.completed} tone="green" />
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="ฟอร์มทั้งหมด" value={stats.total} tone="navy" />
+        <StatCard label="รอการประเมิน" value={stats.waiting} tone="gray" />
+        <StatCard label="กำลังดำเนินการ" value={stats.inProgress} tone="amber" />
+        <StatCard label="เสร็จสมบูรณ์" value={stats.completed} tone="green" />
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-[#E7E5E4] bg-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
         <SectionHeader title="ภาพรวมเว็บไซต์" description={loading ? 'กำลังโหลดข้อมูล...' : `${websites.length} เว็บไซต์`} />
-        <div className="grid grid-cols-1 divide-y divide-[#E7E5E4]">
-          {websites.map((website) => (
-            <AdminWebsiteRow key={website.id} website={website} />
-          ))}
-        </div>
-      </section>
-
-      <section className="overflow-hidden rounded-xl border border-[#E7E5E4] bg-white shadow-sm">
-        <SectionHeader title="รอการตรวจสอบ" description={`${pendingReviews.length} รายการที่ส่งแล้ว`} />
-        <div className="grid grid-cols-1 divide-y divide-[#E7E5E4]">
-          {pendingReviews.map((review) => (
-            <article key={review.id} className="grid gap-4 px-5 py-4 md:grid-cols-[1fr_160px_auto] md:items-center">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[#0C0A09]">{review.evaluatorName}</p>
-                <p className="mt-1 truncate text-sm text-[#78716C]">{review.websiteName}</p>
-              </div>
-              <p className="text-sm text-[#78716C]">{review.submittedAt}</p>
-              <Link
-                href="/evaluator"
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-[#1C1917] px-4 text-sm font-semibold text-white transition-colors hover:bg-stone-700"
-              >
-                ตรวจสอบ
-              </Link>
-            </article>
-          ))}
-        </div>
+        {websites.length === 0 && !loading ? (
+          <p className="px-5 py-10 text-center text-sm text-[#64748B]">ยังไม่มีแบบประเมิน</p>
+        ) : (
+          <div className="divide-y divide-[#E2E8F0]">
+            {websites.map((website) => (
+              <AdminWebsiteRow key={website.id} website={website} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -271,134 +178,106 @@ function AdminDashboard({
 function DashboardHeader({greeting, subtitle}: {greeting: string; subtitle: string}) {
   return (
     <section>
-      <h1 className="font-[var(--font-heading)] text-[28px] font-semibold leading-tight text-[#0C0A09] dark:text-[var(--text-primary)]">
-        {greeting}
-      </h1>
-      <p className="mt-2 text-sm text-[#78716C]">{subtitle}</p>
+      <h1 className="text-2xl font-bold text-[#1B2D5B]">{greeting}</h1>
+      <p className="mt-1 text-sm text-[#64748B]">{subtitle}</p>
     </section>
   );
 }
 
 function SectionHeader({title, description}: {title: string; description: string}) {
   return (
-    <div className="flex flex-col gap-1 border-b border-[#E7E5E4] px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
-      <h2 className="font-[var(--font-heading)] text-xl font-semibold text-[#0C0A09] dark:text-[var(--text-primary)]">{title}</h2>
-      <p className="text-sm text-[#78716C]">{description}</p>
+    <div className="flex items-center justify-between border-b border-[#E2E8F0] px-5 py-4">
+      <h2 className="text-base font-bold text-[#1B2D5B]">{title}</h2>
+      <p className="text-sm text-[#64748B]">{description}</p>
     </div>
   );
 }
 
 function EvaluatorWebsiteRow({website}: {website: EvaluatorWebsite}) {
-  const action = getEvaluatorAction(website.status);
   const href = `/evaluator/${website.id}${website.status === 'submitted' ? '?readonly=true' : ''}`;
 
   return (
-    <article className="grid gap-4 px-5 py-5 transition-shadow hover:shadow-md lg:grid-cols-[1fr_220px_140px_150px] lg:items-center">
-      <WebsiteIdentity name={website.name} url={website.url} />
-      <ProgressBlock label="ความคืบหน้า" value={website.progress} />
-      <EvaluatorStatusBadge status={website.status} />
-      <Link href={href} className={action.className}>
-        {action.label}
-      </Link>
-    </article>
+    <Link
+      href={href}
+      className="flex items-center justify-between px-5 py-4 transition-colors hover:bg-[#F8FAFC]"
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#1B2D5B]">
+          <Globe className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-[#1A202C]">{website.name}</p>
+          <p className="truncate text-xs text-[#64748B]">{website.url}</p>
+        </div>
+      </div>
+      <div className="ml-4 flex shrink-0 items-center gap-3">
+        <EvaluatorStatusBadge status={website.status} />
+        <ChevronRight className="h-4 w-4 text-[#94A3B8]" />
+      </div>
+    </Link>
   );
 }
 
 function AdminWebsiteRow({website}: {website: AdminWebsite}) {
-  const progress = Math.round((website.submitted / website.totalEvaluators) * 100);
+  const progress = website.totalEvaluators > 0
+    ? Math.round((website.submitted / website.totalEvaluators) * 100)
+    : 0;
 
   return (
-    <article className="grid gap-4 px-5 py-5 transition-shadow hover:shadow-md lg:grid-cols-[1fr_260px_120px_130px] lg:items-center">
-      <WebsiteIdentity name={website.name} url={website.url} />
-      <div>
-        <div className="mb-2 flex items-center justify-between gap-3 text-xs text-[#78716C]">
-          <span>
-            {website.submitted}/{website.totalEvaluators} ผู้ประเมินส่งแล้ว
-          </span>
-          <span>{progress}%</span>
+    <div className="flex items-center justify-between px-5 py-4 hover:bg-[#F8FAFC]">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#1B2D5B]">
+          <Globe className="h-5 w-5" />
         </div>
-        <ProgressBar value={progress} />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-[#1A202C]">{website.name}</p>
+          <p className="truncate text-xs text-[#64748B]">{website.url}</p>
+        </div>
       </div>
-      <AdminStatusBadge status={website.status} />
-      <Link
-        href="/forms"
-        className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E7E5E4] bg-white px-4 text-sm font-semibold text-[#1C1917] transition-colors hover:bg-gray-50"
-      >
-        ดูรายละเอียด
-      </Link>
-    </article>
-  );
-}
-
-function WebsiteIdentity({name, url}: {name: string; url: string}) {
-  return (
-    <div className="flex min-w-0 items-start gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-700">
-        <Globe className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <h3 className="truncate text-sm font-semibold text-[#0C0A09] dark:text-[var(--text-primary)]">{name}</h3>
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-xs text-[#78716C] transition-colors hover:text-[#92400E]"
+      <div className="ml-4 flex shrink-0 items-center gap-4">
+        <div className="hidden w-32 sm:block">
+          <div className="mb-1 flex justify-between text-xs text-[#64748B]">
+            <span>{website.submitted}/{website.totalEvaluators}</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-[#E2E8F0]">
+            <div className="h-full rounded-full bg-[#1B2D5B]" style={{width: `${Math.min(100, progress)}%`}} />
+          </div>
+        </div>
+        <AdminStatusBadge status={website.status} />
+        <Link
+          href="/forms"
+          className="inline-flex h-9 items-center justify-center rounded-xl bg-[#1B2D5B] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#2D5FA6]"
         >
-          <span className="truncate">{url}</span>
-          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-        </a>
+          จัดการ
+        </Link>
       </div>
     </div>
   );
 }
 
-function ProgressBlock({label, value}: {label: string; value: number}) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between text-xs text-[#78716C]">
-        <span>{label}</span>
-        <span>{value}%</span>
-      </div>
-      <ProgressBar value={value} />
-    </div>
-  );
-}
-
-function ProgressBar({value}: {value: number}) {
-  return (
-    <div className="h-2 rounded-full bg-gray-100">
-      <div className="h-full rounded-full bg-[#CA8A04]" style={{width: `${Math.min(100, Math.max(0, value))}%`}} />
-    </div>
-  );
-}
 
 function StatCard({
-  icon: Icon,
   label,
   value,
   tone,
 }: {
-  icon: LucideIcon;
   label: string;
   value: number;
-  tone: 'gray' | 'amber' | 'green' | 'blue';
+  tone: 'navy' | 'green' | 'red' | 'amber' | 'gray';
 }) {
-  const toneClass = {
-    gray: 'bg-gray-100 text-gray-700',
-    amber: 'bg-amber-100 text-amber-700',
-    green: 'bg-green-100 text-green-700',
-    blue: 'bg-blue-100 text-blue-700',
-  }[tone];
+  const styles: Record<typeof tone, string> = {
+    navy:  'bg-[#1B2D5B] text-white',
+    green: 'bg-[#16A34A] text-white',
+    red:   'bg-[#DC2626] text-white',
+    amber: 'bg-amber-500 text-white',
+    gray:  'bg-[#F1F5F9] text-[#1A202C]',
+  };
 
   return (
-    <div className="rounded-xl border border-[#E7E5E4] bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-      <div className="mb-5 flex items-center justify-between">
-        <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', toneClass)}>{label}</span>
-        <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', toneClass)}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-      <p className="text-3xl font-semibold text-[#0C0A09]">{value}</p>
+    <div className={cn('rounded-xl p-6 shadow-sm', styles[tone])}>
+      <p className="text-sm font-medium opacity-80">{label}</p>
+      <p className="mt-2 text-4xl font-bold">{value}</p>
     </div>
   );
 }
@@ -424,40 +303,18 @@ function AdminStatusBadge({status}: {status: AdminWebsiteStatus}) {
   return <span className={cn('w-fit rounded-full px-3 py-1 text-xs font-semibold', config.className)}>{config.label}</span>;
 }
 
-function getEvaluatorAction(status: EvaluationStatus) {
-  if (status === 'not_started') {
-    return {
-      label: 'เริ่มประเมิน',
-      className:
-        'inline-flex h-10 items-center justify-center rounded-xl bg-[#CA8A04] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#A16207]',
-    };
-  }
-
-  if (status === 'in_progress') {
-    return {
-      label: 'ดำเนินการต่อ',
-      className:
-        'inline-flex h-10 items-center justify-center rounded-xl bg-[#1C1917] px-4 text-sm font-semibold text-white transition-colors hover:bg-stone-700',
-    };
-  }
-
-  return {
-    label: 'ดูผลการประเมิน',
-    className:
-      'inline-flex h-10 items-center justify-center rounded-xl border border-[#E7E5E4] bg-white px-4 text-sm font-semibold text-[#1C1917] transition-colors hover:bg-gray-50',
-  };
-}
 
 function mapFormsToEvaluatorWebsites(forms: DashboardForm[]): EvaluatorWebsite[] {
   return forms
     .filter((form) => form.websiteUrl || form.websiteName || form.title)
-    .map((form, index) => {
+    .map((form) => {
+      // progress will be fetched per-form once assignment API returns submittedCount
       const status = form.status === 'closed' ? 'submitted' : form.status === 'open' ? 'in_progress' : 'not_started';
       return {
-        id: form.id || `form-${index}`,
-        name: form.websiteName || form.title || `เว็บไซต์ที่ ${index + 1}`,
-        url: form.websiteUrl || 'https://www.psu.ac.th',
-        progress: status === 'submitted' ? 100 : status === 'in_progress' ? 52 : 0,
+        id: form.id,
+        name: form.websiteName || form.title || 'ไม่ระบุชื่อ',
+        url: form.websiteUrl || '',
+        progress: status === 'submitted' ? 100 : 0,
         status,
       };
     });
@@ -466,17 +323,15 @@ function mapFormsToEvaluatorWebsites(forms: DashboardForm[]): EvaluatorWebsite[]
 function mapFormsToAdminWebsites(forms: DashboardForm[]): AdminWebsite[] {
   return forms
     .filter((form) => form.websiteUrl || form.websiteName || form.title)
-    .map((form, index) => {
+    .map((form) => {
+      // submitted/totalEvaluators will come from assignment API once connected
       const status = form.status === 'closed' ? 'completed' : form.status === 'open' ? 'in_progress' : 'waiting';
-      const submitted = status === 'completed' ? 12 : status === 'in_progress' ? 7 : 0;
-      const totalEvaluators = 12;
-
       return {
-        id: form.id || `form-${index}`,
-        name: form.websiteName || form.title || `เว็บไซต์ที่ ${index + 1}`,
-        url: form.websiteUrl || 'https://www.psu.ac.th',
-        submitted,
-        totalEvaluators,
+        id: form.id,
+        name: form.websiteName || form.title || 'ไม่ระบุชื่อ',
+        url: form.websiteUrl || '',
+        submitted: 0,
+        totalEvaluators: 0,
         status,
       };
     });

@@ -104,13 +104,13 @@ export default function AuthLayout({
 
         <aside
           className={cn(
-            'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[var(--border)] bg-[var(--bg-surface)] shadow-sm transition-all duration-250 ease-in-out',
+            'fixed inset-y-0 left-0 z-50 flex flex-col bg-[#1B2D5B] shadow-lg transition-all duration-250 ease-in-out',
             collapsed ? 'lg:w-16' : 'lg:w-[240px]',
             mobileOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full lg:translate-x-0',
             'md:w-16 lg:flex'
           )}
         >
-          <div className={cn('flex h-20 items-center border-b border-[var(--border)] px-4', collapsed ? 'lg:justify-center' : 'justify-between')}>
+          <div className={cn('flex h-20 items-center border-b border-white/10 px-4', collapsed ? 'lg:justify-center' : 'justify-between')}>
             <Link href="/dashboard" className="flex items-center justify-center">
               <Image
                 src="/images/eila-logo.png"
@@ -124,7 +124,7 @@ export default function AuthLayout({
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] lg:hidden"
+              className="rounded-lg p-2 text-white/60 hover:bg-white/10 lg:hidden"
               aria-label={t('common.closeMenu')}
             >
               <X className="h-5 w-5" />
@@ -132,7 +132,7 @@ export default function AuthLayout({
             <button
               type="button"
               onClick={() => setCollapsed((value) => !value)}
-              className="hidden h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] lg:flex"
+              className="hidden h-8 w-8 items-center justify-center rounded-lg border border-white/20 text-white/60 hover:bg-white/10 lg:flex"
               aria-label={collapsed ? t('common.expandSidebar') : t('common.collapseSidebar')}
             >
               {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -151,18 +151,18 @@ export default function AuthLayout({
                     'flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors',
                     collapsed && 'lg:justify-center lg:px-0',
                     isActive
-                      ? 'bg-stone-100 text-stone-950 dark:bg-stone-800 dark:text-stone-50'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]'
+                      ? 'border-l-[3px] border-white bg-[#2D5FA6] pl-[calc(0.75rem-3px)] text-white'
+                      : 'text-white/70 hover:bg-[#243B73] hover:text-white'
                   )}
                 >
-                  <item.icon className={cn('h-5 w-5 shrink-0', isActive && 'text-[#CA8A04]')} />
+                  <item.icon className="h-5 w-5 shrink-0 text-current" />
                   <span className={cn('truncate', collapsed && 'lg:hidden')}>{t(`nav.${item.labelKey}`)}</span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className="border-t border-[var(--border)] p-3">
+          <div className="border-t border-white/10 p-3">
             {user && (
               <UserMenu
                 variant="sidebar"
@@ -174,7 +174,7 @@ export default function AuthLayout({
                 }}
               />
             )}
-            <div className={cn('mt-3 text-[11px] font-medium text-[var(--text-disabled)]', collapsed && 'lg:text-center')}>
+            <div className={cn('mt-3 text-[11px] font-medium text-white/40', collapsed && 'lg:text-center')}>
               <span className={cn(collapsed && 'lg:hidden')}>EILA Portal</span>
               <span className={cn(!collapsed && 'ml-1', collapsed && 'hidden lg:inline')}>v0.1</span>
             </div>
@@ -193,7 +193,7 @@ export default function AuthLayout({
                 <span>{t('nav.dashboard')}</span>
                 <span className="px-2 text-[var(--text-disabled)]">/</span>
                 <span className="text-[var(--text-primary)]">{pageTitle}</span>
-                {roleLabel && <span className="ml-2 hidden text-[#92400E] sm:inline">{roleLabel}</span>}
+                {roleLabel && <span className="ml-2 hidden font-semibold text-[#1B2D5B] sm:inline">{roleLabel}</span>}
               </div>
 
               <div className="flex items-center gap-2">
