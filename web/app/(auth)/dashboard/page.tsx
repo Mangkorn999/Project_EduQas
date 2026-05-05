@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useState, useRef} from 'react';
 import {useTranslations} from 'next-intl';
 import {
   AlertCircle,
@@ -10,6 +10,7 @@ import {
   ExternalLink,
   Globe,
   TrendingUp,
+  Search,
 } from 'lucide-react';
 import {useAuthStore} from '@/lib/stores/authStore';
 import {apiGet} from '@/lib/api';
@@ -54,6 +55,24 @@ type DisplayStatusSite = {
 
 const EVALUATOR_ROLES: UserRole[] = ['student', 'staff', 'teacher'];
 const ADMIN_ROLES: UserRole[] = ['super_admin', 'admin', 'executive'];
+
+function useCountUp(target: number, duration = 900) {
+  const [count, setCount] = useState(0);
+  const rafRef = useRef<number>();
+  useEffect(() => {
+    if (target === 0) { setCount(0); return; }
+    const startTime = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setCount(Math.round(eased * target));
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current!);
+  }, [target, duration]);
+  return count;
+}
 
 const getDisplayStatus = (site: DisplayStatusSite): DisplayStatus => {
   if (
@@ -236,6 +255,41 @@ function HeroBanner({
   );
 }
 
+function SkeletonCard() {
+  return (
+    <article className="flex flex-col gap-[14px] rounded-[14px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] p-5 shadow-[var(--shadow-sm)]">
+      <div className="flex items-start gap-3">
+        <div className="h-[42px] w-[42px] shrink-0 animate-pulse rounded-[12px] bg-[var(--typeui-search-bg)]" />
+        <div className="flex flex-col gap-2 pt-1">
+          <div className="h-[13px] w-[120px] animate-pulse rounded-md bg-[var(--typeui-search-bg)]" />
+          <div className="h-[11px] w-[90px] animate-pulse rounded-md bg-[var(--typeui-search-bg)]" />
+        </div>
+      </div>
+      <div className="h-[22px] w-[80px] animate-pulse rounded-[6px] bg-[var(--typeui-search-bg)]" />
+      <div className="h-[46px] w-full animate-pulse rounded-[12px] bg-[var(--typeui-search-bg)]" />
+    </article>
+  );
+}
+
+function CircularProgress({ value, max, size = 36 }: { value: number; max: number; size?: number }) {
+  const pct = max > 0 ? value / max : 0;
+  const r = (size - 5) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - pct);
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--typeui-card-border)" strokeWidth={4} />
+      <circle
+        cx={size/2} cy={size/2} r={r} fill="none"
+        stroke="var(--typeui-success)" strokeWidth={4}
+        strokeDasharray={circ} strokeDashoffset={offset}
+        strokeLinecap="round"
+        style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1)' }}
+      />
+    </svg>
+  );
+}
+
 function StatCard({
   label,
   value,
@@ -249,6 +303,7 @@ function StatCard({
   tone: StatTone;
   trend?: string;
 }) {
+  const animated = useCountUp(value);
   const toneConfig = getToneClasses(tone);
   return (
     <article className="rounded-[18px] border border-[var(--typeui-card-border-soft)] bg-[var(--typeui-card-bg)] p-6 shadow-[var(--typeui-stat-shadow)] transition-[background-color,border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-md)] motion-reduce:transform-none motion-reduce:transition-none">
@@ -262,80 +317,115 @@ function StatCard({
           </span>
         )}
       </div>
-      <p className="mt-5 text-[36px] font-bold leading-none tracking-[-0.04em] text-[var(--typeui-text)]">{value}</p>
+      <p className="mt-5 text-[36px] font-bold leading-none tracking-[-0.04em] text-[var(--typeui-text)]">{animated}</p>
       <p className="mt-2 text-[13px] font-medium text-[var(--typeui-subtext)]">{label}</p>
     </article>
   );
 }
 
 function EvaluatorTable({loading, websites}: {loading: boolean; websites: EvaluatorWebsite[]}) {
+  const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'Complete'>('All');
+  
+  const filtered = websites.filter(w =>
+    w.name.toLowerCase().includes(query.toLowerCase()) ||
+    w.url.toLowerCase().includes(query.toLowerCase())
+  );
+  
+  const tabFiltered = activeTab === 'Active'
+    ? filtered.filter(w => w.status === 'in_progress')
+    : activeTab === 'Complete'
+    ? filtered.filter(w => w.status === 'submitted')
+    : filtered;
+
   return (
     <section className="overflow-hidden rounded-[18px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] shadow-[var(--typeui-card-shadow)]">
-      <TableHeader
-        title="เว็บไซต์ที่ต้องประเมิน"
-        subtitle={loading ? 'กำลังโหลดข้อมูล...' : `${websites.length} รายการ`}
-      />
+      <div className="flex flex-col gap-4 border-b border-[var(--typeui-divider)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-[15px] font-bold text-[var(--typeui-text)]">เว็บไซต์ที่ต้องประเมิน</h2>
+          <p className="mt-1 text-[12px] font-normal text-[var(--typeui-muted)]">{loading ? 'กำลังโหลดข้อมูล...' : `${websites.length} รายการ`}</p>
+        </div>
+        <div className="relative w-full sm:w-[220px]">
+          <Search className="absolute left-3 top-1/2 h-[13px] w-[13px] -translate-y-1/2 text-[var(--typeui-muted)]" />
+          <input
+            type="text"
+            placeholder="ค้นหาเว็บไซต์..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="w-full rounded-[10px] border border-[var(--typeui-search-border)] bg-[var(--typeui-search-bg)] py-2 pl-8 pr-4 text-[13px] text-[var(--typeui-text)] placeholder:text-[var(--typeui-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--typeui-primary)] focus:ring-offset-0 focus:border-transparent transition-colors duration-150"
+          />
+        </div>
+      </div>
 
-      {websites.length === 0 && !loading ? (
+      {loading ? (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : tabFiltered.length === 0 ? (
         <EmptyState title="ยังไม่มีเว็บไซต์ที่ได้รับมอบหมาย" subtitle="รายการประเมินใหม่จะแสดงที่นี่เมื่อมีการมอบหมายงาน" />
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
-          {websites.map((website) => (
+          {tabFiltered.map((website) => (
             <EvaluatorWebsiteCard key={website.id} website={website} />
           ))}
         </div>
       )}
 
-      <TableFooter countLabel={`${websites.length} total`} />
+      <TableFooter countLabel={`${tabFiltered.length} total`} activeTab={activeTab} onTabChange={setActiveTab} />
     </section>
   );
 }
 
 function AdminTable({loading, websites}: {loading: boolean; websites: AdminWebsite[]}) {
+  const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'Complete'>('All');
+  
+  const filtered = websites.filter(w =>
+    w.name.toLowerCase().includes(query.toLowerCase()) ||
+    w.url.toLowerCase().includes(query.toLowerCase())
+  );
+  
+  const tabFiltered = activeTab === 'Active'
+    ? filtered.filter(w => w.status === 'in_progress')
+    : activeTab === 'Complete'
+    ? filtered.filter(w => w.status === 'completed' || w.status === 'published')
+    : filtered;
+
   return (
     <section className="overflow-hidden rounded-[18px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] shadow-[var(--typeui-card-shadow)]">
-      <TableHeader
-        title="ภาพรวมเว็บไซต์"
-        subtitle={loading ? 'กำลังโหลดข้อมูล...' : `${websites.length} เว็บไซต์`}
-      />
+      <div className="flex flex-col gap-4 border-b border-[var(--typeui-divider)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-[15px] font-bold text-[var(--typeui-text)]">ภาพรวมเว็บไซต์</h2>
+          <p className="mt-1 text-[12px] font-normal text-[var(--typeui-muted)]">{loading ? 'กำลังโหลดข้อมูล...' : `${websites.length} เว็บไซต์`}</p>
+        </div>
+        <div className="relative w-full sm:w-[220px]">
+          <Search className="absolute left-3 top-1/2 h-[13px] w-[13px] -translate-y-1/2 text-[var(--typeui-muted)]" />
+          <input
+            type="text"
+            placeholder="ค้นหาเว็บไซต์..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="w-full rounded-[10px] border border-[var(--typeui-search-border)] bg-[var(--typeui-search-bg)] py-2 pl-8 pr-4 text-[13px] text-[var(--typeui-text)] placeholder:text-[var(--typeui-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--typeui-primary)] focus:ring-offset-0 focus:border-transparent transition-colors duration-150"
+          />
+        </div>
+      </div>
 
-      {websites.length === 0 && !loading ? (
+      {loading ? (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : tabFiltered.length === 0 ? (
         <EmptyState title="ยังไม่มีแบบประเมิน" subtitle="แบบประเมินที่สร้างแล้วจะแสดงในตารางนี้" />
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
-          {websites.map((website) => (
+          {tabFiltered.map((website) => (
             <AdminWebsiteCard key={website.id} website={website} />
           ))}
         </div>
       )}
 
-      <TableFooter countLabel={`${websites.length} total`} />
+      <TableFooter countLabel={`${tabFiltered.length} total`} activeTab={activeTab} onTabChange={setActiveTab} />
     </section>
-  );
-}
-
-function TableHeader({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <div className="flex flex-col gap-4 border-b border-[var(--typeui-divider)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h2 className="text-[15px] font-bold text-[var(--typeui-text)]">{title}</h2>
-        <p className="mt-1 text-[12px] font-normal text-[var(--typeui-muted)]">{subtitle}</p>
-      </div>
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          className="rounded-[10px] border border-[var(--typeui-search-border)] bg-[var(--typeui-header-bg)] px-4 py-2 text-[13px] font-medium text-[var(--typeui-button-text)] transition-colors duration-150 hover:bg-[var(--typeui-search-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--typeui-primary)] motion-reduce:transition-none"
-        >
-          Filter
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -351,10 +441,26 @@ function EvaluatorWebsiteCard({website}: {website: EvaluatorWebsite}) {
         <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[12px] bg-[var(--typeui-blue-soft)] text-[var(--typeui-blue)]">
           <Globe className="h-[18px] w-[18px]" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold text-[var(--typeui-text)]">{website.name}</p>
           <p className="mt-1 truncate text-[12px] text-[var(--typeui-muted)]">{website.url || '-'}</p>
         </div>
+        {(() => {
+          const s = getDisplayStatus(website);
+          const cfg = {
+            done:       { label: 'ส่งแล้ว',         cls: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success)]' },
+            inprogress: { label: 'กำลังดำเนินการ',  cls: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning)]' },
+            pending:    { label: 'รอดำเนินการ',      cls: 'bg-[var(--typeui-search-bg)] text-[var(--typeui-muted)]' },
+          }[s];
+          return (
+            <span className={cn(
+              'ml-auto shrink-0 rounded-full px-[10px] py-[3px] text-[10px] font-bold whitespace-nowrap',
+              cfg.cls
+            )}>
+              {cfg.label}
+            </span>
+          );
+        })()}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -368,16 +474,21 @@ function EvaluatorWebsiteCard({website}: {website: EvaluatorWebsite}) {
       </div>
 
       {website.progress > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-[var(--typeui-muted)]">คะแนน</span>
-            <span className={cn('text-[12px] font-bold', getScoreTextColor(website.progress))}>{website.progress}%</span>
-          </div>
-          <div className="h-[6px] w-full overflow-hidden rounded-full bg-[var(--typeui-card-border)]">
-            <div
-              className={cn('h-full rounded-full transition-[width] duration-[600ms] ease-in-out', getScoreColor(website.progress))}
-              style={{width: `${Math.min(100, website.progress)}%`}}
-            />
+        <div className="flex items-center gap-3">
+          <CircularProgress value={website.progress} max={100} size={38} />
+          <div className="flex-1 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-[var(--typeui-muted)]">ความคืบหน้า</span>
+              <span className={cn('text-[12px] font-bold', getScoreTextColor(website.progress))}>
+                {website.progress}%
+              </span>
+            </div>
+            <div className="h-[5px] w-full overflow-hidden rounded-full bg-[var(--typeui-card-border)]">
+              <div
+                className={cn('h-full rounded-full transition-[width] duration-[800ms] ease-in-out', getScoreColor(website.progress))}
+                style={{ width: `${Math.min(100, website.progress)}%` }}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -409,10 +520,26 @@ function AdminWebsiteCard({website}: {website: AdminWebsite}) {
         <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[12px] bg-[var(--typeui-blue-soft)] text-[var(--typeui-blue)]">
           <Globe className="h-[18px] w-[18px]" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold text-[var(--typeui-text)]">{website.name}</p>
           <p className="mt-1 truncate text-[12px] text-[var(--typeui-muted)]">{website.url || '-'}</p>
         </div>
+        {(() => {
+          const s = getDisplayStatus(website);
+          const cfg = {
+            done:       { label: 'ส่งแล้ว',         cls: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success)]' },
+            inprogress: { label: 'กำลังดำเนินการ',  cls: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning)]' },
+            pending:    { label: 'รอดำเนินการ',      cls: 'bg-[var(--typeui-search-bg)] text-[var(--typeui-muted)]' },
+          }[s];
+          return (
+            <span className={cn(
+              'ml-auto shrink-0 rounded-full px-[10px] py-[3px] text-[10px] font-bold whitespace-nowrap',
+              cfg.cls
+            )}>
+              {cfg.label}
+            </span>
+          );
+        })()}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -465,21 +592,33 @@ function EmptyState({title, subtitle}: {title: string; subtitle: string}) {
   );
 }
 
-function TableFooter({countLabel}: {countLabel: string}) {
+function TableFooter({
+  countLabel,
+  activeTab,
+  onTabChange,
+}: {
+  countLabel: string;
+  activeTab: string;
+  onTabChange: (t: string) => void;
+}) {
   return (
     <footer className="flex flex-col gap-3 border-t border-[var(--typeui-divider)] px-6 py-[14px] sm:flex-row sm:items-center sm:justify-between">
       <p className="text-[11px] font-medium text-[var(--typeui-muted)]">{countLabel}</p>
       <div className="flex items-center gap-2">
         {['All', 'Active', 'Complete'].map((tab) => (
-          <span
+          <button
             key={tab}
+            type="button"
+            onClick={() => onTabChange(tab)}
             className={cn(
-              'rounded-[8px] px-3 py-[5px] text-[12px] font-medium transition-colors duration-150 motion-reduce:transition-none',
-              'bg-[var(--typeui-search-bg)] text-[var(--typeui-subtext)] hover:bg-[var(--typeui-primary-soft)] hover:text-[var(--typeui-primary)]'
+              'rounded-[8px] px-3 py-[5px] text-[12px] font-medium transition-colors duration-150',
+              activeTab === tab
+                ? 'bg-[var(--typeui-primary)] text-white shadow-sm'
+                : 'bg-[var(--typeui-search-bg)] text-[var(--typeui-subtext)] hover:bg-[var(--typeui-primary-soft)] hover:text-[var(--typeui-primary)]'
             )}
           >
             {tab}
-          </span>
+          </button>
         ))}
       </div>
     </footer>

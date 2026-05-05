@@ -149,12 +149,13 @@
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
 
+  --typeui-bg: #07070d;
   --typeui-content-bg: #07070d;
   --typeui-topbar-bg: rgba(9,9,11,0.90);
   --typeui-topbar-border: rgba(255,255,255,0.07);
-  --typeui-muted: #71717a;
-  --typeui-text: #fafafa;
-  --typeui-subtext: #a1a1aa;
+  --typeui-muted: #6060a0;
+  --typeui-text: #f0f0ff;
+  --typeui-subtext: #a0a0c8;
   --typeui-button-text: #e4e4e7;
   --typeui-search-bg: rgba(255,255,255,0.05);
   --typeui-search-border: rgba(255,255,255,0.08);

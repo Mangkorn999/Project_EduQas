@@ -1,26 +1,62 @@
-'use client'
-import { useTheme } from 'next-themes'
-import { Sun, Moon } from 'lucide-react'
+'use client';
+
+import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
+import { Sun, Moon } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme()
-  const isDark = resolvedTheme === 'dark'
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <div className="h-[34px] w-[68px] rounded-full bg-[var(--typeui-search-bg)]" />;
+
+  const isDark = resolvedTheme === 'dark';
+  const toggle = () => setTheme(isDark ? 'light' : 'dark');
 
   return (
     <button
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-[10px]
-        border border-[var(--typeui-search-border)] bg-[var(--typeui-search-bg)]
-        text-[var(--typeui-subtext)] transition-colors duration-150
-        hover:bg-[var(--typeui-divider)] hover:text-[var(--typeui-text)]
-        focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--typeui-primary)]
-        motion-reduce:transition-none"
-      aria-label="Toggle theme"
+      onClick={toggle}
+      className={cn(
+        "relative flex h-[34px] w-[68px] cursor-pointer items-center rounded-full p-1 transition-all duration-300",
+        "bg-white border border-gray-200 shadow-sm",
+        "dark:bg-slate-900 dark:border-slate-800"
+      )}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      {isDark
-        ? <Sun className="h-4 w-4" />
-        : <Moon className="h-4 w-4" />
-      }
+      {/* Sliding Knob */}
+      <motion.div
+        className="absolute h-6 w-6 rounded-full bg-[#0066FF] shadow-[0_2px_8px_rgba(0,102,255,0.4)]"
+        initial={false}
+        animate={{
+          x: isDark ? 34 : 0,
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 400,
+          damping: 25,
+        }}
+      />
+
+      {/* Icons Container */}
+      <div className="relative flex w-full items-center justify-around z-10 pointer-events-none">
+        <Sun 
+          className={cn(
+            "h-[15px] w-[15px] transition-colors duration-300",
+            !isDark ? "text-white" : "text-gray-400"
+          )}
+          strokeWidth={2.5}
+        />
+        <Moon 
+          className={cn(
+            "h-[15px] w-[15px] transition-colors duration-300",
+            isDark ? "text-white" : "text-slate-500"
+          )}
+          strokeWidth={2.5}
+        />
+      </div>
     </button>
-  )
+  );
 }
