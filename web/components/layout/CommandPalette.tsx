@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import {AnimatePresence, motion} from 'framer-motion';
+import {useTranslations} from 'next-intl';
 import {Search, type LucideIcon} from 'lucide-react';
 
 type CommandPaletteItem = {
@@ -17,6 +18,8 @@ type CommandPaletteProps = {
 };
 
 export function CommandPalette({items, open, onClose}: CommandPaletteProps) {
+  const t = useTranslations();
+  
   return (
     <AnimatePresence>
       {open && (
@@ -39,7 +42,7 @@ export function CommandPalette({items, open, onClose}: CommandPaletteProps) {
               <Search className="h-4 w-4 text-white/40" />
               <input
                 autoFocus
-                placeholder="Search pages, actions..."
+                placeholder={t('forms.search') || 'Search...'}
                 className="w-full bg-transparent text-white outline-none placeholder:text-white/30"
               />
             </div>

@@ -147,6 +147,7 @@ function EvaluatorDashboard({
   loading: boolean;
   websites: EvaluatorWebsite[];
 }) {
+  const t = useTranslations();
   const total = websites.length;
   const submitted = websites.filter((w) => w.status === 'submitted').length;
   const notEvaluated = websites.filter((w) => w.status !== 'submitted').length;
@@ -155,18 +156,18 @@ function EvaluatorDashboard({
   return (
     <DashboardSurface>
       <HeroBanner
-        eyebrow="Evaluator console"
+        eyebrow={t('dashboard.evaluatorConsole')}
         title={greeting}
-        subtitle="เว็บไซต์ที่ได้รับมอบหมายให้ประเมิน"
+        subtitle={t('dashboard.assignedWebsites')}
         metric={`${submitted}/${total}`}
-        metricLabel="ส่งแบบประเมินแล้ว"
+        metricLabel={t('dashboard.submittedForms')}
       />
 
       <section className="grid grid-cols-2 gap-[14px] lg:grid-cols-4" aria-label="Dashboard statistics">
-        <StatCard label="ทั้งหมด" value={total} icon={Globe} tone="primary" />
-        <StatCard label="กำลังดำเนินการ" value={inProgress} icon={Clock} tone="warning" />
-        <StatCard label="ประเมินแล้ว" value={submitted} icon={CheckCircle2} tone="success" />
-        <StatCard label="ยังไม่ประเมิน" value={notEvaluated} icon={AlertCircle} tone="danger" />
+        <StatCard label={t('dashboard.total')} value={total} icon={Globe} tone="primary" />
+        <StatCard label={t('dashboard.inProgress')} value={inProgress} icon={Clock} tone="warning" />
+        <StatCard label={t('dashboard.evaluated')} value={submitted} icon={CheckCircle2} tone="success" />
+        <StatCard label={t('dashboard.notEvaluated')} value={notEvaluated} icon={AlertCircle} tone="danger" />
       </section>
 
       <EvaluatorTable loading={loading} websites={websites} />
@@ -183,6 +184,7 @@ function AdminDashboard({
   loading: boolean;
   websites: AdminWebsite[];
 }) {
+  const t = useTranslations();
   const stats = {
     total: websites.length,
     waiting: websites.filter((website) => website.status === 'waiting').length,
@@ -193,18 +195,18 @@ function AdminDashboard({
   return (
     <DashboardSurface>
       <HeroBanner
-        eyebrow="Admin console"
-        title={`สวัสดี, ${name}`}
-        subtitle="ภาพรวมการประเมินคุณภาพเว็บไซต์"
+        eyebrow={t('dashboard.adminConsole')}
+        title={t('dashboard.greeting', {name})}
+        subtitle={t('dashboard.websiteOverview')}
         metric={`${stats.completed}/${stats.total}`}
-        metricLabel="เสร็จสมบูรณ์"
+        metricLabel={t('dashboard.completed')}
       />
 
       <section className="grid grid-cols-2 gap-[14px] lg:grid-cols-4" aria-label="Dashboard statistics">
-        <StatCard label="ฟอร์มทั้งหมด" value={stats.total} icon={Globe} tone="primary" />
-        <StatCard label="รอการประเมิน" value={stats.waiting} icon={Clock} tone="muted" />
-        <StatCard label="กำลังดำเนินการ" value={stats.inProgress} icon={TrendingUp} tone="warning" />
-        <StatCard label="เสร็จสมบูรณ์" value={stats.completed} icon={CheckCircle2} tone="success" />
+        <StatCard label={t('dashboard.total')} value={stats.total} icon={Globe} tone="primary" />
+        <StatCard label={t('dashboard.waiting')} value={stats.waiting} icon={Clock} tone="muted" />
+        <StatCard label={t('dashboard.inProgress')} value={stats.inProgress} icon={TrendingUp} tone="warning" />
+        <StatCard label={t('dashboard.completed')} value={stats.completed} icon={CheckCircle2} tone="success" />
       </section>
 
       <AdminTable loading={loading} websites={websites} />
@@ -324,6 +326,7 @@ function StatCard({
 }
 
 function EvaluatorTable({loading, websites}: {loading: boolean; websites: EvaluatorWebsite[]}) {
+  const t = useTranslations();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'Complete'>('All');
   
@@ -342,14 +345,14 @@ function EvaluatorTable({loading, websites}: {loading: boolean; websites: Evalua
     <section className="overflow-hidden rounded-[18px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] shadow-[var(--typeui-card-shadow)]">
       <div className="flex flex-col gap-4 border-b border-[var(--typeui-divider)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-[15px] font-bold text-[var(--typeui-text)]">เว็บไซต์ที่ต้องประเมิน</h2>
-          <p className="mt-1 text-[12px] font-normal text-[var(--typeui-muted)]">{loading ? 'กำลังโหลดข้อมูล...' : `${websites.length} รายการ`}</p>
+          <h2 className="text-[15px] font-bold text-[var(--typeui-text)]">{t('dashboard.assignedWebsites')}</h2>
+          <p className="mt-1 text-[12px] font-normal text-[var(--typeui-muted)]">{loading ? t('common.loading') : t('dashboard.itemsCount', {count: websites.length})}</p>
         </div>
         <div className="relative w-full sm:w-[220px]">
           <Search className="absolute left-3 top-1/2 h-[13px] w-[13px] -translate-y-1/2 text-[var(--typeui-muted)]" />
           <input
             type="text"
-            placeholder="ค้นหาเว็บไซต์..."
+            placeholder={t('dashboard.searchWebsites')}
             value={query}
             onChange={e => setQuery(e.target.value)}
             className="w-full rounded-[10px] border border-[var(--typeui-search-border)] bg-[var(--typeui-search-bg)] py-2 pl-8 pr-4 text-[13px] text-[var(--typeui-text)] placeholder:text-[var(--typeui-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--typeui-primary)] focus:ring-offset-0 focus:border-transparent transition-colors duration-150"
@@ -362,7 +365,7 @@ function EvaluatorTable({loading, websites}: {loading: boolean; websites: Evalua
           {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : tabFiltered.length === 0 ? (
-        <EmptyState title="ยังไม่มีเว็บไซต์ที่ได้รับมอบหมาย" subtitle="รายการประเมินใหม่จะแสดงที่นี่เมื่อมีการมอบหมายงาน" />
+        <EmptyState title={t('dashboard.noAssigned')} subtitle={t('dashboard.newAssignedDesc')} />
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
           {tabFiltered.map((website) => (
@@ -371,12 +374,13 @@ function EvaluatorTable({loading, websites}: {loading: boolean; websites: Evalua
         </div>
       )}
 
-      <TableFooter countLabel={`${tabFiltered.length} total`} activeTab={activeTab} onTabChange={setActiveTab} />
+      <TableFooter countLabel={t('dashboard.itemsCount', {count: tabFiltered.length})} activeTab={activeTab} onTabChange={setActiveTab} />
     </section>
   );
 }
 
 function AdminTable({loading, websites}: {loading: boolean; websites: AdminWebsite[]}) {
+  const t = useTranslations();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'Complete'>('All');
   
@@ -395,14 +399,14 @@ function AdminTable({loading, websites}: {loading: boolean; websites: AdminWebsi
     <section className="overflow-hidden rounded-[18px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] shadow-[var(--typeui-card-shadow)]">
       <div className="flex flex-col gap-4 border-b border-[var(--typeui-divider)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-[15px] font-bold text-[var(--typeui-text)]">ภาพรวมเว็บไซต์</h2>
-          <p className="mt-1 text-[12px] font-normal text-[var(--typeui-muted)]">{loading ? 'กำลังโหลดข้อมูล...' : `${websites.length} เว็บไซต์`}</p>
+          <h2 className="text-[15px] font-bold text-[var(--typeui-text)]">{t('dashboard.websiteOverview')}</h2>
+          <p className="mt-1 text-[12px] font-normal text-[var(--typeui-muted)]">{loading ? t('common.loading') : t('dashboard.websitesCount', {count: websites.length})}</p>
         </div>
         <div className="relative w-full sm:w-[220px]">
           <Search className="absolute left-3 top-1/2 h-[13px] w-[13px] -translate-y-1/2 text-[var(--typeui-muted)]" />
           <input
             type="text"
-            placeholder="ค้นหาเว็บไซต์..."
+            placeholder={t('dashboard.searchWebsites')}
             value={query}
             onChange={e => setQuery(e.target.value)}
             className="w-full rounded-[10px] border border-[var(--typeui-search-border)] bg-[var(--typeui-search-bg)] py-2 pl-8 pr-4 text-[13px] text-[var(--typeui-text)] placeholder:text-[var(--typeui-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--typeui-primary)] focus:ring-offset-0 focus:border-transparent transition-colors duration-150"
@@ -415,7 +419,7 @@ function AdminTable({loading, websites}: {loading: boolean; websites: AdminWebsi
           {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : tabFiltered.length === 0 ? (
-        <EmptyState title="ยังไม่มีแบบประเมิน" subtitle="แบบประเมินที่สร้างแล้วจะแสดงในตารางนี้" />
+        <EmptyState title={t('dashboard.noForms')} subtitle={t('dashboard.newAssignedDesc')} />
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
           {tabFiltered.map((website) => (
@@ -424,12 +428,13 @@ function AdminTable({loading, websites}: {loading: boolean; websites: AdminWebsi
         </div>
       )}
 
-      <TableFooter countLabel={`${tabFiltered.length} total`} activeTab={activeTab} onTabChange={setActiveTab} />
+      <TableFooter countLabel={t('dashboard.itemsCount', {count: tabFiltered.length})} activeTab={activeTab} onTabChange={setActiveTab} />
     </section>
   );
 }
 
 function EvaluatorWebsiteCard({website}: {website: EvaluatorWebsite}) {
+  const t = useTranslations();
   const href = `/evaluator/${website.id}${website.status === 'submitted' ? '?readonly=true' : ''}`;
 
   return (
@@ -448,9 +453,9 @@ function EvaluatorWebsiteCard({website}: {website: EvaluatorWebsite}) {
         {(() => {
           const s = getDisplayStatus(website);
           const cfg = {
-            done:       { label: 'ส่งแล้ว',         cls: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success)]' },
-            inprogress: { label: 'กำลังดำเนินการ',  cls: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning)]' },
-            pending:    { label: 'รอดำเนินการ',      cls: 'bg-[var(--typeui-search-bg)] text-[var(--typeui-muted)]' },
+            done:       { label: t('dashboard.done'),         cls: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success)]' },
+            inprogress: { label: t('dashboard.inProgress'),  cls: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning)]' },
+            pending:    { label: t('dashboard.pending'),     cls: 'bg-[var(--typeui-search-bg)] text-[var(--typeui-muted)]' },
           }[s];
           return (
             <span className={cn(
@@ -478,7 +483,7 @@ function EvaluatorWebsiteCard({website}: {website: EvaluatorWebsite}) {
           <CircularProgress value={website.progress} max={100} size={38} />
           <div className="flex-1 space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] text-[var(--typeui-muted)]">ความคืบหน้า</span>
+              <span className="text-[11px] text-[var(--typeui-muted)]">{t('dashboard.progress')}</span>
               <span className={cn('text-[12px] font-bold', getScoreTextColor(website.progress))}>
                 {website.progress}%
               </span>
@@ -496,10 +501,10 @@ function EvaluatorWebsiteCard({website}: {website: EvaluatorWebsite}) {
       <div className="px-0 pb-0 pt-0">
         <Link
           href={href}
-          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[12px] border-0 bg-[linear-gradient(135deg,var(--typeui-primary)_0%,#1e7cd8_100%)] py-[13px] text-[14px] font-extrabold tracking-[0.01em] text-white shadow-[0_4px_18px_rgba(12,92,171,0.35)] transition-[opacity,transform] duration-150 hover:-translate-y-px hover:opacity-[0.88]"
+          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[12px] border-0 bg-[linear-gradient(135deg,var(--typeui-primary)_0%,#1e7cd8_100%)] py-[13px] text-[14px] font-extrabold tracking-[0.01em] text-white shadow-[0_4px_18_rgba(12,92,171,0.35)] transition-[opacity,transform] duration-150 hover:-translate-y-px hover:opacity-[0.88]"
         >
           <ExternalLink className="h-[15px] w-[15px] stroke-[2.5]" />
-          เริ่มประเมิน
+          {t('dashboard.startEvaluation')}
         </Link>
       </div>
     </article>
@@ -507,6 +512,7 @@ function EvaluatorWebsiteCard({website}: {website: EvaluatorWebsite}) {
 }
 
 function AdminWebsiteCard({website}: {website: AdminWebsite}) {
+  const t = useTranslations();
   const progress = website.totalEvaluators > 0
     ? Math.round((website.submitted / website.totalEvaluators) * 100)
     : 0;
@@ -527,9 +533,9 @@ function AdminWebsiteCard({website}: {website: AdminWebsite}) {
         {(() => {
           const s = getDisplayStatus(website);
           const cfg = {
-            done:       { label: 'ส่งแล้ว',         cls: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success)]' },
-            inprogress: { label: 'กำลังดำเนินการ',  cls: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning)]' },
-            pending:    { label: 'รอดำเนินการ',      cls: 'bg-[var(--typeui-search-bg)] text-[var(--typeui-muted)]' },
+            done:       { label: t('dashboard.done'),         cls: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success)]' },
+            inprogress: { label: t('dashboard.inProgress'),  cls: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning)]' },
+            pending:    { label: t('dashboard.pending'),     cls: 'bg-[var(--typeui-search-bg)] text-[var(--typeui-muted)]' },
           }[s];
           return (
             <span className={cn(
@@ -570,10 +576,10 @@ function AdminWebsiteCard({website}: {website: AdminWebsite}) {
       <div className="px-0 pb-0 pt-0">
         <Link
           href="/forms"
-          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[12px] border-0 bg-[linear-gradient(135deg,var(--typeui-primary)_0%,#1e7cd8_100%)] py-[13px] text-[14px] font-extrabold tracking-[0.01em] text-white shadow-[0_4px_18px_rgba(12,92,171,0.35)] transition-[opacity,transform] duration-150 hover:-translate-y-px hover:opacity-[0.88]"
+          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[12px] border-0 bg-[linear-gradient(135deg,var(--typeui-primary)_0%,#1e7cd8_100%)] py-[13px] text-[14px] font-extrabold tracking-[0.01em] text-white shadow-[0_4px_18_rgba(12,92,171,0.35)] transition-[opacity,transform] duration-150 hover:-translate-y-px hover:opacity-[0.88]"
         >
           <ExternalLink className="h-[15px] w-[15px] stroke-[2.5]" />
-          เริ่มประเมิน
+          {t('dashboard.startEvaluation')}
         </Link>
       </div>
     </article>
@@ -601,23 +607,28 @@ function TableFooter({
   activeTab: string;
   onTabChange: (t: string) => void;
 }) {
+  const t = useTranslations();
   return (
     <footer className="flex flex-col gap-3 border-t border-[var(--typeui-divider)] px-6 py-[14px] sm:flex-row sm:items-center sm:justify-between">
       <p className="text-[11px] font-medium text-[var(--typeui-muted)]">{countLabel}</p>
       <div className="flex items-center gap-2">
-        {['All', 'Active', 'Complete'].map((tab) => (
+        {[
+          {id: 'All', label: t('dashboard.all')},
+          {id: 'Active', label: t('dashboard.active')},
+          {id: 'Complete', label: t('dashboard.complete')}
+        ].map((tab) => (
           <button
-            key={tab}
+            key={tab.id}
             type="button"
-            onClick={() => onTabChange(tab)}
+            onClick={() => onTabChange(tab.id)}
             className={cn(
               'rounded-[8px] px-3 py-[5px] text-[12px] font-medium transition-colors duration-150',
-              activeTab === tab
+              activeTab === tab.id
                 ? 'bg-[var(--typeui-primary)] text-white shadow-sm'
                 : 'bg-[var(--typeui-search-bg)] text-[var(--typeui-subtext)] hover:bg-[var(--typeui-primary-soft)] hover:text-[var(--typeui-primary)]'
             )}
           >
-            {tab}
+            {tab.label}
           </button>
         ))}
       </div>

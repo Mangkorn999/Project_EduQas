@@ -16,7 +16,29 @@
     "done": "เสร็จสมบูรณ์",
     "websites": "เว็บไซต์ที่อยู่ในการประเมิน",
     "progress": "ความคืบหน้า",
-    "openWebsite": "เปิดเว็บไซต์"
+    "openWebsite": "เปิดเว็บไซต์",
+    "evaluatorConsole": "แดชบอร์ดผู้ประเมิน",
+    "adminConsole": "แดชบอร์ดผู้ดูแลระบบ",
+    "assignedWebsites": "เว็บไซต์ที่ได้รับมอบหมาย",
+    "submittedForms": "ส่งแบบประเมินแล้ว",
+    "total": "ทั้งหมด",
+    "inProgress": "กำลังดำเนินการ",
+    "evaluated": "ประเมินแล้ว",
+    "notEvaluated": "ยังไม่ประเมิน",
+    "websiteOverview": "ภาพรวมเว็บไซต์",
+    "waiting": "รอการประเมิน",
+    "completed": "เสร็จสมบูรณ์",
+    "searchWebsites": "ค้นหาเว็บไซต์...",
+    "itemsCount": "{count} รายการ",
+    "noAssigned": "ยังไม่มีเว็บไซต์ที่ได้รับมอบหมาย",
+    "newAssignedDesc": "รายการประเมินใหม่จะแสดงที่นี่เมื่อมีการมอบหมายงาน",
+    "all": "ทั้งหมด",
+    "active": "กำลังทำ",
+    "complete": "เสร็จสิ้น",
+    "startEvaluation": "เริ่มประเมิน",
+    "noForms": "ยังไม่มีแบบประเมิน",
+    "formsOverview": "ภาพรวมแบบฟอร์ม",
+    "websitesCount": "{count} เว็บไซต์"
   },
   "forms": {
     "title": "แบบฟอร์มทั้งหมด",
@@ -84,6 +106,17 @@
     "collapseSidebar": "ย่อแถบเมนู",
     "loading": "กำลังโหลด...",
     "error": "เกิดข้อผิดพลาด",
-    "success": "สำเร็จ"
+    "success": "สำเร็จ",
+    "search": "ค้นหา..."
+  },
+  "auth": {
+    "signIn": "เข้าสู่ระบบเพื่อดำเนินการต่อ",
+    "loginWithPsu": "เข้าสู่ระบบด้วย PSU Passport",
+    "loginSubtitle": "เข้าสู่ระบบด้วย PSU Passport เพื่อใช้งานระบบประเมินเว็บไซต์หน่วยงาน",
+    "termsPrefix": "โดยการเข้าสู่ระบบ คุณยอมรับ",
+    "terms": "ข้อตกลงการใช้งาน",
+    "privacy": "นโยบายความเป็นส่วนตัว",
+    "and": "และ",
+    "universitySuffix": "ของมหาวิทยาลัย"
   }
 }

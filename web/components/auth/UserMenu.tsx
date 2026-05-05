@@ -3,7 +3,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {useLocale, useTranslations} from 'next-intl';
-import {ChevronDown, LogOut, User} from 'lucide-react';
+import {ChevronDown, LogOut, Settings, User} from 'lucide-react';
 import {useAuthStore} from '@/lib/stores/authStore';
 import {cn} from '@/lib/utils';
 import {ALL_ROLES, getRoleLabel} from '@/lib/roles';
@@ -96,66 +96,97 @@ export function UserMenu({
         <button
           type="button"
           onClick={() => setIsOpen((value) => !value)}
-          className="hidden h-11 w-11 items-center justify-center rounded-full border border-[var(--typeui-search-border)] bg-[var(--typeui-search-bg)] text-[var(--typeui-subtext)] transition-colors duration-150 hover:bg-[var(--typeui-divider)] hover:text-[var(--typeui-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--typeui-primary)] sm:flex"
+          className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] bg-[#0066FF] text-xs font-bold text-white shadow-sm transition-all duration-200 hover:shadow-[0_0_12px_rgba(0,102,255,0.4)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066FF]"
           aria-label="Open user menu"
-          title="Open user menu"
+          title="Profile menu"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--typeui-primary)] text-white">
-            <User className="h-4 w-4" />
-          </span>
+          {user.name?.charAt(0).toUpperCase() || 'A'}
         </button>
       )}
 
       {isOpen && (
         <div
           className={cn(
-            'absolute z-[9999] mt-2 w-80 rounded-[16px] border border-[var(--border)] bg-[var(--bg-surface)] p-2 shadow-lg',
+            'absolute z-[9999] mt-2 w-60 rounded-[20px] border border-[var(--border)] bg-[var(--bg-surface)] p-2 shadow-xl',
             variant === 'sidebar' ? 'bottom-full left-0 mb-2' : 'right-0'
           )}
         >
-          <div className="border-b border-[var(--border)] p-3">
-            <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{user.name}</p>
-            <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{user.email || user.faculty || t('profile.noFaculty')}</p>
-          </div>
-
-          <div className="p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t('profile.switchRole')}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {availableRoles.map((role) => {
-                const active = activeRole === role;
-                return (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => handleRoleSelect(role)}
-                    disabled={changingRole !== null}
-                    className={cn(
-                      'min-h-10 rounded-lg px-3 py-2 text-left text-xs transition-colors cursor-pointer',
-                      active
-                        ? 'border-2 border-[var(--typeui-gold)] bg-[var(--typeui-warning-soft)] font-semibold text-[var(--typeui-warning-text)]'
-                        : 'border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]',
-                      changingRole === role && 'opacity-70'
-                    )}
-                  >
-                    {getRoleLabel(role, locale)}
-                  </button>
-                );
-              })}
+          {/* Header */}
+          <div className="border-b border-[var(--border)] px-4 py-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+              {t('profile.title')}
+            </span>
+            <div className="mt-2">
+              <p className="truncate text-sm font-bold text-[var(--text-primary)]">{user.name}</p>
+              <p className="mt-0.5 truncate text-[11px] text-[var(--text-muted)]">
+                {roleLabel}
+              </p>
             </div>
           </div>
 
-          <div className="border-t border-[var(--border)] p-2">
+          <div className="py-2">
+            <button
+              type="button"
+              onClick={() => { router.push('/profile'); setIsOpen(false); }}
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
+            >
+              <User className="h-4 w-4" />
+              <span>{t('nav.profile')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { router.push('/settings'); setIsOpen(false); }}
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
+            >
+              <Settings className="h-4 w-4" />
+              <span>{t('nav.settings')}</span>
+            </button>
+          </div>
+
+          {/* Role Switch Section (if multiple roles available) */}
+          {availableRoles.length > 1 && (
+            <div className="border-t border-[var(--border)] px-4 py-3">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                {t('profile.switchRole')}
+              </p>
+              <div className="grid grid-cols-1 gap-1">
+                {availableRoles.map((role) => {
+                  const active = activeRole === role;
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => handleRoleSelect(role)}
+                      disabled={changingRole !== null}
+                      className={cn(
+                        'flex min-h-9 items-center justify-between rounded-lg px-3 py-1.5 text-xs transition-all',
+                        active
+                          ? 'bg-[var(--typeui-warning-soft)] font-bold text-[var(--typeui-warning-text)]'
+                          : 'text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]'
+                      )}
+                    >
+                      <span>{getRoleLabel(role, locale)}</span>
+                      {active && <div className="h-1.5 w-1.5 rounded-full bg-[var(--typeui-gold)]" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="border-t border-[var(--border)] p-1">
             <button
               type="button"
               onClick={handleLogout}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--typeui-danger-text)] transition-colors hover:bg-[var(--typeui-danger-soft)]"
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--typeui-danger-text)] transition-colors hover:bg-[var(--typeui-danger-soft)]"
             >
               <LogOut className="h-4 w-4" />
-              {t('nav.logout')}
+              <span>{t('nav.logout')}</span>
             </button>
           </div>
         </div>
       )}
+
     </div>
   );
 }

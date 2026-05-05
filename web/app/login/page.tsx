@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { ArrowRight, Globe } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/authStore';
@@ -12,6 +13,7 @@ import { LanguageToggle } from '@/components/ui/LanguageToggle';
 const REAL_LOGIN_URL = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'http://localhost:3001/auth/psu';
 
 export default function LoginPage() {
+  const t = useTranslations();
   const router = useRouter();
   const { isAuthenticated, isLoading, user } = useAuthStore();
   const redirectUrl = useMemo(() => {
@@ -45,11 +47,10 @@ export default function LoginPage() {
             className="mx-auto mb-8 object-contain dark:brightness-90"
           />
           <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
-            Sign in to continue
+            {t('auth.signIn')}
           </h1>
           <p className="mt-4 text-[var(--text-secondary)] leading-relaxed">
-            เข้าสู่ระบบด้วย <span className="font-semibold text-[var(--accent-primary)]">PSU Passport</span> <br /> 
-            เพื่อใช้งานระบบประเมินเว็บไซต์หน่วยงาน
+            {t('auth.loginSubtitle')}
           </p>
         </div>
 
@@ -58,14 +59,17 @@ export default function LoginPage() {
             href={redirectUrl}
             className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl bg-indigo-600 px-6 py-4 text-base font-bold text-white shadow-sm transition-colors duration-200 hover:bg-indigo-700"
           >
-            เข้าสู่ระบบด้วย PSU Passport
+            {t('auth.loginWithPsu')}
             <ArrowRight className="h-5 w-5" />
           </a>
           
           <div className="border-t border-[var(--border)] pt-6">
             <p className="text-xs text-center text-[var(--text-muted)] leading-relaxed">
-              โดยการเข้าสู่ระบบ คุณยอมรับ <a href="#" className="underline hover:text-[var(--text-secondary)]">ข้อตกลงการใช้งาน</a> <br /> 
-              และ <a href="#" className="underline hover:text-[var(--text-secondary)]">นโยบายความเป็นส่วนตัว</a> ของมหาวิทยาลัย
+              {t('auth.termsPrefix')}{' '}
+              <a href="#" className="underline hover:text-[var(--text-secondary)]">{t('auth.terms')}</a>{' '}
+              {t('auth.and')}{' '}
+              <a href="#" className="underline hover:text-[var(--text-secondary)]">{t('auth.privacy')}</a>{' '}
+              {t('auth.universitySuffix')}
             </p>
           </div>
         </div>

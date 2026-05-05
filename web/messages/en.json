@@ -16,7 +16,29 @@
     "done": "Completed",
     "websites": "Websites Under Evaluation",
     "progress": "Progress",
-    "openWebsite": "Open website"
+    "openWebsite": "Open website",
+    "evaluatorConsole": "Evaluator Console",
+    "adminConsole": "Admin Console",
+    "assignedWebsites": "Assigned Websites",
+    "submittedForms": "Submitted Forms",
+    "total": "Total",
+    "inProgress": "In Progress",
+    "evaluated": "Evaluated",
+    "notEvaluated": "Not Evaluated",
+    "websiteOverview": "Website Overview",
+    "waiting": "Waiting",
+    "completed": "Completed",
+    "searchWebsites": "Search websites...",
+    "itemsCount": "{count} items",
+    "noAssigned": "No assigned websites yet",
+    "newAssignedDesc": "Assigned websites will appear here.",
+    "all": "All",
+    "active": "Active",
+    "complete": "Complete",
+    "startEvaluation": "Start Evaluation",
+    "noForms": "No forms yet",
+    "formsOverview": "Forms Overview",
+    "websitesCount": "{count} websites"
   },
   "forms": {
     "title": "All Forms",
@@ -84,6 +106,17 @@
     "collapseSidebar": "Collapse sidebar",
     "loading": "Loading...",
     "error": "Something went wrong",
-    "success": "Success"
+    "success": "Success",
+    "search": "Search..."
+  },
+  "auth": {
+    "signIn": "Sign in to continue",
+    "loginWithPsu": "Sign in with PSU Passport",
+    "loginSubtitle": "Sign in with PSU Passport to use the website evaluation system",
+    "termsPrefix": "By signing in, you agree to our",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "and": "and",
+    "universitySuffix": "of the university"
   }
 }
