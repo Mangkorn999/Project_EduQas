@@ -249,14 +249,15 @@ function StatCard({
   tone: StatTone;
   trend?: string;
 }) {
+  const toneConfig = getToneClasses(tone);
   return (
     <article className="rounded-[18px] border border-[var(--typeui-card-border-soft)] bg-[var(--typeui-card-bg)] p-6 shadow-[var(--typeui-stat-shadow)] transition-[background-color,border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-md)] motion-reduce:transform-none motion-reduce:transition-none">
       <div className="flex items-start justify-between gap-3">
-        <div className={cn('flex h-[46px] w-[46px] items-center justify-center rounded-[14px]', getToneClasses(tone).icon)}>
+        <div className={cn('flex h-[46px] w-[46px] items-center justify-center rounded-[14px] border', toneConfig.icon, toneConfig.border)}>
           <Icon className="h-5 w-5" />
         </div>
         {trend && (
-          <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-semibold', getToneClasses(tone).badge)}>
+          <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-semibold', toneConfig.badge)}>
             {trend}
           </span>
         )}
@@ -490,22 +491,27 @@ function getToneClasses(tone: StatTone) {
     primary: {
       icon: 'bg-[var(--typeui-blue-soft)] text-[var(--typeui-blue)]',
       badge: 'bg-[var(--typeui-blue-soft)] text-[var(--typeui-blue)]',
+      border: 'border-[rgba(96,165,250,0.25)]',
     },
     success: {
       icon: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success)]',
       badge: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success-text)]',
+      border: 'border-[rgba(16,185,129,0.30)]',
     },
     warning: {
       icon: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning)]',
       badge: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning-text)]',
+      border: 'border-[rgba(245,158,11,0.30)]',
     },
     danger: {
       icon: 'bg-[var(--typeui-danger-soft)] text-[var(--typeui-danger)]',
       badge: 'bg-[var(--typeui-danger-soft)] text-[var(--typeui-danger-text)]',
+      border: 'border-[rgba(239,68,68,0.30)]',
     },
     muted: {
       icon: 'bg-[var(--typeui-danger-soft)] text-[var(--typeui-danger)]',
       badge: 'bg-[var(--typeui-danger-soft)] text-[var(--typeui-danger-text)]',
+      border: 'border-[rgba(239,68,68,0.30)]',
     },
   };
 

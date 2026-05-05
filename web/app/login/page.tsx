@@ -34,7 +34,7 @@ export default function LoginPage() {
       </div>
 
       {/* Login Card */}
-      <section className="w-full max-w-[440px] rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-10 shadow-[var(--shadow-lg)] transition-all duration-300">
+      <section className="w-full max-w-[440px] rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-10 shadow-sm transition-all duration-300">
         <div className="mb-10 text-center">
           <Image
             src="/images/eila-logo.png"
@@ -56,7 +56,7 @@ export default function LoginPage() {
         <div className="space-y-4">
           <a
             href={redirectUrl}
-            className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl bg-[#1C1917] px-6 py-4 text-base font-bold text-white shadow-sm transition-colors duration-200 hover:bg-stone-700"
+            className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl bg-indigo-600 px-6 py-4 text-base font-bold text-white shadow-sm transition-colors duration-200 hover:bg-indigo-700"
           >
             เข้าสู่ระบบด้วย PSU Passport
             <ArrowRight className="h-5 w-5" />
