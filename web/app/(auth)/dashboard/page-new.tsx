@@ -68,10 +68,8 @@ type AdminWebsite = {
   status: AdminWebsiteStatus;
 };
 
-
 const EVALUATOR_ROLES: UserRole[] = ['student', 'staff', 'teacher'];
 const ADMIN_ROLES: UserRole[] = ['super_admin', 'admin', 'executive'];
-
 
 export default function DashboardPage() {
   const t = useTranslations();
@@ -310,7 +308,6 @@ function AdminDashboard({
   );
 }
 
-
 function StatCard({
   label,
   value,
@@ -546,7 +543,6 @@ function mapFormsToEvaluatorWebsites(forms: DashboardForm[]): EvaluatorWebsite[]
   return forms
     .filter((form) => form.websiteUrl || form.websiteName || form.title)
     .map((form) => {
-      // progress will be fetched per-form once assignment API returns submittedCount
       const status = form.status === 'closed' ? 'submitted' : form.status === 'open' ? 'in_progress' : 'not_started';
       return {
         id: form.id,
@@ -562,7 +558,6 @@ function mapFormsToAdminWebsites(forms: DashboardForm[]): AdminWebsite[] {
   return forms
     .filter((form) => form.websiteUrl || form.websiteName || form.title)
     .map((form) => {
-      // submitted/totalEvaluators will come from assignment API once connected
       const status = form.status === 'closed' ? 'completed' : form.status === 'open' ? 'in_progress' : 'waiting';
       return {
         id: form.id,
