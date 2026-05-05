@@ -1,13 +1,15 @@
 import type {Config} from 'tailwindcss';
 
 const config: Config = {
+  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
   theme: {
     extend: {
       fontFamily: {
-        prompt: ['Prompt', 'sans-serif'],
+        sans: ['var(--font-sans)', 'Prompt', 'sans-serif'],
       },
     },
   },
+  plugins: [],
 };
 
 export default config;

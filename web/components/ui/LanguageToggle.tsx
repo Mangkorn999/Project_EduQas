@@ -16,11 +16,12 @@ export function LanguageToggle() {
   return (
     <button
       onClick={toggle}
-      className="flex items-center gap-1.5 px-3 h-9 rounded-xl
-        bg-[var(--bg-subtle)] hover:bg-[var(--bg-muted)]
-        border border-[var(--border)]
-        text-[var(--text-secondary)] hover:text-[var(--text-primary)]
-        text-sm font-medium transition-all duration-200 cursor-pointer"
+      className="flex h-11 cursor-pointer items-center gap-1.5 rounded-[10px]
+        border border-[var(--typeui-search-border)] bg-[var(--typeui-search-bg)] px-3
+        text-sm font-medium text-[var(--typeui-subtext)] transition-colors duration-150
+        hover:bg-[var(--typeui-divider)] hover:text-[var(--typeui-text)]
+        focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--typeui-primary)]
+        motion-reduce:transition-none"
       aria-label="Toggle language"
     >
       <Languages className="h-4 w-4" />

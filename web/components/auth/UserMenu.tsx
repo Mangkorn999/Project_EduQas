@@ -77,34 +77,31 @@ export function UserMenu({
           type="button"
           onClick={() => setIsOpen((value) => !value)}
           className={cn(
-            'flex w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-subtle)] px-3 py-3 text-left transition-colors hover:bg-[var(--bg-muted)]',
+            'flex min-h-11 w-full items-center gap-3 rounded-[10px] border border-[var(--typeui-sidebar-border)] bg-white/[0.06] px-3 py-3 text-left transition-colors duration-150 hover:bg-[var(--typeui-sidebar-active-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--typeui-gold)] motion-reduce:transition-none',
             collapsed && 'lg:justify-center lg:px-0'
           )}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1C1917] text-white dark:bg-stone-50 dark:text-stone-950">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--typeui-sidebar-active-bg)] text-[var(--typeui-sidebar-text)]">
             <User className="h-4 w-4" />
           </span>
           <span className={cn('min-w-0 flex-1', collapsed && 'lg:hidden')}>
-            <span className="block truncate text-sm font-semibold text-[var(--text-primary)]">{user.name}</span>
-            <span className="mt-1 inline-flex max-w-full items-center rounded-full border-2 border-[#CA8A04] bg-amber-50 px-2 py-0.5 text-xs font-semibold text-[#92400E]">
+            <span className="block truncate text-sm font-semibold text-[var(--typeui-sidebar-text)]">{user.name}</span>
+            <span className="mt-1 inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs font-medium text-white/40">
               <span className="truncate">{roleLabel}</span>
             </span>
           </span>
-          <ChevronDown className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform', isOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+          <ChevronDown className={cn('h-4 w-4 text-white/45 transition-transform duration-150', isOpen && 'rotate-180', collapsed && 'lg:hidden')} />
         </button>
       ) : (
         <button
           type="button"
           onClick={() => setIsOpen((value) => !value)}
-          className="hidden items-center gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-[var(--bg-subtle)] sm:flex"
+          className="hidden h-11 w-11 items-center justify-center rounded-full border border-[var(--typeui-search-border)] bg-[var(--typeui-search-bg)] text-[var(--typeui-subtext)] transition-colors duration-150 hover:bg-[var(--typeui-divider)] hover:text-[var(--typeui-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--typeui-primary)] sm:flex"
+          aria-label="Open user menu"
+          title="Open user menu"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1C1917] text-white dark:bg-stone-50 dark:text-stone-950">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--typeui-primary)] text-white">
             <User className="h-4 w-4" />
-          </span>
-          <span className="hidden max-w-[170px] truncate text-sm font-semibold text-[var(--text-primary)] xl:block">{user.name}</span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#CA8A04] bg-amber-50 px-2.5 py-1 text-xs font-semibold text-[#92400E]">
-            {roleLabel}
-            <ChevronDown className={cn('h-3 w-3 transition-transform', isOpen && 'rotate-180')} />
           </span>
         </button>
       )}
@@ -112,7 +109,7 @@ export function UserMenu({
       {isOpen && (
         <div
           className={cn(
-            'absolute z-[9999] mt-2 w-80 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-2 shadow-lg',
+            'absolute z-[9999] mt-2 w-80 rounded-[16px] border border-[var(--border)] bg-[var(--bg-surface)] p-2 shadow-lg',
             variant === 'sidebar' ? 'bottom-full left-0 mb-2' : 'right-0'
           )}
         >
@@ -135,7 +132,7 @@ export function UserMenu({
                     className={cn(
                       'min-h-10 rounded-lg px-3 py-2 text-left text-xs transition-colors cursor-pointer',
                       active
-                        ? 'border-2 border-[#CA8A04] bg-amber-50 font-semibold text-[#92400E]'
+                        ? 'border-2 border-[var(--typeui-gold)] bg-[var(--typeui-warning-soft)] font-semibold text-[var(--typeui-warning-text)]'
                         : 'border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]',
                       changingRole === role && 'opacity-70'
                     )}
@@ -151,7 +148,7 @@ export function UserMenu({
             <button
               type="button"
               onClick={handleLogout}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--typeui-danger-text)] transition-colors hover:bg-[var(--typeui-danger-soft)]"
             >
               <LogOut className="h-4 w-4" />
               {t('nav.logout')}
