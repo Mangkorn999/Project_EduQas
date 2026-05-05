@@ -11,8 +11,10 @@ export default async function responsesRoutes(app: FastifyInstance) {
     schema: { params: formIdParamsSchema },
   }, controller.logWebsiteOpen)
 
+  // service layer (assertCanReadFormResponses) handles per-role filtering:
+  // admin/super_admin → all responses for form; teacher/staff/student → own response only
   app.get('/forms/:formId/responses', {
-    preHandler: [app.authenticate, app.authorize('dashboard.faculty')],
+    preHandler: [app.authenticate],
     schema: { params: formIdParamsSchema, querystring: paginationSchema }
   }, controller.getResponses)
 

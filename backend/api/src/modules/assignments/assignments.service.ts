@@ -1,6 +1,6 @@
 import { db } from '../../../../db'
 import { evaluatorAssignments, users } from '../../../../db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, and, inArray, isNull } from 'drizzle-orm'
 
 export async function listAssignments(roundId: string) {
   const rows = await db
@@ -48,6 +48,58 @@ export async function bulkAssign(
     .returning()
 
   return rows
+}
+
+// Query how many users match the given roles + optional facultyId
+// Used by AssignmentDialog to show preview before confirming
+export async function previewAssignmentCount(
+  roles: string[],
+  facultyId: string | 'all',
+) {
+  const filters = [isNull(users.deletedAt), inArray(users.role, roles as any[])]
+  if (facultyId !== 'all') {
+    filters.push(eq(users.facultyId, facultyId))
+  }
+
+  const rows = await db
+    .select({ role: users.role })
+    .from(users)
+    .where(and(...filters))
+
+  const byRole: Record<string, number> = {}
+  for (const row of rows) {
+    byRole[row.role] = (byRole[row.role] ?? 0) + 1
+  }
+
+  return { total: rows.length, byRole }
+}
+
+// Assign all users matching roles + facultyId to the given roundId + websiteId
+// Skips users who already have an assignment for this (roundId, websiteId)
+export async function bulkAssignByRole(
+  roundId: string,
+  websiteId: string,
+  roles: string[],
+  facultyId: string | 'all',
+  adminFacultyId?: string, // enforce that admin cannot bypass their own faculty
+) {
+  // Security: admin can only assign within their own faculty
+  if (adminFacultyId && facultyId !== adminFacultyId) {
+    throw new Error('forbidden')
+  }
+
+  const filters = [isNull(users.deletedAt), inArray(users.role, roles as any[])]
+  if (facultyId !== 'all') {
+    filters.push(eq(users.facultyId, facultyId))
+  }
+
+  const matchingUsers = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(...filters))
+
+  const assignments = matchingUsers.map((u) => ({ userId: u.id, websiteId }))
+  return bulkAssign(roundId, assignments)
 }
 
 export async function deleteAssignment(assignmentId: string) {

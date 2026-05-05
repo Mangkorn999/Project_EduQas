@@ -549,6 +549,13 @@ export class AuthController {
         sameSite: 'lax',
         maxAge:   15 * 60,
       })
+      reply.setCookie('session_active', '1', {
+        path:     '/',
+        httpOnly: false,
+        secure:   env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge:   15 * 60,
+      })
 
       await createAuditLog(
         { userId: user.id, ip: request.ip },
@@ -628,6 +635,13 @@ export class AuthController {
         sameSite: 'lax',
         maxAge:   15 * 60,
       })
+      reply.setCookie('session_active', '1', {
+        path:     '/',
+        httpOnly: false,
+        secure:   env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge:   15 * 60,
+      })
 
       return { accessToken }
 
@@ -656,6 +670,12 @@ export class AuthController {
     reply.clearCookie('accessToken', {
       path:     '/',
       httpOnly: true,
+      secure:   env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    })
+    reply.clearCookie('session_active', {
+      path:     '/',
+      httpOnly: false,
       secure:   env.NODE_ENV === 'production',
       sameSite: 'lax',
     })
