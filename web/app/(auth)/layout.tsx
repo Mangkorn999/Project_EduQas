@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {useLocale, useTranslations} from 'next-intl';
+import {useTranslations} from 'next-intl';
 import {
   Bell,
   ChevronLeft,
@@ -11,19 +11,22 @@ import {
   FileText,
   LayoutDashboard,
   Menu,
+  Search,
   User,
   X,
   type LucideIcon,
 } from 'lucide-react';
-import {useMemo, useState} from 'react';
+import {motion} from 'framer-motion';
+import {useEffect, useMemo, useState} from 'react';
 import {cn} from '@/lib/utils';
 import {ProtectedLayout} from '@/components/auth/ProtectedLayout';
+import {CommandPalette} from '@/components/layout/CommandPalette';
 import {UserMenu} from '@/components/auth/UserMenu';
 import {LanguageToggle} from '@/components/ui/LanguageToggle';
 import {ThemeToggle} from '@/components/ui/ThemeToggle';
 import {useAuthStore} from '@/lib/stores/authStore';
 import type {UserRole} from '@/lib/permissions';
-import {getAvailableRoles, getRoleLabel} from '@/lib/roles';
+import {getAvailableRoles} from '@/lib/roles';
 
 type ShellNavItem = {
   icon: LucideIcon;
@@ -39,7 +42,6 @@ const SHELL_NAV_ITEMS: ShellNavItem[] = [
   {icon: LayoutDashboard, labelKey: 'dashboard', href: '/dashboard', matchPrefix: '/dashboard'},
   {icon: FileText, labelKey: 'forms', href: '/forms', matchPrefix: '/forms'},
   {icon: Bell, labelKey: 'notifications', href: '/notifications', matchPrefix: '/notifications'},
-  {icon: User, labelKey: 'profile', href: '/profile', matchPrefix: '/profile'},
 ];
 
 export default function AuthLayout({
@@ -49,10 +51,21 @@ export default function AuthLayout({
 }>) {
   const pathname = usePathname();
   const t = useTranslations();
-  const locale = useLocale();
-  const {user, setUserRole} = useAuthStore();
-  const [collapsed, setCollapsed] = useState(false);
+  const {user} = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [openCmd, setOpenCmd] = useState(false);
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setOpenCmd((value) => !value);
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const useAppShell =
     pathname.startsWith('/evaluator') ||
@@ -74,144 +87,153 @@ export default function AuthLayout({
     });
   }, [user]);
 
+  const commandItems = useMemo(
+    () => visibleNavItems.map((item) => ({
+      href: item.href,
+      icon: item.icon,
+      label: t(`nav.${item.labelKey}`),
+    })),
+    [t, visibleNavItems]
+  );
+
   if (!useAppShell) {
     return <ProtectedLayout>{children}</ProtectedLayout>;
   }
 
-  const roleLabel = user ? getRoleLabel(user.role as UserRole, locale) : '';
   const pageTitle = getPageTitle(pathname, t);
 
   return (
     <ProtectedLayout>
-      <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)]">
-        <button
-          type="button"
-          onClick={() => setMobileOpen(true)}
-          className="fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm lg:hidden"
-          aria-label={t('common.openMenu')}
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+      <div className="min-h-screen overflow-hidden bg-[var(--typeui-content-bg)] text-[var(--typeui-text)] dark:bg-[#020617] dark:text-white">
+        {/* Background Gradients */}
+        <div className="pointer-events-none fixed inset-0 z-0">
+          <div className="absolute right-0 top-0 h-[400px] w-[400px] bg-cyan-400/10 blur-[120px]" />
+          <div className="absolute bottom-0 left-0 h-[400px] w-[400px] bg-blue-500/10 blur-[120px]" />
+        </div>
 
-        {mobileOpen && (
-          <button
-            type="button"
-            className="fixed inset-0 z-40 bg-stone-950/35 lg:hidden"
-            onClick={() => setMobileOpen(false)}
-            aria-label={t('common.closeMenu')}
-          />
-        )}
+        <CommandPalette
+          items={commandItems}
+          open={openCmd}
+          onClose={() => {
+            setOpenCmd(false);
+            setMobileOpen(false);
+          }}
+        />
 
-        <aside
-          className={cn(
-            'fixed inset-y-0 left-0 z-50 flex flex-col bg-[#1B2D5B] shadow-lg transition-all duration-250 ease-in-out',
-            collapsed ? 'lg:w-16' : 'lg:w-[240px]',
-            mobileOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full lg:translate-x-0',
-            'md:w-16 lg:flex'
-          )}
-        >
-          <div className={cn('flex h-20 items-center border-b border-white/10 px-4', collapsed ? 'lg:justify-center' : 'justify-between')}>
-            <Link href="/dashboard" className="flex items-center justify-center">
-              <Image
-                src="/images/eila-logo.png"
-                alt="EILA - PSU Website Evaluation System"
-                width={collapsed ? 36 : 140}
-                height={collapsed ? 36 : 48}
-                priority
-                className="h-auto object-contain dark:brightness-90"
-              />
-            </Link>
-            <button
-              type="button"
-              onClick={() => setMobileOpen(false)}
-              className="rounded-lg p-2 text-white/60 hover:bg-white/10 lg:hidden"
-              aria-label={t('common.closeMenu')}
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setCollapsed((value) => !value)}
-              className="hidden h-8 w-8 items-center justify-center rounded-lg border border-white/20 text-white/60 hover:bg-white/10 lg:flex"
-              aria-label={collapsed ? t('common.expandSidebar') : t('common.collapseSidebar')}
-            >
-              {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </button>
-          </div>
+        {/* Unified Topbar */}
+        <header className="glass fixed left-0 right-0 top-0 z-50 h-[72px] border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
+          <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-4 px-6 md:px-8">
+            <div className="flex items-center gap-6">
+              {/* Logo */}
+              <Link href="/dashboard" className="flex shrink-0 items-center transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                <Image
+                  src="/images/eila-logo.png"
+                  alt="EILA - PSU"
+                  width={120}
+                  height={40}
+                  priority
+                  className="h-9 w-auto object-contain"
+                />
+              </Link>
 
-          <nav className="flex-1 space-y-1 px-3 py-6">
-            {visibleNavItems.map((item) => {
-              const isActive = item.matchPrefix ? pathname.startsWith(item.matchPrefix) : pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    'flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors',
-                    collapsed && 'lg:justify-center lg:px-0',
-                    isActive
-                      ? 'border-l-[3px] border-white bg-[#2D5FA6] pl-[calc(0.75rem-3px)] text-white'
-                      : 'text-white/70 hover:bg-[#243B73] hover:text-white'
-                  )}
-                >
-                  <item.icon className="h-5 w-5 shrink-0 text-current" />
-                  <span className={cn('truncate', collapsed && 'lg:hidden')}>{t(`nav.${item.labelKey}`)}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="border-t border-white/10 p-3">
-            {user && (
-              <UserMenu
-                variant="sidebar"
-                collapsed={collapsed}
-                availableRoles={getAvailableRoles(user.roles)}
-                onRoleSelect={async (role) => {
-                  await setUserRole(role);
-                  window.location.reload();
-                }}
-              />
-            )}
-            <div className={cn('mt-3 text-[11px] font-medium text-white/40', collapsed && 'lg:text-center')}>
-              <span className={cn(collapsed && 'lg:hidden')}>EILA Portal</span>
-              <span className={cn(!collapsed && 'ml-1', collapsed && 'hidden lg:inline')}>v0.1</span>
+              {/* Desktop Navigation */}
+              <nav className="hidden items-center gap-1 lg:flex">
+                {visibleNavItems.map((item) => {
+                  const isActive = item.matchPrefix ? pathname.startsWith(item.matchPrefix) : pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        'relative flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-medium transition-all duration-300',
+                        isActive 
+                          ? 'bg-[#e0efff] text-[var(--typeui-primary)] dark:bg-white/10 dark:text-cyan-400' 
+                          : 'text-[var(--typeui-subtext)] hover:bg-white/5 hover:text-[var(--typeui-text)] dark:text-white/60 dark:hover:text-white'
+                      )}
+                    >
+                      <item.icon className={cn("h-4 w-4", isActive ? "opacity-100" : "opacity-70")} />
+                      <span>{t(`nav.${item.labelKey}`)}</span>
+                      {isActive && (
+                        <motion.div
+                          layoutId="nav-underline"
+                          className="absolute bottom-1 left-4 right-4 h-0.5 rounded-full bg-[var(--typeui-primary)] dark:bg-cyan-400 shadow-[0_0_8px_rgba(0,102,255,0.4)]"
+                          transition={{type: 'spring', stiffness: 500, damping: 30}}
+                        />
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
             </div>
-          </div>
-        </aside>
 
-        <div className={cn('min-h-screen transition-all duration-250 ease-in-out md:pl-16', collapsed ? 'lg:pl-16' : 'lg:pl-[240px]')}>
-          <header
-            className={cn(
-              'fixed left-0 right-0 top-0 z-30 h-14 border-b border-[var(--border)] bg-[var(--bg-surface)]/95 backdrop-blur md:left-16',
-              collapsed ? 'lg:left-16' : 'lg:left-[240px]'
-            )}
-          >
-            <div className="flex h-full items-center justify-between gap-4 px-5 md:px-8">
-              <div className="min-w-0 pl-12 text-sm font-medium text-[var(--text-muted)] lg:pl-0">
-                <span>{t('nav.dashboard')}</span>
-                <span className="px-2 text-[var(--text-disabled)]">/</span>
-                <span className="text-[var(--text-primary)]">{pageTitle}</span>
-                {roleLabel && <span className="ml-2 hidden font-semibold text-[#1B2D5B] sm:inline">{roleLabel}</span>}
-              </div>
-
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 md:gap-2">
                 <LanguageToggle />
                 <ThemeToggle />
                 <Link
                   href="/notifications"
-                  className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-subtle)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-muted)]"
+                  className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-[var(--typeui-subtext)] transition-all hover:bg-white/10 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] active:scale-[0.97]"
                   aria-label={t('nav.notifications')}
                 >
                   <Bell className="h-4 w-4" />
-                  <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#CA8A04]" />
+                  <span className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
                 </Link>
                 {user && <UserMenu variant="topbar" availableRoles={getAvailableRoles(user.roles)} />}
+                
+                {/* Mobile Menu Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen(!mobileOpen)}
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-[var(--typeui-subtext)] lg:hidden"
+                >
+                  {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
               </div>
             </div>
-          </header>
-          <main className="mx-auto w-full max-w-7xl px-5 pb-8 pt-[88px] md:px-8">{children}</main>
+          </div>
+
+          {/* Mobile Navigation Dropdown */}
+          {mobileOpen && (
+            <motion.div
+              initial={{opacity: 0, y: -10}}
+              animate={{opacity: 1, y: 0}}
+              className="glass absolute left-0 right-0 top-[72px] z-40 border-b border-white/10 p-4 lg:hidden"
+            >
+              <nav className="flex flex-col gap-1">
+                {visibleNavItems.map((item) => {
+                  const isActive = item.matchPrefix ? pathname.startsWith(item.matchPrefix) : pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        'flex h-12 items-center gap-3 rounded-xl px-4 text-sm font-medium transition-all',
+                        isActive 
+                          ? 'bg-[#e0efff] text-[var(--typeui-primary)] dark:bg-white/10 dark:text-cyan-400' 
+                          : 'text-[var(--typeui-subtext)] hover:bg-white/5 hover:text-[var(--typeui-text)] dark:text-white/60 dark:hover:text-white'
+                      )}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span>{t(`nav.${item.labelKey}`)}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </motion.div>
+          )}
+        </header>
+
+        <div className="min-h-screen pt-[72px]">
+          <main className="relative z-10 mx-auto max-w-7xl px-6 pb-12 pt-10">
+            <motion.div
+              initial={{opacity: 0, y: 20}}
+              animate={{opacity: 1, y: 0}}
+              className="card-premium rounded-3xl p-6 md:p-8"
+            >
+              {children}
+            </motion.div>
+          </main>
         </div>
       </div>
     </ProtectedLayout>

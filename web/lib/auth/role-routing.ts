@@ -8,17 +8,6 @@ type BackendRole = 'super_admin' | 'admin' | 'executive' | 'teacher' | 'staff' |
  * admin/super_admin → หน้าจัดการ, อื่นๆ → หน้า evaluator
  */
 export function getPostLoginPath(role?: UserRole | BackendRole | null) {
-  switch (role) {
-    case 'super_admin':
-      return '/admin/audit';
-    case 'admin':
-      return '/forms';
-    case 'executive':
-      return '/reports';
-    case 'teacher':
-    case 'staff':
-    case 'student':
-    default:
-      return '/evaluator';
-  }
+  // All roles now redirect to the unified dashboard
+  return '/dashboard';
 }

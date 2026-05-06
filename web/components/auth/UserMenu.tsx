@@ -3,7 +3,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {useLocale, useTranslations} from 'next-intl';
-import {ChevronDown, LogOut, User} from 'lucide-react';
+import {ChevronDown, LogOut, Settings, User} from 'lucide-react';
 import {useAuthStore} from '@/lib/stores/authStore';
 import {cn} from '@/lib/utils';
 import {ALL_ROLES, getRoleLabel} from '@/lib/roles';
@@ -77,88 +77,116 @@ export function UserMenu({
           type="button"
           onClick={() => setIsOpen((value) => !value)}
           className={cn(
-            'flex w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-subtle)] px-3 py-3 text-left transition-colors hover:bg-[var(--bg-muted)]',
+            'flex min-h-11 w-full items-center gap-3 rounded-[10px] border border-[var(--typeui-sidebar-border)] bg-white/[0.06] px-3 py-3 text-left transition-colors duration-150 hover:bg-[var(--typeui-sidebar-active-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--typeui-gold)] motion-reduce:transition-none',
             collapsed && 'lg:justify-center lg:px-0'
           )}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1C1917] text-white dark:bg-stone-50 dark:text-stone-950">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--typeui-sidebar-active-bg)] text-[var(--typeui-sidebar-text)]">
             <User className="h-4 w-4" />
           </span>
           <span className={cn('min-w-0 flex-1', collapsed && 'lg:hidden')}>
-            <span className="block truncate text-sm font-semibold text-[var(--text-primary)]">{user.name}</span>
-            <span className="mt-1 inline-flex max-w-full items-center rounded-full border-2 border-[#CA8A04] bg-amber-50 px-2 py-0.5 text-xs font-semibold text-[#92400E]">
+            <span className="block truncate text-sm font-semibold text-[var(--typeui-sidebar-text)]">{user.name}</span>
+            <span className="mt-1 inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs font-medium text-white/40">
               <span className="truncate">{roleLabel}</span>
             </span>
           </span>
-          <ChevronDown className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform', isOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+          <ChevronDown className={cn('h-4 w-4 text-white/45 transition-transform duration-150', isOpen && 'rotate-180', collapsed && 'lg:hidden')} />
         </button>
       ) : (
         <button
           type="button"
           onClick={() => setIsOpen((value) => !value)}
-          className="hidden items-center gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-[var(--bg-subtle)] sm:flex"
+          className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] bg-[#0066FF] text-xs font-bold text-white shadow-sm transition-all duration-200 hover:shadow-[0_0_12px_rgba(0,102,255,0.4)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066FF]"
+          aria-label="Open user menu"
+          title="Profile menu"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1C1917] text-white dark:bg-stone-50 dark:text-stone-950">
-            <User className="h-4 w-4" />
-          </span>
-          <span className="hidden max-w-[170px] truncate text-sm font-semibold text-[var(--text-primary)] xl:block">{user.name}</span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#CA8A04] bg-amber-50 px-2.5 py-1 text-xs font-semibold text-[#92400E]">
-            {roleLabel}
-            <ChevronDown className={cn('h-3 w-3 transition-transform', isOpen && 'rotate-180')} />
-          </span>
+          {user.name?.charAt(0).toUpperCase() || 'A'}
         </button>
       )}
 
       {isOpen && (
         <div
           className={cn(
-            'absolute z-[9999] mt-2 w-80 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-2 shadow-lg',
+            'absolute z-[9999] mt-2 w-60 rounded-[20px] border border-[var(--border)] bg-[var(--bg-surface)] p-2 shadow-xl',
             variant === 'sidebar' ? 'bottom-full left-0 mb-2' : 'right-0'
           )}
         >
-          <div className="border-b border-[var(--border)] p-3">
-            <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{user.name}</p>
-            <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{user.email || user.faculty || t('profile.noFaculty')}</p>
-          </div>
-
-          <div className="p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t('profile.switchRole')}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {availableRoles.map((role) => {
-                const active = activeRole === role;
-                return (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => handleRoleSelect(role)}
-                    disabled={changingRole !== null}
-                    className={cn(
-                      'min-h-10 rounded-lg px-3 py-2 text-left text-xs transition-colors cursor-pointer',
-                      active
-                        ? 'border-2 border-[#CA8A04] bg-amber-50 font-semibold text-[#92400E]'
-                        : 'border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]',
-                      changingRole === role && 'opacity-70'
-                    )}
-                  >
-                    {getRoleLabel(role, locale)}
-                  </button>
-                );
-              })}
+          {/* Header */}
+          <div className="border-b border-[var(--border)] px-4 py-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+              {t('profile.title')}
+            </span>
+            <div className="mt-2">
+              <p className="truncate text-sm font-bold text-[var(--text-primary)]">{user.name}</p>
+              <p className="mt-0.5 truncate text-[11px] text-[var(--text-muted)]">
+                {roleLabel}
+              </p>
             </div>
           </div>
 
-          <div className="border-t border-[var(--border)] p-2">
+          <div className="py-2">
+            <button
+              type="button"
+              onClick={() => { router.push('/profile'); setIsOpen(false); }}
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
+            >
+              <User className="h-4 w-4" />
+              <span>{t('nav.profile')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { router.push('/settings'); setIsOpen(false); }}
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
+            >
+              <Settings className="h-4 w-4" />
+              <span>{t('nav.settings')}</span>
+            </button>
+          </div>
+
+          {/* Role Switch Section (if multiple roles available) */}
+          {availableRoles.length > 1 && (
+            <div className="border-t border-[var(--border)] px-4 py-3">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                {t('profile.switchRole')}
+              </p>
+              <div className="grid grid-cols-1 gap-1">
+                {availableRoles.map((role) => {
+                  const active = activeRole === role;
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => handleRoleSelect(role)}
+                      disabled={changingRole !== null}
+                      className={cn(
+                        'flex min-h-9 items-center justify-between rounded-lg px-3 py-1.5 text-xs transition-all',
+                        active
+                          ? 'bg-[var(--typeui-warning-soft)] font-bold text-[var(--typeui-warning-text)]'
+                          : 'text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]'
+                      )}
+                    >
+                      <span>{getRoleLabel(role, locale)}</span>
+                      {active && <div className="h-1.5 w-1.5 rounded-full bg-[var(--typeui-gold)]" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="border-t border-[var(--border)] p-1">
             <button
               type="button"
               onClick={handleLogout}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--typeui-danger-text)] transition-colors hover:bg-[var(--typeui-danger-soft)]"
             >
               <LogOut className="h-4 w-4" />
-              {t('nav.logout')}
+              <span>{t('nav.logout')}</span>
             </button>
           </div>
         </div>
       )}
+
     </div>
   );
 }

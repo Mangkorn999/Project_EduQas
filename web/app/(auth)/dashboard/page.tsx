@@ -1,11 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useState, useRef} from 'react';
 import {useTranslations} from 'next-intl';
 import {
-  ChevronRight,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
   Globe,
+  TrendingUp,
+  Search,
 } from 'lucide-react';
 import {useAuthStore} from '@/lib/stores/authStore';
 import {apiGet} from '@/lib/api';
@@ -41,10 +46,50 @@ type AdminWebsite = {
   status: AdminWebsiteStatus;
 };
 
+type StatTone = 'primary' | 'success' | 'warning' | 'danger' | 'muted';
+type DisplayStatus = 'done' | 'inprogress' | 'pending';
+type DisplayStatusSite = {
+  status?: string;
+  answered?: number;
+};
 
 const EVALUATOR_ROLES: UserRole[] = ['student', 'staff', 'teacher'];
 const ADMIN_ROLES: UserRole[] = ['super_admin', 'admin', 'executive'];
 
+function useCountUp(target: number, duration = 900) {
+  const [count, setCount] = useState(0);
+  const rafRef = useRef<number>();
+  useEffect(() => {
+    if (target === 0) { setCount(0); return; }
+    const startTime = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setCount(Math.round(eased * target));
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current!);
+  }, [target, duration]);
+  return count;
+}
+
+const getDisplayStatus = (site: DisplayStatusSite): DisplayStatus => {
+  if (
+    site.status === 'done' ||
+    site.status === 'submitted' ||
+    site.status === 'completed' ||
+    site.status === 'published'
+  ) {
+    return 'done';
+  }
+
+  if (site.answered && site.answered > 0) {
+    return 'inprogress';
+  }
+
+  return 'pending';
+};
 
 export default function DashboardPage() {
   const t = useTranslations();
@@ -58,7 +103,7 @@ export default function DashboardPage() {
         const res = await apiGet('/api/v1/forms');
         setForms(res.data || []);
       } catch {
-        // forms stay as empty array — UI shows empty state
+        // forms stay as empty array - UI shows empty state
       } finally {
         setLoading(false);
       }
@@ -102,33 +147,31 @@ function EvaluatorDashboard({
   loading: boolean;
   websites: EvaluatorWebsite[];
 }) {
+  const t = useTranslations();
   const total = websites.length;
   const submitted = websites.filter((w) => w.status === 'submitted').length;
   const notEvaluated = websites.filter((w) => w.status !== 'submitted').length;
+  const inProgress = websites.filter((w) => w.status === 'in_progress').length;
 
   return (
-    <div className="space-y-8">
-      <DashboardHeader greeting={greeting} subtitle="เว็บไซต์ที่ได้รับมอบหมายให้ประเมิน" />
+    <DashboardSurface>
+      <HeroBanner
+        eyebrow={t('dashboard.evaluatorConsole')}
+        title={greeting}
+        subtitle={t('dashboard.assignedWebsites')}
+        metric={`${submitted}/${total}`}
+        metricLabel={t('dashboard.submittedForms')}
+      />
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="ทั้งหมด" value={total} tone="navy" />
-        <StatCard label="ประเมินแล้ว" value={submitted} tone="green" />
-        <StatCard label="ยังไม่ประเมิน" value={notEvaluated} tone="red" />
+      <section className="grid grid-cols-2 gap-[14px] lg:grid-cols-4" aria-label="Dashboard statistics">
+        <StatCard label={t('dashboard.total')} value={total} icon={Globe} tone="primary" />
+        <StatCard label={t('dashboard.inProgress')} value={inProgress} icon={Clock} tone="warning" />
+        <StatCard label={t('dashboard.evaluated')} value={submitted} icon={CheckCircle2} tone="success" />
+        <StatCard label={t('dashboard.notEvaluated')} value={notEvaluated} icon={AlertCircle} tone="danger" />
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
-        <SectionHeader title="เว็บไซต์ที่ต้องประเมิน" description={loading ? 'กำลังโหลดข้อมูล...' : `${websites.length} รายการ`} />
-        {websites.length === 0 && !loading ? (
-          <p className="px-5 py-10 text-center text-sm text-[#64748B]">ยังไม่มีเว็บไซต์ที่ได้รับมอบหมาย</p>
-        ) : (
-          <div className="divide-y divide-[#E2E8F0]">
-            {websites.map((website) => (
-              <EvaluatorWebsiteRow key={website.id} website={website} />
-            ))}
-          </div>
-        )}
-      </section>
-    </div>
+      <EvaluatorTable loading={loading} websites={websites} />
+    </DashboardSurface>
   );
 }
 
@@ -141,6 +184,7 @@ function AdminDashboard({
   loading: boolean;
   websites: AdminWebsite[];
 }) {
+  const t = useTranslations();
   const stats = {
     total: websites.length,
     waiting: websites.filter((website) => website.status === 'waiting').length,
@@ -149,160 +193,492 @@ function AdminDashboard({
   };
 
   return (
-    <div className="space-y-8">
-      <DashboardHeader greeting={`สวัสดี, ${name}`} subtitle="ภาพรวมการประเมินคุณภาพเว็บไซต์" />
+    <DashboardSurface>
+      <HeroBanner
+        eyebrow={t('dashboard.adminConsole')}
+        title={t('dashboard.greeting', {name})}
+        subtitle={t('dashboard.websiteOverview')}
+        metric={`${stats.completed}/${stats.total}`}
+        metricLabel={t('dashboard.completed')}
+      />
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="ฟอร์มทั้งหมด" value={stats.total} tone="navy" />
-        <StatCard label="รอการประเมิน" value={stats.waiting} tone="gray" />
-        <StatCard label="กำลังดำเนินการ" value={stats.inProgress} tone="amber" />
-        <StatCard label="เสร็จสมบูรณ์" value={stats.completed} tone="green" />
+      <section className="grid grid-cols-2 gap-[14px] lg:grid-cols-4" aria-label="Dashboard statistics">
+        <StatCard label={t('dashboard.total')} value={stats.total} icon={Globe} tone="primary" />
+        <StatCard label={t('dashboard.waiting')} value={stats.waiting} icon={Clock} tone="muted" />
+        <StatCard label={t('dashboard.inProgress')} value={stats.inProgress} icon={TrendingUp} tone="warning" />
+        <StatCard label={t('dashboard.completed')} value={stats.completed} icon={CheckCircle2} tone="success" />
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
-        <SectionHeader title="ภาพรวมเว็บไซต์" description={loading ? 'กำลังโหลดข้อมูล...' : `${websites.length} เว็บไซต์`} />
-        {websites.length === 0 && !loading ? (
-          <p className="px-5 py-10 text-center text-sm text-[#64748B]">ยังไม่มีแบบประเมิน</p>
-        ) : (
-          <div className="divide-y divide-[#E2E8F0]">
-            {websites.map((website) => (
-              <AdminWebsiteRow key={website.id} website={website} />
-            ))}
-          </div>
-        )}
-      </section>
+      <AdminTable loading={loading} websites={websites} />
+    </DashboardSurface>
+  );
+}
+
+function DashboardSurface({children}: {children: React.ReactNode}) {
+  return (
+    <div
+      className="space-y-6 text-[var(--typeui-text)]"
+    >
+      {children}
     </div>
   );
 }
 
-function DashboardHeader({greeting, subtitle}: {greeting: string; subtitle: string}) {
+function HeroBanner({
+  eyebrow,
+  title,
+  subtitle,
+  metric,
+  metricLabel,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  metric: string;
+  metricLabel: string;
+}) {
   return (
-    <section>
-      <h1 className="text-2xl font-bold text-[#1B2D5B]">{greeting}</h1>
-      <p className="mt-1 text-sm text-[#64748B]">{subtitle}</p>
+    <header className="typeui-hero relative overflow-hidden rounded-[20px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] px-8 py-8 shadow-[var(--typeui-card-shadow)] sm:px-9">
+      <div className="pointer-events-none absolute -right-[50px] -top-[50px] h-[220px] w-[220px] rounded-full bg-[var(--typeui-hero-blob)]" />
+      <div className="relative flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        <div className="max-w-3xl">
+          <p className="typeui-hero-label text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--typeui-label-blue)]">{eyebrow}</p>
+          <h1 className="mt-2 text-[32px] font-bold leading-tight tracking-normal text-[var(--typeui-text)]">
+            {title}
+          </h1>
+          <p className="mt-2 text-[14px] font-normal text-[var(--typeui-subtext)]">{subtitle}</p>
+        </div>
+        <div className="rounded-[18px] border border-[var(--typeui-card-border-soft)] bg-[var(--typeui-card-bg)] px-4 py-3 shadow-[var(--typeui-stat-shadow)]">
+          <p className="text-[32px] font-bold leading-none tracking-[-0.04em] text-[var(--typeui-success)]">{metric}</p>
+          <p className="mt-1 text-[12px] font-medium text-[var(--typeui-subtext)]">{metricLabel}</p>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function SkeletonCard() {
+  return (
+    <article className="flex flex-col gap-[14px] rounded-[14px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] p-5 shadow-[var(--shadow-sm)]">
+      <div className="flex items-start gap-3">
+        <div className="h-[42px] w-[42px] shrink-0 animate-pulse rounded-[12px] bg-[var(--typeui-search-bg)]" />
+        <div className="flex flex-col gap-2 pt-1">
+          <div className="h-[13px] w-[120px] animate-pulse rounded-md bg-[var(--typeui-search-bg)]" />
+          <div className="h-[11px] w-[90px] animate-pulse rounded-md bg-[var(--typeui-search-bg)]" />
+        </div>
+      </div>
+      <div className="h-[22px] w-[80px] animate-pulse rounded-[6px] bg-[var(--typeui-search-bg)]" />
+      <div className="h-[46px] w-full animate-pulse rounded-[12px] bg-[var(--typeui-search-bg)]" />
+    </article>
+  );
+}
+
+function CircularProgress({ value, max, size = 36 }: { value: number; max: number; size?: number }) {
+  const pct = max > 0 ? value / max : 0;
+  const r = (size - 5) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - pct);
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--typeui-card-border)" strokeWidth={4} />
+      <circle
+        cx={size/2} cy={size/2} r={r} fill="none"
+        stroke="var(--typeui-success)" strokeWidth={4}
+        strokeDasharray={circ} strokeDashoffset={offset}
+        strokeLinecap="round"
+        style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1)' }}
+      />
+    </svg>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  trend,
+}: {
+  label: string;
+  value: number;
+  icon: React.ComponentType<{className?: string}>;
+  tone: StatTone;
+  trend?: string;
+}) {
+  const animated = useCountUp(value);
+  const toneConfig = getToneClasses(tone);
+  return (
+    <article className="rounded-[18px] border border-[var(--typeui-card-border-soft)] bg-[var(--typeui-card-bg)] p-6 shadow-[var(--typeui-stat-shadow)] transition-[background-color,border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-md)] motion-reduce:transform-none motion-reduce:transition-none">
+      <div className="flex items-start justify-between gap-3">
+        <div className={cn('flex h-[46px] w-[46px] items-center justify-center rounded-[14px] border', toneConfig.icon, toneConfig.border)}>
+          <Icon className="h-5 w-5" />
+        </div>
+        {trend && (
+          <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-semibold', toneConfig.badge)}>
+            {trend}
+          </span>
+        )}
+      </div>
+      <p className="mt-5 text-[36px] font-bold leading-none tracking-[-0.04em] text-[var(--typeui-text)]">{animated}</p>
+      <p className="mt-2 text-[13px] font-medium text-[var(--typeui-subtext)]">{label}</p>
+    </article>
+  );
+}
+
+function EvaluatorTable({loading, websites}: {loading: boolean; websites: EvaluatorWebsite[]}) {
+  const t = useTranslations();
+  const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'Complete'>('All');
+  
+  const filtered = websites.filter(w =>
+    w.name.toLowerCase().includes(query.toLowerCase()) ||
+    w.url.toLowerCase().includes(query.toLowerCase())
+  );
+  
+  const tabFiltered = activeTab === 'Active'
+    ? filtered.filter(w => w.status === 'in_progress')
+    : activeTab === 'Complete'
+    ? filtered.filter(w => w.status === 'submitted')
+    : filtered;
+
+  return (
+    <section className="overflow-hidden rounded-[18px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] shadow-[var(--typeui-card-shadow)]">
+      <div className="flex flex-col gap-4 border-b border-[var(--typeui-divider)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-[15px] font-bold text-[var(--typeui-text)]">{t('dashboard.assignedWebsites')}</h2>
+          <p className="mt-1 text-[12px] font-normal text-[var(--typeui-muted)]">{loading ? t('common.loading') : t('dashboard.itemsCount', {count: websites.length})}</p>
+        </div>
+        <div className="relative w-full sm:w-[220px]">
+          <Search className="absolute left-3 top-1/2 h-[13px] w-[13px] -translate-y-1/2 text-[var(--typeui-muted)]" />
+          <input
+            type="text"
+            placeholder={t('dashboard.searchWebsites')}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="w-full rounded-[10px] border border-[var(--typeui-search-border)] bg-[var(--typeui-search-bg)] py-2 pl-8 pr-4 text-[13px] text-[var(--typeui-text)] placeholder:text-[var(--typeui-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--typeui-primary)] focus:ring-offset-0 focus:border-transparent transition-colors duration-150"
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : tabFiltered.length === 0 ? (
+        <EmptyState title={t('dashboard.noAssigned')} subtitle={t('dashboard.newAssignedDesc')} />
+      ) : (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
+          {tabFiltered.map((website) => (
+            <EvaluatorWebsiteCard key={website.id} website={website} />
+          ))}
+        </div>
+      )}
+
+      <TableFooter countLabel={t('dashboard.itemsCount', {count: tabFiltered.length})} activeTab={activeTab} onTabChange={setActiveTab} />
     </section>
   );
 }
 
-function SectionHeader({title, description}: {title: string; description: string}) {
+function AdminTable({loading, websites}: {loading: boolean; websites: AdminWebsite[]}) {
+  const t = useTranslations();
+  const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'Complete'>('All');
+  
+  const filtered = websites.filter(w =>
+    w.name.toLowerCase().includes(query.toLowerCase()) ||
+    w.url.toLowerCase().includes(query.toLowerCase())
+  );
+  
+  const tabFiltered = activeTab === 'Active'
+    ? filtered.filter(w => w.status === 'in_progress')
+    : activeTab === 'Complete'
+    ? filtered.filter(w => w.status === 'completed' || w.status === 'published')
+    : filtered;
+
   return (
-    <div className="flex items-center justify-between border-b border-[#E2E8F0] px-5 py-4">
-      <h2 className="text-base font-bold text-[#1B2D5B]">{title}</h2>
-      <p className="text-sm text-[#64748B]">{description}</p>
-    </div>
+    <section className="overflow-hidden rounded-[18px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] shadow-[var(--typeui-card-shadow)]">
+      <div className="flex flex-col gap-4 border-b border-[var(--typeui-divider)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-[15px] font-bold text-[var(--typeui-text)]">{t('dashboard.websiteOverview')}</h2>
+          <p className="mt-1 text-[12px] font-normal text-[var(--typeui-muted)]">{loading ? t('common.loading') : t('dashboard.websitesCount', {count: websites.length})}</p>
+        </div>
+        <div className="relative w-full sm:w-[220px]">
+          <Search className="absolute left-3 top-1/2 h-[13px] w-[13px] -translate-y-1/2 text-[var(--typeui-muted)]" />
+          <input
+            type="text"
+            placeholder={t('dashboard.searchWebsites')}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="w-full rounded-[10px] border border-[var(--typeui-search-border)] bg-[var(--typeui-search-bg)] py-2 pl-8 pr-4 text-[13px] text-[var(--typeui-text)] placeholder:text-[var(--typeui-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--typeui-primary)] focus:ring-offset-0 focus:border-transparent transition-colors duration-150"
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : tabFiltered.length === 0 ? (
+        <EmptyState title={t('dashboard.noForms')} subtitle={t('dashboard.newAssignedDesc')} />
+      ) : (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
+          {tabFiltered.map((website) => (
+            <AdminWebsiteCard key={website.id} website={website} />
+          ))}
+        </div>
+      )}
+
+      <TableFooter countLabel={t('dashboard.itemsCount', {count: tabFiltered.length})} activeTab={activeTab} onTabChange={setActiveTab} />
+    </section>
   );
 }
 
-function EvaluatorWebsiteRow({website}: {website: EvaluatorWebsite}) {
+function EvaluatorWebsiteCard({website}: {website: EvaluatorWebsite}) {
+  const t = useTranslations();
   const href = `/evaluator/${website.id}${website.status === 'submitted' ? '?readonly=true' : ''}`;
 
   return (
-    <Link
-      href={href}
-      className="flex items-center justify-between px-5 py-4 transition-colors hover:bg-[#F8FAFC]"
+    <article
+      data-status={getDisplayStatus(website)}
+      className="flex flex-col gap-[14px] rounded-[14px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] p-5 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-md)] motion-reduce:transform-none motion-reduce:transition-none"
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#1B2D5B]">
-          <Globe className="h-5 w-5" />
+      <div className="flex items-start gap-3">
+        <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[12px] bg-[var(--typeui-blue-soft)] text-[var(--typeui-blue)]">
+          <Globe className="h-[18px] w-[18px]" />
         </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-[#1A202C]">{website.name}</p>
-          <p className="truncate text-xs text-[#64748B]">{website.url}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-semibold text-[var(--typeui-text)]">{website.name}</p>
+          <p className="mt-1 truncate text-[12px] text-[var(--typeui-muted)]">{website.url || '-'}</p>
         </div>
+        {(() => {
+          const s = getDisplayStatus(website);
+          const cfg = {
+            done:       { label: t('dashboard.done'),         cls: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success)]' },
+            inprogress: { label: t('dashboard.inProgress'),  cls: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning)]' },
+            pending:    { label: t('dashboard.pending'),     cls: 'bg-[var(--typeui-search-bg)] text-[var(--typeui-muted)]' },
+          }[s];
+          return (
+            <span className={cn(
+              'ml-auto shrink-0 rounded-full px-[10px] py-[3px] text-[10px] font-bold whitespace-nowrap',
+              cfg.cls
+            )}>
+              {cfg.label}
+            </span>
+          );
+        })()}
       </div>
-      <div className="ml-4 flex shrink-0 items-center gap-3">
-        <EvaluatorStatusBadge status={website.status} />
-        <ChevronRight className="h-4 w-4 text-[#94A3B8]" />
+
+      <div className="flex flex-wrap gap-2">
+        <span className="rounded-[6px] border border-[var(--typeui-card-border)] bg-[var(--typeui-search-bg)] px-[10px] py-[3px] text-[11px] text-[var(--typeui-subtext)]">
+          Evaluation
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--typeui-card-border)] bg-[var(--typeui-search-bg)] px-[10px] py-[3px] text-[11px] text-[var(--typeui-subtext)]">
+          <Clock className="h-2.5 w-2.5 text-[var(--typeui-muted)]" />
+          -
+        </span>
       </div>
-    </Link>
+
+      {website.progress > 0 && (
+        <div className="flex items-center gap-3">
+          <CircularProgress value={website.progress} max={100} size={38} />
+          <div className="flex-1 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-[var(--typeui-muted)]">{t('dashboard.progress')}</span>
+              <span className={cn('text-[12px] font-bold', getScoreTextColor(website.progress))}>
+                {website.progress}%
+              </span>
+            </div>
+            <div className="h-[5px] w-full overflow-hidden rounded-full bg-[var(--typeui-card-border)]">
+              <div
+                className={cn('h-full rounded-full transition-[width] duration-[800ms] ease-in-out', getScoreColor(website.progress))}
+                style={{ width: `${Math.min(100, website.progress)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="px-0 pb-0 pt-0">
+        <Link
+          href={href}
+          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[12px] border-0 bg-[linear-gradient(135deg,var(--typeui-primary)_0%,#1e7cd8_100%)] py-[13px] text-[14px] font-extrabold tracking-[0.01em] text-white shadow-[0_4px_18_rgba(12,92,171,0.35)] transition-[opacity,transform] duration-150 hover:-translate-y-px hover:opacity-[0.88]"
+        >
+          <ExternalLink className="h-[15px] w-[15px] stroke-[2.5]" />
+          {t('dashboard.startEvaluation')}
+        </Link>
+      </div>
+    </article>
   );
 }
 
-function AdminWebsiteRow({website}: {website: AdminWebsite}) {
+function AdminWebsiteCard({website}: {website: AdminWebsite}) {
+  const t = useTranslations();
   const progress = website.totalEvaluators > 0
     ? Math.round((website.submitted / website.totalEvaluators) * 100)
     : 0;
 
   return (
-    <div className="flex items-center justify-between px-5 py-4 hover:bg-[#F8FAFC]">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#1B2D5B]">
-          <Globe className="h-5 w-5" />
+    <article
+      data-status={getDisplayStatus(website)}
+      className="flex flex-col gap-[14px] rounded-[14px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] p-5 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-md)] motion-reduce:transform-none motion-reduce:transition-none"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[12px] bg-[var(--typeui-blue-soft)] text-[var(--typeui-blue)]">
+          <Globe className="h-[18px] w-[18px]" />
         </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-[#1A202C]">{website.name}</p>
-          <p className="truncate text-xs text-[#64748B]">{website.url}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-semibold text-[var(--typeui-text)]">{website.name}</p>
+          <p className="mt-1 truncate text-[12px] text-[var(--typeui-muted)]">{website.url || '-'}</p>
         </div>
+        {(() => {
+          const s = getDisplayStatus(website);
+          const cfg = {
+            done:       { label: t('dashboard.done'),         cls: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success)]' },
+            inprogress: { label: t('dashboard.inProgress'),  cls: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning)]' },
+            pending:    { label: t('dashboard.pending'),     cls: 'bg-[var(--typeui-search-bg)] text-[var(--typeui-muted)]' },
+          }[s];
+          return (
+            <span className={cn(
+              'ml-auto shrink-0 rounded-full px-[10px] py-[3px] text-[10px] font-bold whitespace-nowrap',
+              cfg.cls
+            )}>
+              {cfg.label}
+            </span>
+          );
+        })()}
       </div>
-      <div className="ml-4 flex shrink-0 items-center gap-4">
-        <div className="hidden w-32 sm:block">
-          <div className="mb-1 flex justify-between text-xs text-[#64748B]">
-            <span>{website.submitted}/{website.totalEvaluators}</span>
-            <span>{progress}%</span>
+
+      <div className="flex flex-wrap gap-2">
+        <span className="rounded-[6px] border border-[var(--typeui-card-border)] bg-[var(--typeui-search-bg)] px-[10px] py-[3px] text-[11px] text-[var(--typeui-subtext)]">
+          Form
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--typeui-card-border)] bg-[var(--typeui-search-bg)] px-[10px] py-[3px] text-[11px] text-[var(--typeui-subtext)]">
+          <Clock className="h-2.5 w-2.5 text-[var(--typeui-muted)]" />
+          -
+        </span>
+      </div>
+
+      {progress > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-[var(--typeui-muted)]">คะแนน</span>
+            <span className={cn('text-[12px] font-bold', getScoreTextColor(progress))}>{progress}%</span>
           </div>
-          <div className="h-1.5 rounded-full bg-[#E2E8F0]">
-            <div className="h-full rounded-full bg-[#1B2D5B]" style={{width: `${Math.min(100, progress)}%`}} />
+          <div className="h-[6px] w-full overflow-hidden rounded-full bg-[var(--typeui-card-border)]">
+            <div
+              className={cn('h-full rounded-full transition-[width] duration-[600ms] ease-in-out', getScoreColor(progress))}
+              style={{width: `${Math.min(100, progress)}%`}}
+            />
           </div>
         </div>
-        <AdminStatusBadge status={website.status} />
+      )}
+
+      <div className="px-0 pb-0 pt-0">
         <Link
           href="/forms"
-          className="inline-flex h-9 items-center justify-center rounded-xl bg-[#1B2D5B] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#2D5FA6]"
+          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[12px] border-0 bg-[linear-gradient(135deg,var(--typeui-primary)_0%,#1e7cd8_100%)] py-[13px] text-[14px] font-extrabold tracking-[0.01em] text-white shadow-[0_4px_18_rgba(12,92,171,0.35)] transition-[opacity,transform] duration-150 hover:-translate-y-px hover:opacity-[0.88]"
         >
-          จัดการ
+          <ExternalLink className="h-[15px] w-[15px] stroke-[2.5]" />
+          {t('dashboard.startEvaluation')}
         </Link>
       </div>
+    </article>
+  );
+}
+
+function EmptyState({title, subtitle}: {title: string; subtitle: string}) {
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--typeui-search-bg)] text-[var(--typeui-subtext)]">
+        <AlertCircle className="h-6 w-6" />
+      </div>
+      <h3 className="mt-4 text-[14px] font-semibold text-[var(--typeui-text)]">{title}</h3>
+      <p className="mt-2 max-w-sm text-[12px] font-normal text-[var(--typeui-subtext)]">{subtitle}</p>
     </div>
   );
 }
 
-
-function StatCard({
-  label,
-  value,
-  tone,
+function TableFooter({
+  countLabel,
+  activeTab,
+  onTabChange,
 }: {
-  label: string;
-  value: number;
-  tone: 'navy' | 'green' | 'red' | 'amber' | 'gray';
+  countLabel: string;
+  activeTab: string;
+  onTabChange: (t: string) => void;
 }) {
-  const styles: Record<typeof tone, string> = {
-    navy:  'bg-[#1B2D5B] text-white',
-    green: 'bg-[#16A34A] text-white',
-    red:   'bg-[#DC2626] text-white',
-    amber: 'bg-amber-500 text-white',
-    gray:  'bg-[#F1F5F9] text-[#1A202C]',
+  const t = useTranslations();
+  return (
+    <footer className="flex flex-col gap-3 border-t border-[var(--typeui-divider)] px-6 py-[14px] sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-[11px] font-medium text-[var(--typeui-muted)]">{countLabel}</p>
+      <div className="flex items-center gap-2">
+        {[
+          {id: 'All', label: t('dashboard.all')},
+          {id: 'Active', label: t('dashboard.active')},
+          {id: 'Complete', label: t('dashboard.complete')}
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onTabChange(tab.id)}
+            className={cn(
+              'rounded-[8px] px-3 py-[5px] text-[12px] font-medium transition-colors duration-150',
+              activeTab === tab.id
+                ? 'bg-[var(--typeui-primary)] text-white shadow-sm'
+                : 'bg-[var(--typeui-search-bg)] text-[var(--typeui-subtext)] hover:bg-[var(--typeui-primary-soft)] hover:text-[var(--typeui-primary)]'
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    </footer>
+  );
+}
+
+function getToneClasses(tone: StatTone) {
+  const tones = {
+    primary: {
+      icon: 'bg-[var(--typeui-blue-soft)] text-[var(--typeui-blue)]',
+      badge: 'bg-[var(--typeui-blue-soft)] text-[var(--typeui-blue)]',
+      border: 'border-[rgba(96,165,250,0.25)]',
+    },
+    success: {
+      icon: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success)]',
+      badge: 'bg-[var(--typeui-success-soft)] text-[var(--typeui-success-text)]',
+      border: 'border-[rgba(16,185,129,0.30)]',
+    },
+    warning: {
+      icon: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning)]',
+      badge: 'bg-[var(--typeui-warning-soft)] text-[var(--typeui-warning-text)]',
+      border: 'border-[rgba(245,158,11,0.30)]',
+    },
+    danger: {
+      icon: 'bg-[var(--typeui-danger-soft)] text-[var(--typeui-danger)]',
+      badge: 'bg-[var(--typeui-danger-soft)] text-[var(--typeui-danger-text)]',
+      border: 'border-[rgba(239,68,68,0.30)]',
+    },
+    muted: {
+      icon: 'bg-[var(--typeui-danger-soft)] text-[var(--typeui-danger)]',
+      badge: 'bg-[var(--typeui-danger-soft)] text-[var(--typeui-danger-text)]',
+      border: 'border-[rgba(239,68,68,0.30)]',
+    },
   };
 
-  return (
-    <div className={cn('rounded-xl p-6 shadow-sm', styles[tone])}>
-      <p className="text-sm font-medium opacity-80">{label}</p>
-      <p className="mt-2 text-4xl font-bold">{value}</p>
-    </div>
-  );
+  return tones[tone];
 }
 
-function EvaluatorStatusBadge({status}: {status: EvaluationStatus}) {
-  const config = {
-    not_started: {label: 'ยังไม่เริ่ม', className: 'bg-gray-100 text-gray-700'},
-    in_progress: {label: 'กำลังดำเนินการ', className: 'bg-amber-100 text-amber-700'},
-    submitted: {label: 'ส่งแล้ว', className: 'bg-green-100 text-green-700'},
-  }[status];
-
-  return <span className={cn('w-fit rounded-full px-3 py-1 text-xs font-semibold', config.className)}>{config.label}</span>;
+function getScoreColor(score: number) {
+  if (score >= 80) return 'bg-[var(--typeui-success)]';
+  if (score >= 50) return 'bg-[var(--typeui-warning)]';
+  return 'bg-[var(--typeui-danger)]';
 }
 
-function AdminStatusBadge({status}: {status: AdminWebsiteStatus}) {
-  const config = {
-    waiting: {label: 'รอ', className: 'bg-gray-100 text-gray-700'},
-    in_progress: {label: 'กำลังทำ', className: 'bg-amber-100 text-amber-700'},
-    completed: {label: 'เสร็จ', className: 'bg-green-100 text-green-700'},
-    published: {label: 'เผยแพร่แล้ว', className: 'bg-blue-100 text-blue-700'},
-  }[status];
-
-  return <span className={cn('w-fit rounded-full px-3 py-1 text-xs font-semibold', config.className)}>{config.label}</span>;
+function getScoreTextColor(score: number) {
+  if (score >= 80) return 'text-[var(--typeui-success)]';
+  if (score >= 50) return 'text-[var(--typeui-warning)]';
+  return 'text-[var(--typeui-danger)]';
 }
-
 
 function mapFormsToEvaluatorWebsites(forms: DashboardForm[]): EvaluatorWebsite[] {
   return forms

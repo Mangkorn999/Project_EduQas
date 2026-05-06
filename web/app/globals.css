@@ -3,14 +3,6 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-prompt: "Prompt", sans-serif;
-  --font-sans: var(--font-inter), var(--font-noto-thai), system-ui, sans-serif;
-  --font-heading: var(--font-eb-garamond), var(--font-noto-thai), serif;
-  --font-body: var(--font-crimson), var(--font-noto-thai), serif;
-  --font-ui: var(--font-inter), var(--font-noto-thai), system-ui, sans-serif;
-  --font-thai: var(--font-noto-thai), sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
-
   --font-size-display: 3rem;
   --font-size-display-line-height: 1.15;
   --font-size-display-font-weight: 700;
@@ -35,45 +27,105 @@
 }
 
 :root {
+  --font-sans: 'Prompt', sans-serif;
+  --glass-bg: rgba(255,255,255,0.88);
+  --glass-border: #e5e7eb;
+  --glow-cyan: 0 0 0 1px rgba(34,211,238,0.14), 0 10px 24px rgba(15,23,42,0.08);
+  --glow-blue: 0 0 0 1px rgba(59,130,246,0.14), 0 10px 24px rgba(15,23,42,0.08);
+  --depth-1: 0 1px 2px rgba(15,23,42,0.06);
+  --depth-2: 0 10px 24px rgba(15,23,42,0.10);
+
   /* Light Theme */
-  --color-primary: #001d59;
-  --color-primary-alt: #003087;
-  --color-primary-light: #0047AB;
-  --color-accent: #FFD700;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-error: #EF4444;
-  --color-bg: #f8f9ff;
-  --color-container: #e5eeff;
-  --color-text: #0b1c30;
-  --color-text-muted: #444652;
+  --color-primary: #3b82f6;
+  --color-primary-alt: #1d4ed8;
+  --color-primary-light: #dbeafe;
+  --color-accent: #4f46e5;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-bg: #f8f9fa;
+  --color-container: #ffffff;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
 
-  --bg-page: #f8f9ff;
-  --bg-surface: #FFFFFF;
-  --bg-subtle: #e5eeff;
-  --bg-muted: #CBD5E1;
+  --bg-page: #f8f9fa;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --bg-muted: #e2e8f0;
 
-  --text-primary: #0b1c30;
-  --text-secondary: #444652;
-  --text-muted: #444652;
-  --text-disabled: #64748B;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-disabled: #94a3b8;
 
-  --border: #CBD5E1;
-  --border-strong: #94A3B8;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
 
-  --accent-primary: #003087;
-  --accent-blue: #0047AB;
-  --accent-teal: #10B981;
-  --accent-amber: #FFD700;
-  --accent-red: #EF4444;
+  --accent-primary: #3b82f6;
+  --accent-blue: #3b82f6;
+  --accent-teal: #0891b2;
+  --accent-amber: #d97706;
+  --accent-red: #dc2626;
 
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 2px rgba(17,24,39,0.05);
+  --shadow-md: 0 8px 20px rgba(17,24,39,0.08), 0 1px 2px rgba(17,24,39,0.05);
+  --shadow-lg: 0 16px 36px rgba(17,24,39,0.10), 0 2px 6px rgba(17,24,39,0.05);
+
+  --typeui-sidebar-bg: #0d2257;
+  --typeui-sidebar-border: rgba(255,255,255,0.06);
+  --typeui-sidebar-text: #ffffff;
+  --typeui-sidebar-subtitle: rgba(255,255,255,0.35);
+  --typeui-sidebar-inactive: rgba(255,255,255,0.55);
+  --typeui-sidebar-icon-inactive: rgba(255,255,255,0.45);
+  --typeui-sidebar-active-bg: rgba(255,255,255,0.12);
+  --typeui-gold: #facc15;
+  --typeui-danger: #dc2626;
+  --typeui-content-bg: #f8f9fa;
+  --typeui-topbar-bg: rgba(255,255,255,0.86);
+  --typeui-topbar-border: rgba(15,23,42,0.08);
+  --typeui-muted: #6b7280;
+  --typeui-text: #0f172a;
+  --typeui-subtext: #374151;
+  --typeui-button-text: #374151;
+  --typeui-search-bg: #f8fafc;
+  --typeui-search-border: #e2e8f0;
+  --typeui-card-bg: #ffffff;
+  --typeui-card-border: #e2e8f0;
+  --typeui-card-border-soft: #e2e8f0;
+  --typeui-card-shadow: 0 1px 2px rgba(17,24,39,0.05), 0 8px 20px rgba(17,24,39,0.06);
+  --typeui-stat-shadow: 0 1px 2px rgba(17,24,39,0.05), 0 8px 18px rgba(17,24,39,0.06);
+  --typeui-blue: #3b82f6;
+  --typeui-blue-soft: rgba(59,130,246,0.12);
+  --typeui-primary: #0066ff;
+  --typeui-primary-shadow: 0 8px 18px rgba(0,102,255,0.20);
+  --typeui-primary-soft: rgba(0, 102, 255, 0.08);
+  --typeui-action-bg: #2563eb;
+  --typeui-action-shadow: 0 8px 18px rgba(37,99,235,0.22);
+  --typeui-label-blue: #2563eb;
+  --typeui-success: #059669;
+  --typeui-success-text: #059669;
+  --typeui-success-soft: rgba(5,150,105,0.10);
+  --typeui-warning: #d97706;
+  --typeui-warning-text: #d97706;
+  --typeui-warning-soft: rgba(217,119,6,0.10);
+  --typeui-danger-text: #dc2626;
+  --typeui-danger-soft: rgba(239,68,68,0.10);
+  --typeui-row-border: #f3f4f6;
+  --typeui-header-bg: #f9fafb;
+  --typeui-divider: #e5e7eb;
+  --typeui-hero-blob: radial-gradient(circle, rgba(147,197,253,0.24) 0%, rgba(196,181,253,0.12) 45%, transparent 70%);
+  --typeui-hero-blob-secondary: radial-gradient(circle, rgba(125,211,252,0.18) 0%, transparent 70%);
 }
 
 .dark {
   /* Dark Theme */
+  --glass-bg: rgba(255,255,255,0.05);
+  --glass-border: rgba(255,255,255,0.1);
+  --glow-cyan: 0 0 20px rgba(34,211,238,0.5);
+  --glow-blue: 0 0 20px rgba(59,130,246,0.5);
+  --depth-1: 0 2px 6px rgba(0,0,0,0.2);
+  --depth-2: 0 10px 30px rgba(0,0,0,0.4);
+
   --bg-page: #0C0A09;
   --bg-surface: #1C1917;
   --bg-subtle: #292524;
@@ -96,27 +148,115 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+
+  --typeui-bg: #07070d;
+  --typeui-content-bg: #07070d;
+  --typeui-topbar-bg: rgba(9,9,11,0.90);
+  --typeui-topbar-border: rgba(255,255,255,0.07);
+  --typeui-muted: #6060a0;
+  --typeui-text: #f0f0ff;
+  --typeui-subtext: #a0a0c8;
+  --typeui-button-text: #e4e4e7;
+  --typeui-search-bg: rgba(255,255,255,0.05);
+  --typeui-search-border: rgba(255,255,255,0.08);
+  --typeui-card-bg: #13131f;
+  --typeui-card-border: rgba(255,255,255,0.10);
+  --typeui-card-border-soft: rgba(255,255,255,0.10);
+  --typeui-card-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  --typeui-stat-shadow: 0 1px 3px rgba(0,0,0,0.35);
+  --typeui-row-border: rgba(255,255,255,0.05);
+  --typeui-header-bg: rgba(255,255,255,0.04);
+  --typeui-divider: rgba(255,255,255,0.07);
+  --typeui-blue-soft: rgba(59,130,246,0.20);
+  --typeui-primary-soft: rgba(59,130,246,0.20);
+  --typeui-success-soft: rgba(16,185,129,0.22);
+  --typeui-warning-soft: rgba(245,158,11,0.22);
+  --typeui-danger-soft: rgba(239,68,68,0.22);
+  --typeui-hero-blob: radial-gradient(circle, rgba(59,130,246,0.22) 0%, rgba(124,58,237,0.10) 45%, transparent 70%);
+  --typeui-hero-blob-secondary: radial-gradient(circle, rgba(16,185,129,0.16) 0%, transparent 70%);
 }
 
 body {
   background-color: var(--bg-page);
   color: var(--text-primary);
-  font-family: var(--font-prompt);
+  font-family: var(--font-sans);
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+* {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
 }
 
 @layer base {
   body {
-    @apply font-prompt;
+    @apply font-sans;
   }
 }
 
 h1,
 h2,
 h3 {
-  font-family: var(--font-prompt);
+  font-family: var(--font-sans);
 }
 
 .academic-body {
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
+}
+
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+}
+
+.card-premium {
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--depth-2);
+  backdrop-filter: blur(12px);
+}
+
+.dark .card-premium {
+  background: rgba(255,255,255,0.03);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 40px rgba(0,0,0,0.6);
+  backdrop-filter: blur(20px);
+}
+
+.glow-hover:hover {
+  transform: translateX(4px);
+  box-shadow: var(--glow-blue);
+}
+
+.typeui-hero::after {
+  position: absolute;
+  right: 130px;
+  bottom: -20px;
+  width: 100px;
+  height: 100px;
+  border-radius: 9999px;
+  background: var(--typeui-hero-blob-secondary);
+  pointer-events: none;
+  content: "";
+}
+
+.typeui-hero-label {
+  font-size: 0;
+}
+
+.typeui-hero-label::after {
+  color: var(--typeui-label-blue);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  content: "EILA WORKSPACE";
 }
