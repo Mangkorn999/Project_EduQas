@@ -38,12 +38,12 @@ type ShellNavItem = {
 };
 
 const SHELL_NAV_ITEMS: ShellNavItem[] = [
-  {icon: LayoutDashboard, labelKey: 'dashboard', href: '/dashboard',    matchPrefix: '/dashboard'},
-  {icon: FileText,        labelKey: 'forms',     href: '/forms',        matchPrefix: '/forms'},
-  {icon: Globe,           labelKey: 'websites',  href: '/websites',     matchPrefix: '/websites'},
-  {icon: User,            labelKey: 'users',     href: '/admin/users',  matchPrefix: '/admin/users'},
-  {icon: ShieldCheck,     labelKey: 'audit',     href: '/admin/audit',  matchPrefix: '/admin/audit'},
-  {icon: BarChart3,       labelKey: 'reports',   href: '/reports',      matchPrefix: '/reports'},
+  {icon: LayoutDashboard, labelKey: 'dashboard', href: '/dashboard', matchPrefix: '/dashboard'},
+  {icon: FileText, labelKey: 'forms', href: '/forms', matchPrefix: '/forms'},
+  {icon: Globe, labelKey: 'websites', href: '/websites', matchPrefix: '/websites'},
+  {icon: User, labelKey: 'users', href: '/admin/users', matchPrefix: '/admin/users'},
+  {icon: ShieldCheck, labelKey: 'audit', href: '/admin/audit', matchPrefix: '/admin/audit'},
+  {icon: BarChart3, labelKey: 'reports', href: '/reports', matchPrefix: '/reports'},
 ];
 
 export default function AuthLayout({children}: {children: React.ReactNode}) {
@@ -54,20 +54,16 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
   const [openCmd, setOpenCmd] = useState(false);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setOpenCmd((v) => !v);
+    const handler = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setOpenCmd((value) => !value);
       }
     };
+
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
-
-  // Close mobile sidebar on route change
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
 
   const useAppShell =
     pathname.startsWith('/evaluator') ||
@@ -84,31 +80,21 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
 
     return SHELL_NAV_ITEMS.filter((item) => {
       if (item.labelKey === 'dashboard') return true;
-
-      // Evaluators: dashboard only
       if (role === 'teacher' || role === 'staff' || role === 'student') return false;
-
-      // Executive: dashboard + reports only
       if (role === 'executive') return item.labelKey === 'reports';
-
-      // Admin (EILA): forms, websites, reports
-      if (role === 'admin') {
-        return ['forms', 'websites', 'reports'].includes(item.labelKey);
-      }
-
-      // Super admin: everything
+      if (role === 'admin') return ['forms', 'websites', 'reports'].includes(item.labelKey);
       if (role === 'super_admin') return true;
-
       return false;
     });
   }, [user]);
 
   const commandItems = useMemo(
-    () => visibleNavItems.map((item) => ({
-      href: item.href,
-      icon: item.icon,
-      label: t(`nav.${item.labelKey}`),
-    })),
+    () =>
+      visibleNavItems.map((item) => ({
+        href: item.href,
+        icon: item.icon,
+        label: t(`nav.${item.labelKey}`),
+      })),
     [t, visibleNavItems],
   );
 
@@ -121,8 +107,6 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
   return (
     <ProtectedLayout>
       <div className="flex h-screen overflow-hidden bg-[var(--bg-page)]">
-
-        {/* ── Mobile overlay ─────────────────────────────────────────────── */}
         <AnimatePresence>
           {sidebarOpen && (
             <motion.div
@@ -136,7 +120,6 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
           )}
         </AnimatePresence>
 
-        {/* ── Sidebar ────────────────────────────────────────────────────── */}
         <aside
           className={cn(
             'fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col lg:relative lg:translate-x-0',
@@ -145,7 +128,6 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
           )}
           style={{background: 'var(--sidebar-bg-gradient)'}}
         >
-          {/* Logo */}
           <div className="flex h-16 shrink-0 items-center gap-3 border-b border-[var(--sidebar-border)] px-5">
             <Link
               href="/dashboard"
@@ -153,7 +135,7 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
             >
               <Image
                 src="/images/eila-logo.png"
-                alt="EILA — PSU Website Evaluation"
+                alt="EILA - PSU Website Evaluation"
                 width={108}
                 height={36}
                 priority
@@ -170,13 +152,13 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
             </button>
           </div>
 
-          {/* Nav */}
           <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
             <ul className="space-y-0.5" role="list">
               {visibleNavItems.map((item) => {
                 const isActive = item.matchPrefix
                   ? pathname.startsWith(item.matchPrefix)
                   : pathname === item.href;
+
                 return (
                   <li key={item.href}>
                     <Link
@@ -213,23 +195,13 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
             </ul>
           </nav>
 
-          {/* User menu */}
           <div className="shrink-0 border-t border-[var(--sidebar-border)] p-3">
-            {user && (
-              <UserMenu
-                variant="sidebar"
-                availableRoles={getAvailableRoles(user.roles)}
-              />
-            )}
+            {user && <UserMenu variant="sidebar" availableRoles={getAvailableRoles(user.roles)} />}
           </div>
         </aside>
 
-        {/* ── Main area ──────────────────────────────────────────────────── */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-
-          {/* Topbar */}
           <header className="flex h-16 shrink-0 items-center gap-4 border-b border-[var(--border)] bg-[var(--bg-surface)] px-4 md:px-6">
-            {/* Mobile menu button */}
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
@@ -239,14 +211,9 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
               <Menu className="h-4 w-4" />
             </button>
 
-            {/* Page title */}
-            <h1 className="text-[15px] font-semibold text-[var(--text-primary)]">
-              {pageTitle}
-            </h1>
+            <h1 className="text-[15px] font-semibold text-[var(--text-primary)]">{pageTitle}</h1>
 
-            {/* Right controls */}
             <div className="ml-auto flex items-center gap-1.5">
-              {/* Command palette trigger */}
               <button
                 type="button"
                 onClick={() => setOpenCmd(true)}
@@ -274,12 +241,7 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
             </div>
           </header>
 
-          {/* Content */}
-          <main
-            id="main-content"
-            className="flex-1 overflow-y-auto"
-            tabIndex={-1}
-          >
+          <main id="main-content" className="flex-1 overflow-y-auto" tabIndex={-1}>
             <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
               <motion.div
                 key={pathname}
@@ -294,11 +256,7 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
         </div>
       </div>
 
-      <CommandPalette
-        items={commandItems}
-        open={openCmd}
-        onClose={() => setOpenCmd(false)}
-      />
+      <CommandPalette items={commandItems} open={openCmd} onClose={() => setOpenCmd(false)} />
     </ProtectedLayout>
   );
 }
@@ -306,16 +264,16 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
 function getPageTitle(pathname: string, t: ReturnType<typeof useTranslations>, role?: string) {
   if (pathname === '/dashboard') {
     if (role === 'student' || role === 'staff' || role === 'teacher') {
-      return 'งานของฉัน';
+      return 'My Work';
     }
     return t('nav.dashboard');
   }
-  if (pathname.startsWith('/forms'))          return t('nav.forms');
-  if (pathname.startsWith('/websites'))       return t('nav.websites');
-  if (pathname.startsWith('/admin/users'))    return t('nav.users');
-  if (pathname.startsWith('/admin/audit'))    return t('nav.audit');
-  if (pathname.startsWith('/reports'))        return t('nav.reports');
-  if (pathname.startsWith('/notifications'))  return t('nav.notifications');
-  if (pathname.startsWith('/profile'))        return t('nav.profile');
+  if (pathname.startsWith('/forms')) return t('nav.forms');
+  if (pathname.startsWith('/websites')) return t('nav.websites');
+  if (pathname.startsWith('/admin/users')) return t('nav.users');
+  if (pathname.startsWith('/admin/audit')) return t('nav.audit');
+  if (pathname.startsWith('/reports')) return t('nav.reports');
+  if (pathname.startsWith('/notifications')) return t('nav.notifications');
+  if (pathname.startsWith('/profile')) return t('nav.profile');
   return t('nav.dashboard');
 }

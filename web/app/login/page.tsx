@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import {useEffect, useMemo} from 'react';
 import {useRouter} from 'next/navigation';
 import {useTranslations} from 'next-intl';
 import Image from 'next/image';
@@ -17,14 +17,11 @@ export default function LoginPage() {
   const t = useTranslations();
   const router = useRouter();
   const {isAuthenticated, isLoading, user} = useAuthStore();
-  const [redirectUrl, setRedirectUrl] = useState(REAL_LOGIN_URL);
-
-  useEffect(() => {
-    setRedirectUrl(
-      `${REAL_LOGIN_URL}?redirect_uri=${encodeURIComponent(
-        `${window.location.origin}/callback`,
-      )}`,
-    );
+  const redirectUrl = useMemo(() => {
+    if (typeof window === 'undefined') return REAL_LOGIN_URL;
+    return `${REAL_LOGIN_URL}?redirect_uri=${encodeURIComponent(
+      `${window.location.origin}/callback`,
+    )}`;
   }, []);
 
   useEffect(() => {
@@ -35,21 +32,17 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen bg-[var(--bg-page)]">
-
-      {/* Controls */}
       <div className="absolute right-5 top-5 z-10 flex items-center gap-2">
         <LanguageToggle />
         <ThemeToggle />
       </div>
 
-      {/* ── Left brand panel (hidden on mobile) ─────────────────────────── */}
       <div
         className="hidden w-[480px] shrink-0 flex-col justify-between p-10 lg:flex"
         style={{
           background: 'linear-gradient(160deg, #0d2257 0%, #0a1a45 55%, #071130 100%)',
         }}
       >
-        {/* Logo */}
         <div>
           <Image
             src="/images/eila-logo.png"
@@ -61,28 +54,29 @@ export default function LoginPage() {
           />
         </div>
 
-        {/* Brand copy */}
         <div className="space-y-6">
           <div className="space-y-3">
             <h1 className="text-3xl font-bold leading-snug text-white">
-              ระบบประเมินคุณภาพ<br />เว็บไซต์หน่วยงาน
+              Website evaluation
+              <br />
+              for PSU units
             </h1>
             <p className="text-[15px] leading-relaxed text-white/60">
-              Prince of Songkla University<br />
-              สำนักการศึกษาและนวัตกรรมการเรียนรู้ (EILA)
+              Prince of Songkla University
+              <br />
+              Educational Innovation and Learning Academy
             </p>
           </div>
 
-          {/* Feature list */}
           <ul className="space-y-3" aria-label="System features">
             {[
-              'จัดการรอบการประเมินและแบบฟอร์ม',
-              'ติดตามความคืบหน้าแบบ Real-time',
-              'รายงานและส่งออกข้อมูลได้ทันที',
+              'Manage rounds and evaluation forms',
+              'Track review progress in real time',
+              'Export and share results quickly',
             ].map((feat) => (
               <li key={feat} className="flex items-center gap-3 text-sm text-white/70">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-300">
-                  ✓
+                  +
                 </span>
                 {feat}
               </li>
@@ -90,17 +84,13 @@ export default function LoginPage() {
           </ul>
         </div>
 
-        {/* Footer */}
         <p className="text-xs text-white/30">
-          © {new Date().getFullYear()} Prince of Songkla University · EILA
+          Copyright {new Date().getFullYear()} Prince of Songkla University
         </p>
       </div>
 
-      {/* ── Right login panel ────────────────────────────────────────────── */}
       <div className="flex flex-1 items-center justify-center p-6">
         <div className="w-full max-w-[400px]">
-
-          {/* Mobile logo */}
           <div className="mb-8 flex justify-center lg:hidden">
             <Image
               src="/images/eila-logo.png"
@@ -112,10 +102,7 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Card */}
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-8 shadow-[var(--shadow-lg)]">
-
-            {/* Header */}
             <div className="mb-8 text-center">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-900/20">
                 <ShieldCheck className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -128,7 +115,6 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* CTA */}
             <div className="space-y-4">
               <a
                 href={redirectUrl}
@@ -138,14 +124,12 @@ export default function LoginPage() {
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </a>
 
-              {/* Divider */}
               <div className="flex items-center gap-3">
                 <hr className="flex-1 border-[var(--border)]" />
                 <span className="text-xs text-[var(--text-disabled)]">PSU Passport</span>
                 <hr className="flex-1 border-[var(--border)]" />
               </div>
 
-              {/* Terms */}
               <p className="text-center text-xs leading-relaxed text-[var(--text-muted)]">
                 {t('auth.termsPrefix')}{' '}
                 <a
@@ -166,9 +150,8 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Bottom badge */}
           <p className="mt-6 text-center text-xs text-[var(--text-disabled)]">
-            Prince of Songkla University · สงขลา ประเทศไทย
+            Prince of Songkla University
           </p>
         </div>
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {useEffect, useMemo, useState, useRef} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {useTranslations} from 'next-intl';
 import {
   AlertCircle,
@@ -15,7 +15,6 @@ import {
   Users,
   BarChart3,
   FileText,
-  ArrowRight,
   PlusCircle,
 } from 'lucide-react';
 import {useAuthStore} from '@/lib/stores/authStore';
@@ -71,24 +70,9 @@ type DisplayStatusSite = {
 };
 
 const EVALUATOR_ROLES: UserRole[] = ['student', 'staff', 'teacher'];
-const ADMIN_ROLES: UserRole[] = ['super_admin', 'admin', 'executive'];
 
-function useCountUp(target: number, duration = 900) {
-  const [count, setCount] = useState(0);
-  const rafRef = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    if (target === 0) { setCount(0); return; }
-    const startTime = performance.now();
-    const tick = (now: number) => {
-      const p = Math.min((now - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setCount(Math.round(eased * target));
-      if (p < 1) rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current!);
-  }, [target, duration]);
-  return count;
+function useCountUp(target: number) {
+  return target;
 }
 
 const getDisplayStatus = (site: DisplayStatusSite): DisplayStatus => {
