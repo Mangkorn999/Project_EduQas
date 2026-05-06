@@ -1,9 +1,9 @@
 import { db } from '../../../../db'
-import { forms, evaluationCriteria, formQuestions, formVersions, formTargetFaculties } from '../../../../db/schema'
+import { forms, evaluationCriteria, formQuestions, formVersions, formTargetFaculties, formTargetRoles } from '../../../../db/schema'
 import { eq, and, isNull, desc, sql } from 'drizzle-orm'
 
 export class SnapshotService {
-  async publishForm(formId: string, facultyScope?: string, targetFacultyIds?: string[]) {
+  async publishForm(formId: string, facultyScope?: string, targetFacultyIds?: string[], targetRoles?: string[]) {
     return db.transaction(async (tx) => {
       const filters = [eq(forms.id, formId), isNull(forms.deletedAt)]
       if (facultyScope) filters.push(eq(forms.ownerFacultyId, facultyScope))
@@ -63,6 +63,16 @@ export class SnapshotService {
         await tx.delete(formTargetFaculties).where(eq(formTargetFaculties.formId, formId))
         await tx.insert(formTargetFaculties).values(
           targetFacultyIds.map(fid => ({ formId, facultyId: fid }))
+        )
+      }
+
+      // บันทึกบทบาทเป้าหมายที่ form จะถูกส่งไป (ถ้ามี)
+      // Always delete old target roles first (allows clearing roles on re-publish)
+      await tx.delete(formTargetRoles).where(eq(formTargetRoles.formId, formId))
+      // Insert new roles if provided
+      if (targetRoles && targetRoles.length > 0) {
+        await tx.insert(formTargetRoles).values(
+          targetRoles.map(role => ({ formId, role: role as any }))
         )
       }
 

@@ -205,8 +205,8 @@ export class FormsController {
     const body = (request.body as any) || {}
     const facultyScope = user.role === 'admin' ? user.facultyId : undefined
     try {
-      const data = await this.snapshotService.publishForm(id, facultyScope, body.targetFacultyIds)
-      await createAuditLog({ userId: user.userId, ip: request.ip }, 'form.publish', 'form', id, { status: 'draft' }, { status: 'open', targetFacultyIds: body.targetFacultyIds })
+      const data = await this.snapshotService.publishForm(id, facultyScope, body.targetFacultyIds, body.targetRoles)
+      await createAuditLog({ userId: user.userId, ip: request.ip }, 'form.publish', 'form', id, { status: 'draft' }, { status: 'open', targetFacultyIds: body.targetFacultyIds, targetRoles: body.targetRoles })
       return { data }
     } catch (err: any) {
       return reply.code(400).send({ error: { code: 'publish_error', message: err.message } })
