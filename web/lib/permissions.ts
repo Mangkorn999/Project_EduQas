@@ -18,7 +18,7 @@ export const PERMISSIONS = {
   'template.manage.faculty': ['super_admin', 'admin'],
   'evaluate.assigned': ['teacher', 'staff', 'student'],
   'dashboard.cross_faculty': ['super_admin', 'executive'],
-  'dashboard.faculty': ['super_admin', 'admin'],
+  'dashboard.faculty': ['super_admin', 'admin', 'executive'],
   'report.export_pdf': ['super_admin', 'admin', 'executive'],
   'user.manage': ['super_admin'],
   'audit.view': ['super_admin'],
