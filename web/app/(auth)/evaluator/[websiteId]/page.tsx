@@ -115,17 +115,21 @@ export default function EvaluatorFormPage({params}: {params: Promise<{websiteId:
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    let mounted = true;
+
     const fetchForm = async () => {
       // Phase 1: load form (if fails, show fallback)
       try {
         setLoading(true);
         const res = await apiGet(`/api/v1/forms/${websiteId}`);
+        if (!mounted) return;
         setForm(res.data);
         const savedDraft = window.localStorage.getItem(draftKey);
         if (savedDraft) {
           setAnswers(JSON.parse(savedDraft));
         }
       } catch (err) {
+        if (!mounted) return;
         console.error('Failed to load evaluation form', err);
         setForm({
           id: websiteId,
@@ -137,23 +141,27 @@ export default function EvaluatorFormPage({params}: {params: Promise<{websiteId:
           criteria: fallbackCriteria,
         });
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
 
       // Phase 2: website-open separately — failure shows banner only, never replaces form
-      if (!readonly) {
-        try {
-          await apiPost(`/api/v1/forms/${websiteId}/website-open`, {});
-        } catch (err) {
-          setNotice(
-            'ไม่สามารถบันทึกการเปิดเว็บไซต์: ' +
-              (err instanceof Error ? err.message : 'ข้อผิดพลาดที่ไม่ทราบสาเหตุ')
-          );
-        }
+      if (!mounted || readonly) return;
+      try {
+        await apiPost(`/api/v1/forms/${websiteId}/website-open`, {});
+      } catch (err) {
+        if (!mounted) return;
+        setNotice(
+          'ไม่สามารถบันทึกการเปิดเว็บไซต์: ' +
+            (err instanceof Error ? err.message : 'ข้อผิดพลาดที่ไม่ทราบสาเหตุ')
+        );
       }
     };
 
     fetchForm();
+
+    return () => {
+      mounted = false;
+    };
   }, [draftKey, readonly, websiteId]);
 
   const sections = useMemo(() => buildSections(form), [form]);
