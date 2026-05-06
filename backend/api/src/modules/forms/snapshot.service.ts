@@ -2,6 +2,9 @@ import { db } from '../../../../db'
 import { forms, evaluationCriteria, formQuestions, formVersions, formTargetFaculties, formTargetRoles } from '../../../../db/schema'
 import { eq, and, isNull, desc, sql } from 'drizzle-orm'
 
+const RESPONDENT_ROLES = ['teacher', 'staff', 'student'] as const
+type RespondentRole = typeof RESPONDENT_ROLES[number]
+
 export class SnapshotService {
   async publishForm(formId: string, facultyScope?: string, targetFacultyIds?: string[], targetRoles?: string[]) {
     return db.transaction(async (tx) => {
@@ -72,17 +75,17 @@ export class SnapshotService {
       }
 
       // บันทึกบทบาทเป้าหมายที่ form จะถูกส่งไป (ถ้ามี)
-      // Always delete old target roles first (allows clearing roles on re-publish)
-      await tx.delete(formTargetRoles).where(eq(formTargetRoles.formId, formId))
-      // Insert new roles if provided (only respondent roles allowed)
+      // Validate roles BEFORE touching the DB — reject invalid roles immediately
       if (targetRoles && targetRoles.length > 0) {
-        const RESPONDENT_ROLES = ['teacher', 'staff', 'student'] as const
-        const validRoles = targetRoles.filter(r => RESPONDENT_ROLES.includes(r as any))
-        if (validRoles.length > 0) {
-          await tx.insert(formTargetRoles).values(
-            validRoles.map(role => ({ formId, role: role as any }))
-          )
+        const invalid = targetRoles.filter(r => !RESPONDENT_ROLES.includes(r as RespondentRole))
+        if (invalid.length > 0) {
+          throw new Error('invalid_target_roles')
         }
+        // Only delete+insert when targetRoles is explicitly provided and non-empty
+        await tx.delete(formTargetRoles).where(eq(formTargetRoles.formId, formId))
+        await tx.insert(formTargetRoles).values(
+          targetRoles.map(role => ({ formId, role: role as RespondentRole }))
+        )
       }
 
       const [updated] = await tx.update(forms)
