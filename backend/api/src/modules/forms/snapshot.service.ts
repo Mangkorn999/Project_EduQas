@@ -12,6 +12,11 @@ export class SnapshotService {
       if (!form) throw new Error('form_not_found')
       if (form.status !== 'draft') throw new Error('already_published')
 
+      // university-scope forms don't use targetRoles (FR-FORM-13)
+      if (form.scope === 'university' && targetRoles && targetRoles.length > 0) {
+        throw new Error('university_scope_cannot_have_target_roles')
+      }
+
       const criteria = await tx.select().from(evaluationCriteria).where(eq(evaluationCriteria.formId, formId))
       const questions = await tx.select().from(formQuestions).where(eq(formQuestions.formId, formId)).orderBy(formQuestions.sortOrder)
 
@@ -69,11 +74,15 @@ export class SnapshotService {
       // บันทึกบทบาทเป้าหมายที่ form จะถูกส่งไป (ถ้ามี)
       // Always delete old target roles first (allows clearing roles on re-publish)
       await tx.delete(formTargetRoles).where(eq(formTargetRoles.formId, formId))
-      // Insert new roles if provided
+      // Insert new roles if provided (only respondent roles allowed)
       if (targetRoles && targetRoles.length > 0) {
-        await tx.insert(formTargetRoles).values(
-          targetRoles.map(role => ({ formId, role: role as any }))
-        )
+        const RESPONDENT_ROLES = ['teacher', 'staff', 'student'] as const
+        const validRoles = targetRoles.filter(r => RESPONDENT_ROLES.includes(r as any))
+        if (validRoles.length > 0) {
+          await tx.insert(formTargetRoles).values(
+            validRoles.map(role => ({ formId, role: role as any }))
+          )
+        }
       }
 
       const [updated] = await tx.update(forms)
