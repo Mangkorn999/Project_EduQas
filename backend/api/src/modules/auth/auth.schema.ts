@@ -1,11 +1,11 @@
 import { z } from 'zod'
 
 export const facultyResponseSchema = z.object({
-  id: z.string().uuid().nullable(),
-  code: z.string().nullable(),
-  nameTh: z.string().nullable(),
-  nameEn: z.string().nullable(),
-  source: z.string().nullable(),
+  id: z.string().nullable().optional(),
+  code: z.string().nullable().optional(),
+  nameTh: z.string().nullable().optional(),
+  nameEn: z.string().nullable().optional(),
+  source: z.string().nullable().optional(),
 })
 
 export const meResponseSchema = z.object({
@@ -13,10 +13,10 @@ export const meResponseSchema = z.object({
   email: z.string(),
   displayName: z.string(),
   role: z.string(),
-  facultyId: z.string().nullable(),
-  facultyNameTh: z.string().nullable(),
-  facultyNameEn: z.string().nullable(),
-  faculty: facultyResponseSchema.nullable(),
+  facultyId: z.string().nullable().optional(),
+  facultyNameTh: z.string().nullable().optional(),
+  facultyNameEn: z.string().nullable().optional(),
+  faculty: facultyResponseSchema.nullable().optional(),
 })
 
 export const loginResponseSchema = z.object({

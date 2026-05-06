@@ -1,6 +1,6 @@
 # EILA MVP Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make the EILA evaluation system fully functional — admin can create evaluations via wizard, evaluators can submit responses via real API, and dashboards show real data.
 
@@ -46,13 +46,13 @@
 - Modify: `backend/api/src/lib/permissions.ts`
 - Modify: `backend/api/src/modules/audit/audit.routes.ts`
 
-- [ ] **Step 1: Read audit routes to find 500 cause**
+- [x] **Step 1: Read audit routes to find 500 cause**
 
 ```bash
 cat backend/api/src/modules/audit/audit.routes.ts
 ```
 
-- [ ] **Step 2: Fix backend permissions**
+- [x] **Step 2: Fix backend permissions**
 
 In `backend/api/src/lib/permissions.ts`, change:
 ```typescript
@@ -77,7 +77,7 @@ export const PERMISSIONS = {
 
 Key changes: `dashboard.faculty` adds `executive`, `user.manage` → `super_admin` only, `audit.view` → `super_admin` only
 
-- [ ] **Step 3: Fix frontend permissions mirror**
+- [x] **Step 3: Fix frontend permissions mirror**
 
 In `web/lib/permissions.ts`, apply same changes:
 ```typescript
@@ -99,7 +99,7 @@ export const PERMISSIONS = {
 } as const
 ```
 
-- [ ] **Step 4: TypeScript check**
+- [x] **Step 4: TypeScript check**
 
 ```bash
 cd backend/api && pnpm exec tsc --noEmit
@@ -108,7 +108,7 @@ cd ../../web && pnpm exec tsc --noEmit
 
 Expected: no errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/api/src/lib/permissions.ts web/lib/permissions.ts
@@ -124,7 +124,7 @@ git commit -m "fix: tighten permissions — audit.view and user.manage super_adm
 - Modify: `web/messages/th.json`
 - Modify: `web/messages/en.json`
 
-- [ ] **Step 1: Update nav items in layout.tsx**
+- [x] **Step 1: Update nav items in layout.tsx**
 
 Replace the `SHELL_NAV_ITEMS` array and `visibleNavItems` logic in `web/app/(auth)/layout.tsx`:
 
@@ -167,7 +167,7 @@ const visibleNavItems = useMemo(() => {
 }, [user]);
 ```
 
-- [ ] **Step 2: Update i18n labels**
+- [x] **Step 2: Update i18n labels**
 
 In `web/messages/th.json`, find the `nav` section and update:
 ```json
@@ -193,7 +193,7 @@ In `web/messages/en.json`, same section:
 }
 ```
 
-- [ ] **Step 3: Fix dashboard label for evaluator role**
+- [x] **Step 3: Fix dashboard label for evaluator role**
 
 In `web/app/(auth)/layout.tsx`, find `getPageTitle` function and add evaluator case:
 ```typescript
@@ -208,7 +208,7 @@ function getPageTitle(pathname: string, t: any): string {
 
 If `getPageTitle` doesn't accept role, pass `user` as parameter.
 
-- [ ] **Step 4: Build check**
+- [x] **Step 4: Build check**
 
 ```bash
 cd /e/EILAP_ROJECTDEMO/web && pnpm build 2>&1 | grep -E "error|Error" | head -20
@@ -216,7 +216,7 @@ cd /e/EILAP_ROJECTDEMO/web && pnpm build 2>&1 | grep -E "error|Error" | head -20
 
 Expected: no errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/app/\(auth\)/layout.tsx web/messages/th.json web/messages/en.json
@@ -231,19 +231,19 @@ git commit -m "fix: role-based sidebar — evaluator sees dashboard only, admin 
 - Modify: `backend/api/src/modules/audit/audit.routes.ts` (if needed)
 - Modify: `web/app/(auth)/admin/audit/page.tsx`
 
-- [ ] **Step 1: Read audit routes**
+- [x] **Step 1: Read audit routes**
 
 ```bash
 cat backend/api/src/modules/audit/audit.routes.ts
 ```
 
-- [ ] **Step 2: Read audit page frontend**
+- [x] **Step 2: Read audit page frontend**
 
 ```bash
 cat web/app/\(auth\)/admin/audit/page.tsx
 ```
 
-- [ ] **Step 3: Test audit API directly**
+- [x] **Step 3: Test audit API directly**
 
 Start backend dev server and test:
 ```bash
@@ -252,7 +252,7 @@ curl -H "Authorization: Bearer <token>" http://localhost:3001/api/v1/audit 2>&1 
 
 Expected: JSON response or specific error message
 
-- [ ] **Step 4: Fix — most likely cause is missing `audit_log` table**
+- [x] **Step 4: Fix — most likely cause is missing `audit_log` table**
 
 Run migration if needed:
 ```bash
@@ -264,7 +264,7 @@ If DB migration fails, check:
 pnpm db:check
 ```
 
-- [ ] **Step 5: Add error boundary to audit page**
+- [x] **Step 5: Add error boundary to audit page**
 
 In `web/app/(auth)/admin/audit/page.tsx`, wrap the fetch in better error handling:
 ```typescript
@@ -288,7 +288,7 @@ if (error) {
 }
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/api/src/modules/audit/ web/app/\(auth\)/admin/audit/page.tsx
@@ -303,14 +303,14 @@ git commit -m "fix: audit page 500 — add error boundary and run migration"
 - Modify: `backend/api/src/modules/forms/forms.service.ts`
 - Modify: `backend/api/src/modules/forms/forms.controller.ts`
 
-- [ ] **Step 1: Write test for dynamic evaluator query**
+- [x] **Step 1: Write test for dynamic evaluator query**
 
 In `backend/api/src/modules/forms/forms.service.ts`, add new method. First verify existing test file:
 ```bash
 ls backend/api/src/modules/api-schema.test.ts
 ```
 
-- [ ] **Step 2: Replace `listFormsForEvaluator` with dynamic check**
+- [x] **Step 2: Replace `listFormsForEvaluator` with dynamic check**
 
 In `backend/api/src/modules/forms/forms.service.ts`, replace the existing `listFormsForEvaluator` method:
 
@@ -381,7 +381,7 @@ import { eq, and, isNull, sql, inArray, type SQL } from 'drizzle-orm'
 import { forms, evaluationCriteria, formQuestions, websites, faculties, evaluatorAssignments, responses, formTargetRoles } from '../../../../db/schema'
 ```
 
-- [ ] **Step 3: Update controller to pass facultyId + role**
+- [x] **Step 3: Update controller to pass facultyId + role**
 
 In `backend/api/src/modules/forms/forms.controller.ts`, update the evaluator branch in `list`:
 
@@ -401,7 +401,7 @@ list = async (request: FastifyRequest, reply: FastifyReply) => {
   // ... rest unchanged
 ```
 
-- [ ] **Step 4: TypeScript check**
+- [x] **Step 4: TypeScript check**
 
 ```bash
 cd /e/EILAP_ROJECTDEMO/backend/api && pnpm exec tsc --noEmit
@@ -409,7 +409,7 @@ cd /e/EILAP_ROJECTDEMO/backend/api && pnpm exec tsc --noEmit
 
 Expected: no errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/api/src/modules/forms/forms.service.ts backend/api/src/modules/forms/forms.controller.ts
@@ -426,7 +426,7 @@ git commit -m "feat: evaluator form list uses dynamic faculty+role check instead
 - Create: `web/app/(auth)/evaluator/evaluate/[formId]/success/page.tsx`
 - Modify: `web/app/(auth)/evaluator/_shared.tsx` — remove mock data, keep UI components
 
-- [ ] **Step 1: Remove mock data from `_shared.tsx`**
+- [x] **Step 1: Remove mock data from `_shared.tsx`**
 
 In `web/app/(auth)/evaluator/_shared.tsx`:
 - Delete the `WEBSITES` constant array (lines with hardcoded sci/eng/inno entries)
@@ -529,7 +529,7 @@ function QuestionCard({ question, index }: { question: FormQuestion; index: numb
 }
 ```
 
-- [ ] **Step 2: Create gate page with real API**
+- [x] **Step 2: Create gate page with real API**
 
 Create `web/app/(auth)/evaluator/evaluate/[formId]/gate/page.tsx`:
 
@@ -590,7 +590,7 @@ export default function Page({ params }: { params: Promise<{ formId: string }> }
 }
 ```
 
-- [ ] **Step 3: Create form page with real API**
+- [x] **Step 3: Create form page with real API**
 
 Create `web/app/(auth)/evaluator/evaluate/[formId]/form/page.tsx`:
 
@@ -676,7 +676,7 @@ export default function Page({ params }: { params: Promise<{ formId: string }> }
 }
 ```
 
-- [ ] **Step 4: Create success page**
+- [x] **Step 4: Create success page**
 
 Create `web/app/(auth)/evaluator/evaluate/[formId]/success/page.tsx`:
 
@@ -716,7 +716,7 @@ export default function Page({ params }: { params: Promise<{ formId: string }> }
 }
 ```
 
-- [ ] **Step 5: Update dashboard page — evaluator view uses real data**
+- [x] **Step 5: Update dashboard page — evaluator view uses real data**
 
 In `web/app/(auth)/dashboard/page.tsx`, the `mapFormsToEvaluatorWebsites` function is called with the existing forms list. The API already returns forms with `hasSubmitted` and `hasOpenedWebsite` from Task 4. Update the map function:
 
@@ -751,7 +751,7 @@ const href = website.status === 'submitted'
   : `/evaluator/evaluate/${website.id}/gate`;
 ```
 
-- [ ] **Step 6: TypeScript + build check**
+- [x] **Step 6: TypeScript + build check**
 
 ```bash
 cd /e/EILAP_ROJECTDEMO/web && pnpm exec tsc --noEmit
@@ -759,7 +759,7 @@ cd /e/EILAP_ROJECTDEMO/web && pnpm exec tsc --noEmit
 
 Expected: no errors
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add web/app/\(auth\)/evaluator/ web/app/\(auth\)/dashboard/page.tsx
@@ -775,7 +775,7 @@ git commit -m "feat: evaluator flow connected to real API — gate/form/success 
 - Create: `web/app/(auth)/evaluations/create/page.tsx`
 - Modify: `web/app/(auth)/forms/page.tsx`
 
-- [ ] **Step 1: Create wizard component skeleton**
+- [x] **Step 1: Create wizard component skeleton**
 
 Create `web/components/evaluation/EvaluationWizard.tsx`:
 
@@ -1264,7 +1264,7 @@ function Step5({ state, roundId, formId }: { state: WizardState; roundId: string
 }
 ```
 
-- [ ] **Step 2: Create wizard page route**
+- [x] **Step 2: Create wizard page route**
 
 Create `web/app/(auth)/evaluations/create/page.tsx`:
 
@@ -1290,7 +1290,7 @@ export default function CreateEvaluationPage() {
 }
 ```
 
-- [ ] **Step 3: Add duplicate button to forms/page.tsx**
+- [x] **Step 3: Add duplicate button to forms/page.tsx**
 
 In `web/app/(auth)/forms/page.tsx`, find the existing form card action buttons and add duplicate:
 
@@ -1316,7 +1316,7 @@ Add button to each form card:
 </button>
 ```
 
-- [ ] **Step 4: Add layout.tsx route for /evaluations/create**
+- [x] **Step 4: Add layout.tsx route for /evaluations/create**
 
 In `web/app/(auth)/layout.tsx`, add `/evaluations` to `useAppShell`:
 ```typescript
@@ -1328,7 +1328,7 @@ const useAppShell =
   // ... rest unchanged
 ```
 
-- [ ] **Step 5: TypeScript check**
+- [x] **Step 5: TypeScript check**
 
 ```bash
 cd /e/EILAP_ROJECTDEMO/web && pnpm exec tsc --noEmit
@@ -1336,7 +1336,7 @@ cd /e/EILAP_ROJECTDEMO/web && pnpm exec tsc --noEmit
 
 Expected: no errors
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add web/components/evaluation/ web/app/\(auth\)/evaluations/ web/app/\(auth\)/forms/page.tsx web/app/\(auth\)/layout.tsx
@@ -1351,7 +1351,7 @@ git commit -m "feat: evaluation wizard — 5-step Google Forms style creation fl
 - Modify: `web/app/(auth)/dashboard/page.tsx`
 - Modify: `backend/api/src/modules/dashboard/dashboard.controller.ts`
 
-- [ ] **Step 1: Update admin dashboard to pick active round automatically**
+- [x] **Step 1: Update admin dashboard to pick active round automatically**
 
 In `web/app/(auth)/dashboard/page.tsx`, the `useEffect` already fetches `GET /api/v1/rounds?status=active`. Verify the rounds service returns rounds with `status=active` filter.
 
@@ -1360,7 +1360,7 @@ Read rounds service:
 grep -n "status" backend/api/src/modules/rounds/rounds.service.ts | head -20
 ```
 
-- [ ] **Step 2: Fix rounds list filter**
+- [x] **Step 2: Fix rounds list filter**
 
 In `backend/api/src/modules/rounds/rounds.service.ts`, ensure `listRounds` accepts status filter and filters correctly. If not, add:
 
@@ -1374,7 +1374,7 @@ async listRounds(scope?: string, status?: string, facultyId?: string) {
 }
 ```
 
-- [ ] **Step 3: Add completion-by-role to dashboard overview API**
+- [x] **Step 3: Add completion-by-role to dashboard overview API**
 
 In `backend/api/src/modules/dashboard/dashboard.controller.ts`, add role breakdown to overview response.
 
@@ -1414,7 +1414,7 @@ return {
 }
 ```
 
-- [ ] **Step 4: Update admin dashboard UI to show role breakdown**
+- [x] **Step 4: Update admin dashboard UI to show role breakdown**
 
 In `web/app/(auth)/dashboard/page.tsx`, add role breakdown section to `AdminDashboard`:
 
@@ -1445,7 +1445,7 @@ In `web/app/(auth)/dashboard/page.tsx`, add role breakdown section to `AdminDash
 )}
 ```
 
-- [ ] **Step 5: TypeScript + build check**
+- [x] **Step 5: TypeScript + build check**
 
 ```bash
 cd /e/EILAP_ROJECTDEMO/backend/api && pnpm exec tsc --noEmit
@@ -1454,7 +1454,7 @@ cd /e/EILAP_ROJECTDEMO/web && pnpm exec tsc --noEmit
 
 Expected: no errors
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/api/src/modules/dashboard/ backend/api/src/modules/rounds/ web/app/\(auth\)/dashboard/page.tsx
@@ -1468,13 +1468,13 @@ git commit -m "feat: admin dashboard shows real completion stats with role break
 **Files:**
 - Delete: `web/app/(auth)/dashboard/page-new.tsx`
 
-- [ ] **Step 1: Delete zombie file**
+- [x] **Step 1: Delete zombie file**
 
 ```bash
 rm web/app/\(auth\)/dashboard/page-new.tsx
 ```
 
-- [ ] **Step 2: Verify build still passes**
+- [x] **Step 2: Verify build still passes**
 
 ```bash
 cd /e/EILAP_ROJECTDEMO/web && pnpm build 2>&1 | tail -10
@@ -1482,7 +1482,7 @@ cd /e/EILAP_ROJECTDEMO/web && pnpm build 2>&1 | tail -10
 
 Expected: all routes listed, no errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add -A web/app/\(auth\)/dashboard/page-new.tsx

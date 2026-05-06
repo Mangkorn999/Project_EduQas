@@ -1,24 +1,30 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import {useEffect, useState} from 'react';
+import {useRouter} from 'next/navigation';
+import {useTranslations} from 'next-intl';
 import Image from 'next/image';
-import { ArrowRight, Globe } from 'lucide-react';
-import { useAuthStore } from '@/lib/stores/authStore';
-import { getPostLoginPath } from '@/lib/auth/role-routing';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { LanguageToggle } from '@/components/ui/LanguageToggle';
+import {ArrowRight, ShieldCheck} from 'lucide-react';
+import {useAuthStore} from '@/lib/stores/authStore';
+import {getPostLoginPath} from '@/lib/auth/role-routing';
+import {ThemeToggle} from '@/components/ui/ThemeToggle';
+import {LanguageToggle} from '@/components/ui/LanguageToggle';
 
-const REAL_LOGIN_URL = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'http://localhost:3001/auth/psu';
+const REAL_LOGIN_URL =
+  process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'http://localhost:3001/auth/psu';
 
 export default function LoginPage() {
   const t = useTranslations();
   const router = useRouter();
-  const { isAuthenticated, isLoading, user } = useAuthStore();
-  const redirectUrl = useMemo(() => {
-    if (typeof window === 'undefined') return REAL_LOGIN_URL;
-    return `${REAL_LOGIN_URL}?redirect_uri=${encodeURIComponent(`${window.location.origin}/callback`)}`;
+  const {isAuthenticated, isLoading, user} = useAuthStore();
+  const [redirectUrl, setRedirectUrl] = useState(REAL_LOGIN_URL);
+
+  useEffect(() => {
+    setRedirectUrl(
+      `${REAL_LOGIN_URL}?redirect_uri=${encodeURIComponent(
+        `${window.location.origin}/callback`,
+      )}`,
+    );
   }, []);
 
   useEffect(() => {
@@ -28,60 +34,144 @@ export default function LoginPage() {
   }, [isAuthenticated, isLoading, router, user?.role]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg-page)] p-6 transition-colors duration-200">
-      {/* Top Controls */}
-      <div className="absolute top-6 right-6 flex items-center gap-2">
+    <div className="relative flex min-h-screen bg-[var(--bg-page)]">
+
+      {/* Controls */}
+      <div className="absolute right-5 top-5 z-10 flex items-center gap-2">
         <LanguageToggle />
         <ThemeToggle />
       </div>
 
-      {/* Login Card */}
-      <section className="w-full max-w-[440px] rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-10 shadow-sm transition-all duration-300">
-        <div className="mb-10 text-center">
+      {/* ── Left brand panel (hidden on mobile) ─────────────────────────── */}
+      <div
+        className="hidden w-[480px] shrink-0 flex-col justify-between p-10 lg:flex"
+        style={{
+          background: 'linear-gradient(160deg, #0d2257 0%, #0a1a45 55%, #071130 100%)',
+        }}
+      >
+        {/* Logo */}
+        <div>
           <Image
             src="/images/eila-logo.png"
-            alt="EILA - PSU Website Evaluation System"
-            width={220}
-            height={80}
+            alt="EILA"
+            width={130}
+            height={44}
             priority
-            className="mx-auto mb-8 object-contain dark:brightness-90"
+            className="h-10 w-auto object-contain brightness-[999] saturate-0"
           />
-          <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
-            {t('auth.signIn')}
-          </h1>
-          <p className="mt-4 text-[var(--text-secondary)] leading-relaxed">
-            {t('auth.loginSubtitle')}
-          </p>
         </div>
 
-        <div className="space-y-4">
-          <a
-            href={redirectUrl}
-            className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl bg-indigo-600 px-6 py-4 text-base font-bold text-white shadow-sm transition-colors duration-200 hover:bg-indigo-700"
-          >
-            {t('auth.loginWithPsu')}
-            <ArrowRight className="h-5 w-5" />
-          </a>
-          
-          <div className="border-t border-[var(--border)] pt-6">
-            <p className="text-xs text-center text-[var(--text-muted)] leading-relaxed">
-              {t('auth.termsPrefix')}{' '}
-              <a href="#" className="underline hover:text-[var(--text-secondary)]">{t('auth.terms')}</a>{' '}
-              {t('auth.and')}{' '}
-              <a href="#" className="underline hover:text-[var(--text-secondary)]">{t('auth.privacy')}</a>{' '}
-              {t('auth.universitySuffix')}
+        {/* Brand copy */}
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <h1 className="text-3xl font-bold leading-snug text-white">
+              ระบบประเมินคุณภาพ<br />เว็บไซต์หน่วยงาน
+            </h1>
+            <p className="text-[15px] leading-relaxed text-white/60">
+              Prince of Songkla University<br />
+              สำนักการศึกษาและนวัตกรรมการเรียนรู้ (EILA)
             </p>
           </div>
-        </div>
-      </section>
 
-      {/* Footer Info */}
-      <footer className="mt-12 text-center">
-        <p className="flex items-center justify-center gap-2 text-sm font-medium text-[var(--text-muted)]">
-          <Globe className="h-4 w-4" />
-          Prince of Songkla University
+          {/* Feature list */}
+          <ul className="space-y-3" aria-label="System features">
+            {[
+              'จัดการรอบการประเมินและแบบฟอร์ม',
+              'ติดตามความคืบหน้าแบบ Real-time',
+              'รายงานและส่งออกข้อมูลได้ทันที',
+            ].map((feat) => (
+              <li key={feat} className="flex items-center gap-3 text-sm text-white/70">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-300">
+                  ✓
+                </span>
+                {feat}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Footer */}
+        <p className="text-xs text-white/30">
+          © {new Date().getFullYear()} Prince of Songkla University · EILA
         </p>
-      </footer>
-    </main>
+      </div>
+
+      {/* ── Right login panel ────────────────────────────────────────────── */}
+      <div className="flex flex-1 items-center justify-center p-6">
+        <div className="w-full max-w-[400px]">
+
+          {/* Mobile logo */}
+          <div className="mb-8 flex justify-center lg:hidden">
+            <Image
+              src="/images/eila-logo.png"
+              alt="EILA"
+              width={130}
+              height={44}
+              priority
+              className="h-10 w-auto object-contain"
+            />
+          </div>
+
+          {/* Card */}
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-8 shadow-[var(--shadow-lg)]">
+
+            {/* Header */}
+            <div className="mb-8 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-900/20">
+                <ShieldCheck className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+                {t('auth.signIn')}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+                {t('auth.loginSubtitle')}
+              </p>
+            </div>
+
+            {/* CTA */}
+            <div className="space-y-4">
+              <a
+                href={redirectUrl}
+                className="group flex w-full items-center justify-center gap-3 rounded-xl bg-[#0d2257] px-5 py-3.5 text-[15px] font-semibold text-white shadow-sm transition-all hover:bg-[#142e6e] hover:shadow-md active:scale-[0.98]"
+              >
+                {t('auth.loginWithPsu')}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </a>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <hr className="flex-1 border-[var(--border)]" />
+                <span className="text-xs text-[var(--text-disabled)]">PSU Passport</span>
+                <hr className="flex-1 border-[var(--border)]" />
+              </div>
+
+              {/* Terms */}
+              <p className="text-center text-xs leading-relaxed text-[var(--text-muted)]">
+                {t('auth.termsPrefix')}{' '}
+                <a
+                  href="#"
+                  className="underline underline-offset-2 hover:text-[var(--text-secondary)]"
+                >
+                  {t('auth.terms')}
+                </a>{' '}
+                {t('auth.and')}{' '}
+                <a
+                  href="#"
+                  className="underline underline-offset-2 hover:text-[var(--text-secondary)]"
+                >
+                  {t('auth.privacy')}
+                </a>{' '}
+                {t('auth.universitySuffix')}
+              </p>
+            </div>
+          </div>
+
+          {/* Bottom badge */}
+          <p className="mt-6 text-center text-xs text-[var(--text-disabled)]">
+            Prince of Songkla University · สงขลา ประเทศไทย
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,9 +1,9 @@
 import { db } from '../../../../db'
-import { forms, evaluationCriteria, formQuestions, formVersions } from '../../../../db/schema'
+import { forms, evaluationCriteria, formQuestions, formVersions, formTargetFaculties } from '../../../../db/schema'
 import { eq, and, isNull, desc, sql } from 'drizzle-orm'
 
 export class SnapshotService {
-  async publishForm(formId: string, facultyScope?: string) {
+  async publishForm(formId: string, facultyScope?: string, targetFacultyIds?: string[]) {
     return db.transaction(async (tx) => {
       const filters = [eq(forms.id, formId), isNull(forms.deletedAt)]
       if (facultyScope) filters.push(eq(forms.ownerFacultyId, facultyScope))
@@ -56,6 +56,15 @@ export class SnapshotService {
         versionNumber: nextVersionNumber,
         snapshot: snapshot
       })
+
+      // บันทึกคณะเป้าหมายที่ form จะถูกส่งไป (ถ้ามี)
+      if (targetFacultyIds && targetFacultyIds.length > 0) {
+        // ลบของเก่าก่อน (กรณี re-publish)
+        await tx.delete(formTargetFaculties).where(eq(formTargetFaculties.formId, formId))
+        await tx.insert(formTargetFaculties).values(
+          targetFacultyIds.map(fid => ({ formId, facultyId: fid }))
+        )
+      }
 
       const [updated] = await tx.update(forms)
         .set({ status: 'open', updatedAt: new Date(), version: form.version + 1 })

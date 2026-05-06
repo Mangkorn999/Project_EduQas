@@ -12,17 +12,27 @@ function getToken() {
  * Standard response handler with 401 redirect
  */
 async function handleResponse(response: Response) {
-  // Handle unauthorized - redirect to login
   if (response.status === 401 || response.status === 403) {
+    let message = response.status === 401 ? 'Session expired.' : 'Forbidden Access.';
+    
+    try {
+      const json = await response.clone().json();
+      const serverMsg = (typeof json.error === 'string' ? json.error : json.error?.message) || json.message;
+      if (serverMsg) message = serverMsg;
+    } catch (err) {
+      // Fallback to default message
+    }
+
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('access_token');
-      
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login?error=session_expired';
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login?error=session_expired';
+        }
       }
     }
-    throw new Error(response.status === 401 ? 'Session expired.' : 'Forbidden Access.');
+    throw new Error(message);
   }
 
   // Parse JSON response
@@ -35,7 +45,11 @@ async function handleResponse(response: Response) {
 
   // Handle API Errors
   if (!response.ok) {
-    const errorMsg = json.error?.message || json.message || 'Something went wrong';
+    // Backend may send { error: 'string' } or { error: { message: '...' } } or { message: '...' }
+    const errorMsg =
+      (typeof json.error === 'string' ? json.error : json.error?.message) ||
+      json.message ||
+      'Something went wrong';
     throw new Error(errorMsg);
   }
 

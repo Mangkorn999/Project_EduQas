@@ -75,8 +75,8 @@ export default function CallbackPage() {
   return (
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className="text-center">
-        <h1 className="text-xl font-bold text-psu-navy">Signing you in...</h1>
-        <p className="mt-2 text-sm text-gray-500">กำลังตรวจสอบสิทธิ์การเข้าใช้งาน</p>
+        <h1 className="text-xl font-bold text-[#0d2257] dark:text-white">Signing you in...</h1>
+        <p className="mt-2 text-sm text-[var(--text-muted)]">กำลังตรวจสอบสิทธิ์การเข้าใช้งาน</p>
       </div>
     </main>
   );

@@ -22,15 +22,21 @@ export interface Website {
   progress: number;
 }
 
-export const WEBSITES: Website[] = [
-  { id: '1', name: 'คณะวิทยาศาสตร์ (Science)', url: 'https://sci.psu.ac.th', status: 'in_progress', progress: 60 },
-  { id: '2', name: 'คณะวิศวกรรมศาสตร์ (Engineering)', url: 'https://eng.psu.ac.th', status: 'pending', progress: 0 },
-  { id: '3', name: 'วิทยาลัยนวัตกรรมการเกษตรและอาหาร', url: 'https://inno.psu.ac.th', status: 'completed', progress: 100 },
-];
-
-export function getWebsiteById(websiteId: string): Website | undefined {
-  return WEBSITES.find((w) => w.id === websiteId);
+export interface FormQuestion {
+  id: string;
+  label: string;
+  questionType: string;
+  isRequired: boolean;
+  sortOrder: number;
+  config?: { options?: Array<{ label: string; value: string }> } | null;
 }
+
+// Minimal website shape used by the new [formId] pages (no status/progress needed)
+export type WebsiteInfo = {
+  id: string;
+  name: string;
+  url: string;
+};
 
 export function StatsSection() {
   const stats = [
@@ -134,7 +140,7 @@ export function PreEvaluationCard({
   website,
   onStart,
 }: {
-  website: Website;
+  website: WebsiteInfo;
   onStart: () => void;
 }) {
   return (
@@ -158,10 +164,6 @@ export function PreEvaluationCard({
           {website.url.replace('https://', '')}
           <Monitor className="h-3 w-3 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
         </a>
-
-        <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100">
-          <span className="text-xs font-semibold text-psu-navy">คณะวิศวกรรมศาสตร์</span>
-        </div>
       </div>
 
       <div className="h-px bg-gray-100 w-full" />
@@ -235,7 +237,7 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
 }: {
-  website: Website;
+  website: WebsiteInfo;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -267,15 +269,11 @@ export function ConfirmModal({
           <div className="bg-[#f8f9ff] rounded-lg p-4 mb-8 space-y-3 text-left border border-gray-100">
             <div className="flex items-center gap-3">
               <CheckCircle2 className="h-5 w-5 text-psu-navy" />
-              <span className="text-sm font-medium text-psu-navy">ตอบครบ 12/12 ข้อ</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="h-5 w-5 text-psu-navy" />
-              <span className="text-sm font-medium text-psu-navy">เปิดเว็บไซต์แล้ว</span>
+              <span className="text-sm font-medium text-psu-navy">ตรวจสอบคำตอบแล้ว</span>
             </div>
             <div className="flex items-center gap-3">
               <History className="h-5 w-5 text-gray-400" />
-              <span className="text-xs text-gray-500">บันทึกร่างล่าสุด: 5 นาทีที่แล้ว</span>
+              <span className="text-xs text-gray-500">กรุณายืนยันเพื่อส่งผลการประเมิน</span>
             </div>
           </div>
 
@@ -299,18 +297,78 @@ export function ConfirmModal({
   );
 }
 
+function QuestionCard({ question, index }: { question: FormQuestion; index: number }) {
+  if (question.questionType === 'rating' || question.questionType === 'scale_5') {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
+        <h3 className="font-semibold text-gray-900 text-lg mb-8">
+          {index + 1}. {question.label}
+          {question.isRequired && <span className="text-red-500 ml-1">*</span>}
+        </h3>
+        <div className="flex justify-between items-center relative">
+          <div className="absolute top-2.5 left-6 right-6 h-px bg-gray-200 -z-10" />
+          {[
+            { val: 1, label: 'ไม่พอใจมาก' },
+            { val: 2, label: 'ไม่พอใจ' },
+            { val: 3, label: 'ปานกลาง' },
+            { val: 4, label: 'พอใจ' },
+            { val: 5, label: 'พอใจมาก' },
+          ].map((item) => (
+            <label key={item.val} className="flex flex-col items-center gap-3 group cursor-pointer bg-white px-2">
+              <input type="radio" name={`q_${question.id}`} value={item.val} className="peer sr-only" />
+              <div className="h-5 w-5 rounded-full border border-gray-400 flex items-center justify-center transition-all peer-checked:border-psu-navy peer-checked:border-[6px]" />
+              <span className="text-xs font-medium text-gray-500 group-hover:text-psu-navy peer-checked:text-psu-navy peer-checked:font-bold">{item.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (question.questionType === 'long_text') {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
+        <label className="block font-semibold text-gray-900 text-lg mb-4">
+          {index + 1}. {question.label}
+          {question.isRequired && <span className="text-red-500 ml-1">*</span>}
+        </label>
+        <textarea
+          name={`q_${question.id}`}
+          className="w-full h-32 rounded-xl border border-gray-200 bg-[#f8f9ff] focus:ring-1 focus:ring-psu-navy p-4 outline-none text-sm"
+          placeholder="พิมพ์ความคิดเห็น..."
+        />
+      </div>
+    );
+  }
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
+      <label className="block font-semibold text-gray-900 text-lg mb-4">
+        {index + 1}. {question.label}
+        {question.isRequired && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <input
+        type="text"
+        name={`q_${question.id}`}
+        className="w-full rounded-xl border border-gray-200 bg-[#f8f9ff] focus:ring-1 focus:ring-psu-navy p-4 outline-none text-sm"
+        placeholder="พิมพ์คำตอบ..."
+      />
+    </div>
+  );
+}
+
 export function EvaluationForm({
   website,
+  questions,
+  responseId: _responseId,
   onBack,
   onSubmitConfirmed,
 }: {
-  website: Website;
+  website: WebsiteInfo;
+  questions: FormQuestion[];
+  responseId?: string;
   onBack: () => void;
   onSubmitConfirmed: () => void;
 }) {
-  const [currentStep, setCurrentStep] = useState(1);
   const [isConfirming, setIsConfirming] = useState(false);
-  const steps = ['ข้อมูลทั่วไป', 'การใช้งาน/UX', 'เนื้อหา/Content', 'ประสิทธิภาพ'];
 
   return (
     <div className="min-h-screen bg-[#f8f9ff] flex flex-col relative text-on-surface">
@@ -330,130 +388,56 @@ export function EvaluationForm({
 
         <div className="hidden lg:flex flex-col items-end gap-1">
           <div className="flex justify-between w-64 text-sm font-bold text-psu-navy">
-            <span>ความคืบหน้า</span>
-            <span>
-              {currentStep} / {steps.length} หมวดหมู่
-            </span>
+            <span>แบบประเมิน</span>
+            <span>{website.name}</span>
           </div>
           <div className="w-64 h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-psu-navy transition-all duration-300"
-              style={{ width: `${(currentStep / 4) * 100}%` }}
-            ></div>
+            <div className="h-full bg-psu-navy w-full transition-all duration-300" />
           </div>
         </div>
-
-        <button className="text-sm font-bold text-psu-navy hover:bg-gray-100 px-4 py-2 rounded-lg transition-all">
-          บันทึกร่าง
-        </button>
       </header>
 
       <div className="flex flex-1 max-w-7xl mx-auto w-full">
-        <aside className="w-72 bg-white border-r border-gray-200 px-6 py-8 hidden md:block">
-          <h2 className="text-xl font-bold text-psu-navy mb-2">Assessment Sections</h2>
-          <p className="text-xs text-gray-400 mb-6">เว็บไซต์ {website.url.replace('https://', '')}</p>
-          <div className="space-y-1">
-            {steps.map((step, i) => {
-              const isActive = currentStep === i + 1;
-              const isPast = i + 1 < currentStep;
-              return (
-                <div
-                  key={step}
-                  className={cn(
-                    'flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer transition-all',
-                    isActive ? 'bg-blue-50 border-l-4 border-psu-navy text-psu-navy' : 'text-gray-500 hover:bg-gray-50'
-                  )}
-                >
-                  <span className={cn('text-sm transition-colors', isActive ? 'font-bold' : 'font-medium')}>
-                    {i + 1}. {step}
-                  </span>
-                  {isPast && !isActive && <CheckCircle2 className="h-4 w-4 text-psu-gold" />}
-                </div>
-              );
-            })}
-          </div>
-        </aside>
-
         <main className="flex-1 p-8 pb-32 overflow-y-auto">
           <div className="max-w-3xl mx-auto space-y-8">
             <motion.section
-              key={currentStep}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="space-y-8"
             >
-              <h2 className="text-3xl font-bold text-on-surface mb-4">{steps[currentStep - 1]}</h2>
+              <h2 className="text-3xl font-bold text-on-surface mb-4">{website.name}</h2>
               <hr className="border-gray-200" />
 
               <div className="space-y-6">
-                {[1, 2].map((q) => (
-                  <div key={q} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-                    <h3 className="font-semibold text-gray-900 text-lg mb-8">
-                      {q}. คำถามสำหรับการประเมินเว็บไซต์ข้อที่ {q} <span className="text-red-500">*</span>
-                    </h3>
-                    <div className="flex justify-between items-center relative">
-                      <div className="absolute top-2.5 left-6 right-6 h-px bg-gray-200 -z-10 mt-[-10px]"></div>
-                      {[
-                        { val: 1, label: 'ไม่พอใจมาก' },
-                        { val: 2, label: 'ไม่พอใจ' },
-                        { val: 3, label: 'ปานกลาง' },
-                        { val: 4, label: 'พอใจ' },
-                        { val: 5, label: 'พอใจมาก' },
-                      ].map((item) => (
-                        <label key={item.val} className="flex flex-col items-center gap-3 group cursor-pointer bg-white px-2">
-                          <input type="radio" name={`q_${currentStep}_${q}`} value={item.val} className="peer sr-only" />
-                          <div
-                            className={cn(
-                              'h-5 w-5 rounded-full border border-gray-400 flex items-center justify-center transition-all peer-checked:border-psu-navy peer-checked:border-[6px]',
-                              'group-hover:border-psu-navy'
-                            )}
-                          ></div>
-                          <span className="text-xs font-medium text-gray-500 group-hover:text-psu-navy peer-checked:text-psu-navy peer-checked:font-bold transition-colors">
-                            {item.label}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
+                {questions.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center text-gray-400">
+                    ไม่พบคำถามในแบบประเมินนี้
                   </div>
-                ))}
-
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-                  <label className="block font-semibold text-gray-900 text-lg mb-4">ข้อเสนอแนะเพิ่มเติม</label>
-                  <textarea
-                    className="w-full h-32 rounded-xl border border-gray-200 bg-[#f8f9ff] focus:ring-1 focus:ring-psu-navy focus:border-psu-navy p-4 outline-none transition-all text-sm"
-                    placeholder="พิมพ์ความคิดเห็น..."
-                  />
-                </div>
+                ) : (
+                  questions.map((q, idx) => (
+                    <QuestionCard key={q.id} question={q} index={idx} />
+                  ))
+                )}
               </div>
             </motion.section>
           </div>
         </main>
       </div>
 
-      <div className="fixed bottom-0 left-0 md:left-72 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 px-8 flex justify-between items-center z-10">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 px-8 flex justify-between items-center z-10">
         <button
-          disabled={currentStep === 1}
-          onClick={() => setCurrentStep((prev) => prev - 1)}
-          className="flex items-center gap-2 px-6 py-2.5 rounded-lg border border-gray-300 font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          onClick={onBack}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-lg border border-gray-300 font-medium text-gray-600 hover:bg-gray-50 transition-all"
         >
-          <ArrowLeft className="h-4 w-4" /> ส่วนก่อนหน้า
+          <ArrowLeft className="h-4 w-4" /> ย้อนกลับ
         </button>
 
-        {currentStep < 4 ? (
-          <button
-            onClick={() => setCurrentStep((prev) => prev + 1)}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-psu-navy text-white font-medium hover:brightness-110 shadow-sm transition-all"
-          >
-            ส่วนถัดไป <ArrowRight className="h-4 w-4" />
-          </button>
-        ) : (
-          <button
-            onClick={() => setIsConfirming(true)}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 shadow-sm transition-all"
-          >
-            ตรวจสอบและส่งประเมิน <ShieldCheck className="h-4 w-4" />
-          </button>
-        )}
+        <button
+          onClick={() => setIsConfirming(true)}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 shadow-sm transition-all"
+        >
+          ตรวจสอบและส่งประเมิน <ShieldCheck className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
@@ -508,10 +492,6 @@ export function SuccessCard({
               })}{' '}
               น.
             </span>
-          </div>
-          <div className="flex justify-between items-center py-3 border-b border-gray-200">
-            <span className="text-gray-500 text-sm">การตอบแบบประเมิน</span>
-            <span className="font-bold text-gray-900">ครบทุกข้อ (12/12 ข้อ)</span>
           </div>
           <div className="flex justify-between items-center py-3">
             <span className="text-gray-500 text-sm">สถานะข้อมูล</span>
@@ -586,4 +566,3 @@ export function SuccessCard({
     </motion.div>
   );
 }
-

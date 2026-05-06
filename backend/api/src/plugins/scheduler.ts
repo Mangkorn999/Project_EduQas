@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin'
 import { FastifyPluginAsync } from 'fastify'
-import { startScheduler } from '../modules/scheduler/scheduler.service'
+import { startScheduler } from '../scheduler'
 
 const schedulerPlugin: FastifyPluginAsync = async (fastify) => {
   // Start the background jobs after the server is ready

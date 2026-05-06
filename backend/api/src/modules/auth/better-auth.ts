@@ -90,7 +90,11 @@ export const psuBetterAuth = betterAuth({
             const email = typeof profile?.email === 'string' && profile.email.trim()
               ? profile.email.trim() : ''
 
+            const firstName = firstString(psuClaim?.first_name_th, psuClaim?.first_name_en, profile?.given_name)
+            const lastName = firstString(psuClaim?.last_name_th, psuClaim?.last_name_en, profile?.family_name)
+            
             const name = firstString(
+              firstName && lastName ? `${firstName} ${lastName}` : null,
               profile?.name,
               profile?.displayName,
               profile?.given_name,

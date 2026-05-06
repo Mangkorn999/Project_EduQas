@@ -13,7 +13,7 @@ export const createWebsiteSchema = z.object({
   name: z.string(),
   url: z.string().url(),
   category: z.string().optional(),
-  ownerFacultyId: z.string().uuid().optional(),
+  ownerFacultyId: z.string().uuid().nullable().optional(),
 })
 
 export const updateWebsiteSchema = z.object({

@@ -1,0 +1,1 @@
+-- placeholder: migration content merged into 0002_0001_auth.sql

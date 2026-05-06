@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
-import { and, count, eq, isNull } from 'drizzle-orm'
-import { forms } from '../../../../db/schema'
+import { and, count, eq, isNull, isNotNull } from 'drizzle-orm'
+import { forms, responses, users } from '../../../../db/schema'
 import { scoreAllWebsitesInRound, scoreWebsite } from '../scoring/score.service'
 import { checkEligibility } from '../ranking/eligibility.service'
 import { canAccessFaculty } from '../../lib/permissions'
@@ -34,6 +34,24 @@ export class DashboardController {
         ...(facultyId ? [eq(forms.ownerFacultyId, facultyId)] : []),
       ))
 
+    // Completion breakdown by role
+    const responsesByRole = await request.server.db
+      .select({
+        role: users.role,
+        total: count(),
+      })
+      .from(responses)
+      .innerJoin(forms, and(eq(forms.roundId, roundId), isNull(forms.deletedAt)))
+      .innerJoin(users, eq(users.id, responses.respondentId))
+      .where(and(
+        isNotNull(responses.submittedAt),
+        isNull(responses.deletedAt),
+        ...(facultyId ? [eq(forms.ownerFacultyId, facultyId)] : []),
+      ))
+      .groupBy(users.role)
+
+    const byRole = Object.fromEntries(responsesByRole.map(r => [r.role, r.total]))
+
     return {
       data: {
         totalWebsites,
@@ -46,6 +64,7 @@ export class DashboardController {
           websiteName: topRanked.websiteName,
           score: topRanked.score,
         } : null,
+        completionByRole: byRole,
       }
     }
   }

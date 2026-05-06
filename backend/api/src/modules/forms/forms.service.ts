@@ -1,23 +1,81 @@
 import { db } from '../../../../db'
-import { forms, evaluationCriteria, formQuestions, websites, faculties } from '../../../../db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
+import { forms, formTargetRoles, evaluationCriteria, formQuestions, websites, faculties, responses } from '../../../../db/schema'
+import { eq, and, isNull, inArray, sql, or } from 'drizzle-orm'
 
 export class FormsService {
-  async listForms(roundId?: string, status?: string, ownerFacultyId?: string) {
+  async listForms(roundId?: string, status?: string, ownerFacultyId?: string, executiveMode = false) {
     const filters = [isNull(forms.deletedAt)]
 
     if (roundId) filters.push(eq(forms.roundId, roundId))
-    if (status) filters.push(eq(forms.status, status as any))
+    // executive sees open/closed only — never draft
+    if (executiveMode) {
+      filters.push(sql`${forms.status} IN ('open', 'closed')`)
+    } else if (status) {
+      filters.push(eq(forms.status, status as any))
+    }
     if (ownerFacultyId) filters.push(eq(forms.ownerFacultyId, ownerFacultyId))
 
     return db.select().from(forms).where(and(...filters))
   }
 
-  async getFormById(id: string, facultyScope?: string) {
-    const filters = [eq(forms.id, id), isNull(forms.deletedAt)]
-    if (facultyScope) {
-      filters.push(eq(forms.ownerFacultyId, facultyScope))
+  async listFormsForEvaluator(userId: string, facultyId: string | null, role: 'teacher' | 'staff' | 'student') {
+    // Step A: Get open forms visible to this evaluator's faculty
+    const matchingForms = await db
+      .select({
+        form: forms,
+        submittedAt: responses.submittedAt,
+        websiteOpenedAt: responses.websiteOpenedAt,
+      })
+      .from(forms)
+      .leftJoin(responses, and(
+        eq(responses.formId, forms.id),
+        eq(responses.respondentId, userId),
+        isNull(responses.deletedAt),
+      ))
+      .where(and(
+        eq(forms.status, 'open' as any),
+        isNull(forms.deletedAt),
+        // university-scope OR same faculty
+        facultyId
+          ? or(eq(forms.scope, 'university'), eq(forms.ownerFacultyId, facultyId!))
+          : eq(forms.scope, 'university' as any),
+      ))
+
+    if (matchingForms.length === 0) return []
+
+    // Step B: Filter by target roles
+    const formIds = matchingForms.map(r => r.form.id)
+
+    const targetRoleRows = await db
+      .select({ formId: formTargetRoles.formId, role: formTargetRoles.role })
+      .from(formTargetRoles)
+      .where(inArray(formTargetRoles.formId, formIds))
+
+    const roleMap = new Map<string, string[]>()
+    for (const row of targetRoleRows) {
+      if (!roleMap.has(row.formId)) roleMap.set(row.formId, [])
+      roleMap.get(row.formId)!.push(row.role)
     }
+
+    return matchingForms
+      .filter(row => {
+        const targetRoles = roleMap.get(row.form.id)
+        if (!targetRoles || targetRoles.length === 0) return true // no restriction
+        return targetRoles.includes(role)
+      })
+      .map(row => ({
+        ...row.form,
+        hasSubmitted: !!row.submittedAt,
+        hasOpenedWebsite: !!row.websiteOpenedAt,
+      }))
+  }
+
+  async getFormById(id: string, facultyScope?: string, executiveMode = false) {
+    const filters = [eq(forms.id, id), isNull(forms.deletedAt)]
+    if (facultyScope) filters.push(eq(forms.ownerFacultyId, facultyScope))
+    // executive cannot see draft forms
+    if (executiveMode) filters.push(sql`${forms.status} IN ('open', 'closed')`)
+
     const [form] = await db.select().from(forms).where(and(...filters))
     return form
   }
@@ -131,9 +189,18 @@ export class FormsService {
 
     const [existing] = await db.select().from(forms).where(and(...filters))
     if (!existing) throw new Error('not_found')
-    if (existing.status === 'closed') throw new Error('already_closed')
+    if (existing.status !== 'open') throw new Error('must_be_open_to_close')
 
-    const [updated] = await db.update(forms).set({ status: 'closed' }).where(eq(forms.id, id)).returning()
+    const [updated] = await db.update(forms).set({ status: 'closed', updatedAt: new Date() }).where(eq(forms.id, id)).returning()
+    return updated
+  }
+
+  async reopenForm(id: string) {
+    const [existing] = await db.select().from(forms).where(and(eq(forms.id, id), isNull(forms.deletedAt)))
+    if (!existing) throw new Error('not_found')
+    if (existing.status !== 'closed') throw new Error('must_be_closed_to_reopen')
+
+    const [updated] = await db.update(forms).set({ status: 'open', updatedAt: new Date() }).where(eq(forms.id, id)).returning()
     return updated
   }
 

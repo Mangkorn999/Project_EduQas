@@ -29,7 +29,8 @@ export class WebsitesController {
   create = async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user as any
     const body = request.body as any
-    const ownerFacultyId = user.role === 'admin' ? user.facultyId : (body.ownerFacultyId || user.facultyId)
+    // admin คณะ → บังคับเป็น facultyId ของตัวเอง, super_admin → ใช้ค่าที่เลือกหรือ null
+    const ownerFacultyId = user.role === 'admin' ? user.facultyId : (body.ownerFacultyId || null)
     try {
       const data = await this.service.createWebsite({ ...body, ownerFacultyId })
       await createAuditLog({ userId: user.userId, ip: request.ip }, 'website.create', 'website', data.id, null, { name: body.name, url: body.url })

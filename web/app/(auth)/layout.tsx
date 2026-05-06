@@ -116,7 +116,7 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
     return <ProtectedLayout>{children}</ProtectedLayout>;
   }
 
-  const pageTitle = getPageTitle(pathname, t);
+  const pageTitle = getPageTitle(pathname, t, user?.role as string | undefined);
 
   return (
     <ProtectedLayout>
@@ -303,8 +303,13 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
   );
 }
 
-function getPageTitle(pathname: string, t: ReturnType<typeof useTranslations>) {
-  if (pathname === '/dashboard')              return t('nav.dashboard');
+function getPageTitle(pathname: string, t: ReturnType<typeof useTranslations>, role?: string) {
+  if (pathname === '/dashboard') {
+    if (role === 'student' || role === 'staff' || role === 'teacher') {
+      return 'งานของฉัน';
+    }
+    return t('nav.dashboard');
+  }
   if (pathname.startsWith('/forms'))          return t('nav.forms');
   if (pathname.startsWith('/websites'))       return t('nav.websites');
   if (pathname.startsWith('/admin/users'))    return t('nav.users');

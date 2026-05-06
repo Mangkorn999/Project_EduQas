@@ -56,12 +56,13 @@ export function FormBuilder({ formId }: FormBuilderProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [websites, setWebsites] = useState<{ id: string; name: string; url: string }[]>([]);
-  const [fetchingWebsites, setFetchingWebsites] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [faculties, setFaculties] = useState<{id: string; nameTh: string}[]>([]);
+  const [selectedFacultyIds, setSelectedFacultyIds] = useState<Set<string>>(new Set());
 
   // Toast notification state
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -107,35 +108,25 @@ export function FormBuilder({ formId }: FormBuilderProps) {
     options: q.config?.options?.map((o: any) => o.label) || []
   });
 
-  const fetchWebsites = async (roundId: string) => {
-    try {
-      setFetchingWebsites(true);
-      const res = await apiGet(`/api/v1/rounds/${roundId}/websites`);
-      setWebsites(res.data ?? []);
-    } catch (err) {
-      console.error('Failed to fetch websites:', err);
-      setWebsites([]);
-    } finally {
-      setFetchingWebsites(false);
-    }
-  };
-
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await apiGet(`/api/v1/forms/${formId}`);
-      setForm(res.data);
-      setLocalTitle(res.data.title || '');
-      setLocalDescription(res.data.description || '');
-      setLocalWebsiteName(res.data.websiteName || '');
-      setLocalWebsiteUrl(res.data.websiteUrl || '');
-      setLocalWebsiteOwnerFaculty(res.data.websiteOwnerFaculty || '');
-      setQuestions((res.data.questions || []).map(mapFromBackend));
+      const [formRes, facultiesRes] = await Promise.all([
+        apiGet(`/api/v1/forms/${formId}`),
+        apiGet('/api/v1/faculties'),
+      ]);
+      setForm(formRes.data);
+      setLocalTitle(formRes.data.title || '');
+      setLocalDescription(formRes.data.description || '');
+      setLocalWebsiteName(formRes.data.websiteName || '');
+      setLocalWebsiteUrl(formRes.data.websiteUrl || '');
+      setLocalWebsiteOwnerFaculty(formRes.data.websiteOwnerFaculty || '');
+      setQuestions((formRes.data.questions || []).map(mapFromBackend));
+      setFaculties(facultiesRes.data ?? []);
 
-      if (res.data.roundId) {
-        const roundRes = await apiGet(`/api/v1/rounds/${res.data.roundId}`);
+      if (formRes.data.roundId) {
+        const roundRes = await apiGet(`/api/v1/rounds/${formRes.data.roundId}`);
         setRound(roundRes.data);
-        await fetchWebsites(res.data.roundId);
       }
     } catch (err) {
       console.error(err);
@@ -304,7 +295,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
   };
 
   // --- Publish ---
-  const handlePublish = async () => {
+  const handleOpenPublishModal = () => {
     if (form?.status !== 'draft') {
       showToast('แบบฟอร์มนี้ได้รับการเผยแพร่แล้วหรือปิดใช้งาน', 'error');
       return;
@@ -313,17 +304,41 @@ export function FormBuilder({ formId }: FormBuilderProps) {
       showToast('ต้องมีอย่างน้อย 1 คำถามก่อนเผยแพร่', 'error');
       return;
     }
-    if (!confirm('ต้องการเผยแพร่แบบฟอร์มนี้หรือไม่? หลังจากเผยแพร่แล้วจะไม่สามารถแก้ไขคำถามได้')) return;
-    
+    // เลือกทุกคณะเป็น default
+    setSelectedFacultyIds(new Set(faculties.map(f => f.id)));
+    setShowPublishModal(true);
+  };
+
+  const handleConfirmPublish = async () => {
     try {
       setPublishing(true);
-      await apiPost(`/api/v1/forms/${formId}/publish`, {});
+      await apiPost(`/api/v1/forms/${formId}/publish`, {
+        targetFacultyIds: Array.from(selectedFacultyIds),
+      });
       setForm((prev: any) => ({ ...prev, status: 'open' }));
+      setShowPublishModal(false);
       showToast('เผยแพร่แบบฟอร์มสำเร็จ! ✅');
     } catch (err: any) {
       showToast(err.message || 'เผยแพร่ไม่สำเร็จ', 'error');
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const toggleFaculty = (id: string) => {
+    setSelectedFacultyIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllFaculties = () => {
+    if (selectedFacultyIds.size === faculties.length) {
+      setSelectedFacultyIds(new Set());
+    } else {
+      setSelectedFacultyIds(new Set(faculties.map(f => f.id)));
     }
   };
 
@@ -454,7 +469,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
             </button>
             {isDraft ? (
               <button 
-                onClick={handlePublish}
+                onClick={handleOpenPublishModal}
                 disabled={publishing || questions.length === 0}
                 className={cn(
                   "flex items-center gap-2 px-4 sm:px-6 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all whitespace-nowrap active:scale-95",
@@ -528,16 +543,16 @@ export function FormBuilder({ formId }: FormBuilderProps) {
                   <span>ข้อมูลเว็บไซต์และรอบการประเมิน</span>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
-                      <Calendar className="h-3 w-3" /> รอบการประเมิน
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                    <label className="text-[11px] font-bold text-blue-500 uppercase flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5" /> รอบการประเมิน
                     </label>
-                    <p className="text-sm font-semibold text-gray-700">{round?.name || 'ไม่ระบุรอบ'}</p>
+                    <p className="text-sm font-bold text-blue-900 px-1 py-0.5">{round?.name || 'ไม่ระบุรอบ'}</p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
-                      <Building2 className="h-3 w-3" /> หน่วยงานเจ้าของ
+                  <div className="space-y-2 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    <label className="text-[11px] font-bold text-gray-500 uppercase flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5" /> หน่วยงานเจ้าของ
                     </label>
                     <input
                       type="text"
@@ -545,88 +560,48 @@ export function FormBuilder({ formId }: FormBuilderProps) {
                       onChange={(e) => setLocalWebsiteOwnerFaculty(e.target.value)}
                       onBlur={() => handleSaveField('websiteOwnerFaculty', localWebsiteOwnerFaculty, form?.websiteOwnerFaculty)}
                       disabled={!isDraft}
-                      className="w-full text-sm font-semibold text-gray-700 bg-transparent border-b border-transparent focus:border-blue-300 outline-none transition-colors disabled:cursor-not-allowed"
-                      placeholder="ชื่อคณะ/หน่วยงาน"
+                      className="w-full text-sm font-semibold text-gray-800 bg-transparent border-b border-gray-200 focus:border-blue-500 outline-none pb-1 transition-colors disabled:cursor-not-allowed"
+                      placeholder="เช่น คณะวิศวกรรมศาสตร์"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
-                    <Globe className="h-3 w-3" /> เว็บไซต์เป้าหมาย (จาก Registry)
-                  </label>
-                  <select
-                    value={form?.websiteTargetId || ''}
-                    onChange={async (e) => {
-                      const websiteTargetId = e.target.value;
-                      const selectedWebsite = websites.find(w => w.id === websiteTargetId);
-                      if (selectedWebsite) {
-                        setLocalWebsiteName(selectedWebsite.name);
-                        setLocalWebsiteUrl(selectedWebsite.url);
-                        try {
-                          setSaving(true);
-                          await apiPatch(`/api/v1/forms/${formId}`, {
-                            websiteTargetId: websiteTargetId || null,
-                            websiteName: selectedWebsite ? selectedWebsite.name : '',
-                            websiteUrl: selectedWebsite ? selectedWebsite.url : '',
-                          });
-                          setForm((prev: any) => ({ ...prev, websiteTargetId, websiteName: selectedWebsite?.name || '', websiteUrl: selectedWebsite?.url || '' }));
-                          showToast('บันทึกเว็บไซต์แล้ว');
-                        } catch (err: any) {
-                          showToast(err.message || 'บันทึกไม่สำเร็จ', 'error');
-                        } finally {
-                          setSaving(false);
-                        }
-                      }
-                    }}
-                    disabled={!isDraft || fetchingWebsites}
-                    className={cn(
-                      "w-full text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-all disabled:cursor-not-allowed disabled:opacity-50",
-                      !isDraft && "bg-gray-50"
-                    )}
-                  >
-                    <option value="">-- เลือกเว็บไซต์ --</option>
-                    {websites.map(w => (
-                      <option key={w.id} value={w.id}>{w.name}</option>
-                    ))}
-                  </select>
-                  {form?.websiteTargetId && websites.find(w => w.id === form.websiteTargetId) && (
-                    <div className="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-2 mt-2">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <ExternalLink className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                        <span className="text-xs text-blue-700 truncate font-medium">{websites.find(w => w.id === form.websiteTargetId)?.url}</span>
-                      </div>
-                      <a
-                        href={websites.find(w => w.id === form.websiteTargetId)?.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[10px] font-bold text-blue-700 hover:underline shrink-0"
-                      >
-                        เปิดดู
-                      </a>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
-                    <LinkIcon className="h-3 w-3" /> URL เว็บไซต์
-                  </label>
-                  <div className="flex items-center gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                  <div className="space-y-2 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    <label className="text-[11px] font-bold text-gray-500 uppercase flex items-center gap-1.5">
+                      <Globe className="h-3.5 w-3.5" /> ชื่อเว็บไซต์เป้าหมาย
+                    </label>
                     <input
                       type="text"
-                      value={localWebsiteUrl}
-                      onChange={(e) => setLocalWebsiteUrl(e.target.value)}
-                      onBlur={() => handleSaveField('websiteUrl', localWebsiteUrl, form?.websiteUrl)}
+                      value={localWebsiteName}
+                      onChange={(e) => setLocalWebsiteName(e.target.value)}
+                      onBlur={() => handleSaveField('websiteName', localWebsiteName, form?.websiteName)}
                       disabled={!isDraft}
-                      className="flex-1 text-sm font-mono text-blue-600 bg-transparent border-b border-transparent focus:border-blue-300 outline-none transition-colors disabled:cursor-not-allowed"
-                      placeholder="https://..."
+                      className="w-full text-sm font-semibold text-gray-800 bg-transparent border-b border-gray-200 focus:border-blue-500 outline-none pb-1 transition-colors disabled:cursor-not-allowed"
+                      placeholder="เช่น ระบบลงทะเบียนเรียน"
                     />
-                    {localWebsiteUrl && (
-                      <a href={localWebsiteUrl} target="_blank" rel="noreferrer" className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    )}
+                  </div>
+
+                  <div className="space-y-2 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    <label className="text-[11px] font-bold text-gray-500 uppercase flex items-center gap-1.5">
+                      <LinkIcon className="h-3.5 w-3.5" /> URL เว็บไซต์เป้าหมาย
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={localWebsiteUrl}
+                        onChange={(e) => setLocalWebsiteUrl(e.target.value)}
+                        onBlur={() => handleSaveField('websiteUrl', localWebsiteUrl, form?.websiteUrl)}
+                        disabled={!isDraft}
+                        className="flex-1 text-sm font-mono text-blue-600 bg-transparent border-b border-gray-200 focus:border-blue-500 outline-none pb-1 transition-colors disabled:cursor-not-allowed"
+                        placeholder="https://..."
+                      />
+                      {localWebsiteUrl && (
+                        <a href={localWebsiteUrl} target="_blank" rel="noreferrer" className="p-1.5 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors bg-white shadow-sm border border-gray-200">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -718,6 +693,112 @@ export function FormBuilder({ formId }: FormBuilderProps) {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Publish Modal — เลือกคณะที่จะส่งแบบฟอร์มให้ */}
+      <AnimatePresence>
+        {showPublishModal && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-gray-950/60 backdrop-blur-sm"
+              onClick={() => setShowPublishModal(false)}
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="relative z-10 w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-blue-600 px-6 py-5 text-white">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Send className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">เผยแพร่แบบฟอร์ม</h2>
+                    <p className="text-blue-100 text-xs mt-0.5">เลือกคณะ/หน่วยงานที่ต้องการส่งแบบฟอร์มประเมิน</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 max-h-[50vh] overflow-y-auto">
+                {/* Warning */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+                  <p className="text-xs font-medium text-amber-800">
+                    ⚠️ หลังจากเผยแพร่แล้ว จะไม่สามารถแก้ไขคำถามได้ หากต้องการแก้ไขให้ Rollback หรือ Duplicate ก่อน
+                  </p>
+                </div>
+
+                {/* Select All */}
+                <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-100">
+                  <span className="text-sm font-bold text-gray-700">
+                    คณะ/หน่วยงานเป้าหมาย ({selectedFacultyIds.size}/{faculties.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={toggleAllFaculties}
+                    className="text-xs font-bold text-blue-600 hover:underline"
+                  >
+                    {selectedFacultyIds.size === faculties.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                  </button>
+                </div>
+
+                {/* Faculty List */}
+                <div className="space-y-1.5">
+                  {faculties.map(faculty => (
+                    <label
+                      key={faculty.id}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border",
+                        selectedFacultyIds.has(faculty.id)
+                          ? "bg-blue-50 border-blue-200"
+                          : "bg-white border-gray-100 hover:bg-gray-50"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedFacultyIds.has(faculty.id)}
+                        onChange={() => toggleFaculty(faculty.id)}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className={cn(
+                        "text-sm font-medium",
+                        selectedFacultyIds.has(faculty.id) ? "text-blue-800" : "text-gray-700"
+                      )}>
+                        {faculty.nameTh}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-gray-100 bg-gray-50 px-6 py-4 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setShowPublishModal(false)}
+                  className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition-colors"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmPublish}
+                  disabled={publishing || selectedFacultyIds.size === 0}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Check className="h-4 w-4" />
+                  {publishing ? 'กำลังเผยแพร่...' : `ยืนยันเผยแพร่ (${selectedFacultyIds.size} คณะ)`}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -13,6 +13,7 @@ export default async function authRoutes(app: FastifyInstance) {
   // Session management
   app.post('/refresh', controller.refresh)
   app.post('/logout', { preHandler: [app.authenticate] }, controller.logout)
+  app.post('/revoke-all', { preHandler: [app.authenticate] }, controller.revokeAll)
   app.get('/me', {
     preHandler: [app.authenticate],
     schema: { response: { 200: meResponseSchema } },

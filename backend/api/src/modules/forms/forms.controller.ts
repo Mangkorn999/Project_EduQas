@@ -5,6 +5,9 @@ import { QuestionsService } from './questions.service'
 import { SnapshotService } from './snapshot.service'
 import { TemplatesService } from '../templates/templates.service'
 import { createAuditLog } from '../audit/audit.service'
+import { and, eq, isNull, or, sql } from 'drizzle-orm'
+import { forms } from '../../../../db/schema'
+import { db } from '../../../../db'
 
 export class FormsController {
   private formsService: FormsService
@@ -24,9 +27,37 @@ export class FormsController {
   // --- Forms ---
   list = async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user as any
+    const EVALUATOR_ROLES = ['teacher', 'staff', 'student']
+
+    if (EVALUATOR_ROLES.includes(user.role)) {
+      const data = await this.formsService.listFormsForEvaluator(
+        user.userId ?? user.id,
+        user.facultyId ?? null,
+        user.role as 'teacher' | 'staff' | 'student',
+      )
+      return reply.send({ data })
+    }
+
     const { roundId, status, ownerFacultyId } = request.query as any
-    const facultyFilter = user.role === 'admin' ? user.facultyId : ownerFacultyId
-    const data = await this.formsService.listForms(roundId, status, facultyFilter)
+    
+    // Admins see their faculty forms + university forms
+    const filters = [isNull(forms.deletedAt)]
+    if (roundId) filters.push(eq(forms.roundId, roundId))
+    
+    if (user.role === 'executive') {
+      filters.push(sql`${forms.status} IN ('open', 'closed')`)
+      if (status && status !== 'draft') filters.push(eq(forms.status, status as any))
+    } else {
+      if (status) filters.push(eq(forms.status, status as any))
+    }
+
+    if (user.role === 'admin') {
+      filters.push(or(eq(forms.ownerFacultyId, user.facultyId), eq(forms.scope, 'university'))!)
+    } else if (ownerFacultyId) {
+      filters.push(eq(forms.ownerFacultyId, ownerFacultyId))
+    }
+
+    const data = await db.select().from(forms).where(and(...filters))
     return { data }
   }
 
@@ -34,7 +65,7 @@ export class FormsController {
     const { id } = request.params as any
     const user = request.user as any
     const facultyScope = user.role === 'admin' ? user.facultyId : undefined
-    const form = await this.formsService.getFormById(id, facultyScope)
+    const form = await this.formsService.getFormById(id, facultyScope, user.role === 'executive')
     
     if (!form) return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
     
@@ -48,11 +79,7 @@ export class FormsController {
     const user = request.user as any
     const body = request.body as any
 
-    if (user.role === 'admin' && body.scope === 'university') {
-      return reply.code(403).send({ error: { code: 'forbidden', message: 'Admin cannot create university forms' } })
-    }
-    
-    const ownerFacultyId = user.role === 'admin' ? user.facultyId : body.ownerFacultyId
+    const ownerFacultyId = body.scope === 'university' ? null : (user.role === 'admin' ? user.facultyId : body.ownerFacultyId)
 
     try {
       const data = await this.formsService.createForm({ ...body, ownerFacultyId, createdById: user.userId })
@@ -175,10 +202,11 @@ export class FormsController {
   publish = async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as any
     const user = request.user as any
+    const body = (request.body as any) || {}
     const facultyScope = user.role === 'admin' ? user.facultyId : undefined
     try {
-      const data = await this.snapshotService.publishForm(id, facultyScope)
-      await createAuditLog({ userId: user.userId, ip: request.ip }, 'form.publish', 'form', id, { status: 'draft' }, { status: 'open' })
+      const data = await this.snapshotService.publishForm(id, facultyScope, body.targetFacultyIds)
+      await createAuditLog({ userId: user.userId, ip: request.ip }, 'form.publish', 'form', id, { status: 'draft' }, { status: 'open', targetFacultyIds: body.targetFacultyIds })
       return { data }
     } catch (err: any) {
       return reply.code(400).send({ error: { code: 'publish_error', message: err.message } })
@@ -214,6 +242,21 @@ export class FormsController {
       return { data }
     } catch (err: any) {
       if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
+      if (err.message === 'must_be_open_to_close') return reply.code(400).send({ error: { code: 'invalid_state', message: 'Only open forms can be closed' } })
+      return reply.code(400).send({ error: { code: 'validation_error', message: err.message } })
+    }
+  }
+
+  reopen = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as any
+    const user = request.user as any
+    try {
+      const data = await this.formsService.reopenForm(id)
+      await createAuditLog({ userId: user.userId, ip: request.ip }, 'form.reopen', 'form', id, { status: 'closed' }, { status: 'open' })
+      return { data }
+    } catch (err: any) {
+      if (err.message === 'not_found') return reply.code(404).send({ error: { code: 'not_found', message: 'Form not found' } })
+      if (err.message === 'must_be_closed_to_reopen') return reply.code(400).send({ error: { code: 'invalid_state', message: 'Only closed forms can be reopened' } })
       return reply.code(400).send({ error: { code: 'validation_error', message: err.message } })
     }
   }

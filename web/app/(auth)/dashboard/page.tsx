@@ -11,6 +11,12 @@ import {
   Globe,
   TrendingUp,
   Search,
+  CalendarDays,
+  Users,
+  BarChart3,
+  FileText,
+  ArrowRight,
+  PlusCircle,
 } from 'lucide-react';
 import {useAuthStore} from '@/lib/stores/authStore';
 import {apiGet} from '@/lib/api';
@@ -24,6 +30,15 @@ type DashboardForm = {
   websiteName?: string;
   websiteUrl?: string;
   updatedAt?: string;
+};
+
+type DashboardOverview = {
+  totalWebsites: number;
+  evaluatedWebsites: number;
+  totalResponses: number;
+  averageScore: number | null;
+  pendingForms: number;
+  completionByRole?: Record<string, number>;
 };
 
 type EvaluationStatus = 'not_started' | 'in_progress' | 'submitted';
@@ -58,7 +73,7 @@ const ADMIN_ROLES: UserRole[] = ['super_admin', 'admin', 'executive'];
 
 function useCountUp(target: number, duration = 900) {
   const [count, setCount] = useState(0);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (target === 0) { setCount(0); return; }
     const startTime = performance.now();
@@ -95,13 +110,35 @@ export default function DashboardPage() {
   const t = useTranslations();
   const {user} = useAuthStore();
   const [forms, setForms] = useState<DashboardForm[]>([]);
+  const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const role = user?.role as UserRole | undefined;
+  const isSuperAdminOrAdmin = role === 'super_admin' || role === 'admin';
+  const isExecutive = role === 'executive';
+  const isAdmin = isSuperAdminOrAdmin || isExecutive;
+  const isEvaluator = role ? EVALUATOR_ROLES.includes(role) : true;
+
   useEffect(() => {
-    const fetchForms = async () => {
+    const fetchData = async () => {
       try {
-        const res = await apiGet('/api/v1/forms');
-        setForms(res.data || []);
+        // Always fetch forms for table data
+        const formsRes = await apiGet('/api/v1/forms');
+        setForms(formsRes.data || []);
+
+        // For admins, also fetch real dashboard stats via active round
+        if (isAdmin) {
+          try {
+            const roundsRes = await apiGet('/api/v1/rounds?status=active');
+            const activeRound = (roundsRes.data || [])[0];
+            if (activeRound?.id) {
+              const ovRes = await apiGet(`/api/v1/dashboard/overview?roundId=${activeRound.id}`);
+              setOverview(ovRes.data ?? null);
+            }
+          } catch {
+            // overview stays null — stat cards fall back to form-derived counts
+          }
+        }
       } catch {
         // forms stay as empty array - UI shows empty state
       } finally {
@@ -109,12 +146,8 @@ export default function DashboardPage() {
       }
     };
 
-    fetchForms();
-  }, []);
-
-  const role = user?.role as UserRole | undefined;
-  const isAdmin = role ? ADMIN_ROLES.includes(role) : false;
-  const isEvaluator = role ? EVALUATOR_ROLES.includes(role) : true;
+    fetchData();
+  }, [isAdmin]);
 
   const evaluatorWebsites = useMemo(() => mapFormsToEvaluatorWebsites(forms), [forms]);
   const adminWebsites = useMemo(() => mapFormsToAdminWebsites(forms), [forms]);
@@ -125,6 +158,8 @@ export default function DashboardPage() {
         name={user?.name || 'EILA'}
         loading={loading}
         websites={adminWebsites}
+        isExecutive={isExecutive}
+        overview={overview}
       />
     );
   }
@@ -179,18 +214,30 @@ function AdminDashboard({
   name,
   loading,
   websites,
+  isExecutive,
+  overview,
 }: {
   name: string;
   loading: boolean;
   websites: AdminWebsite[];
+  isExecutive: boolean;
+  overview: DashboardOverview | null;
 }) {
   const t = useTranslations();
-  const stats = {
+  const formStats = {
     total: websites.length,
     waiting: websites.filter((website) => website.status === 'waiting').length,
     inProgress: websites.filter((website) => website.status === 'in_progress').length,
     completed: websites.filter((website) => website.status === 'completed' || website.status === 'published').length,
   };
+  const stats = overview
+    ? {
+        total: overview.totalWebsites || formStats.total,
+        waiting: (overview.totalWebsites - overview.evaluatedWebsites) || formStats.waiting,
+        inProgress: overview.pendingForms || formStats.inProgress,
+        completed: overview.evaluatedWebsites || formStats.completed,
+      }
+    : formStats;
 
   return (
     <DashboardSurface>
@@ -202,14 +249,75 @@ function AdminDashboard({
         metricLabel={t('dashboard.completed')}
       />
 
+      {/* Quick Actions - Only for Admin */}
+      {!isExecutive && (
+        <section className="mb-8" aria-label="Quick Actions">
+          <h2 className="mb-4 text-[15px] font-bold text-[var(--typeui-text)]">ทางลัดจัดการระบบ (Quick Actions)</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Link href="/rounds" className="group flex flex-col items-center gap-3 rounded-[16px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] p-5 text-center shadow-sm transition-all hover:-translate-y-1 hover:border-[#1e7cd8]/30 hover:shadow-md">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400">
+                <CalendarDays className="h-5 w-5" />
+              </div>
+              <span className="text-[13px] font-bold text-[var(--typeui-text)] group-hover:text-blue-600 dark:group-hover:text-blue-400">จัดการรอบประเมิน</span>
+            </Link>
+            
+            <Link href="/websites" className="group flex flex-col items-center gap-3 rounded-[16px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] p-5 text-center shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-500/30 hover:shadow-md">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400">
+                <Globe className="h-5 w-5" />
+              </div>
+              <span className="text-[13px] font-bold text-[var(--typeui-text)] group-hover:text-emerald-600 dark:group-hover:text-emerald-400">ทะเบียนเว็บไซต์</span>
+            </Link>
+
+            <Link href="/admin/users" className="group flex flex-col items-center gap-3 rounded-[16px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] p-5 text-center shadow-sm transition-all hover:-translate-y-1 hover:border-purple-500/30 hover:shadow-md">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-50 text-purple-600 transition-colors group-hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400">
+                <Users className="h-5 w-5" />
+              </div>
+              <span className="text-[13px] font-bold text-[var(--typeui-text)] group-hover:text-purple-600 dark:group-hover:text-purple-400">จัดการผู้ใช้งาน</span>
+            </Link>
+
+            <Link href="/reports" className="group flex flex-col items-center gap-3 rounded-[16px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] p-5 text-center shadow-sm transition-all hover:-translate-y-1 hover:border-amber-500/30 hover:shadow-md">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600 transition-colors group-hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400">
+                <BarChart3 className="h-5 w-5" />
+              </div>
+              <span className="text-[13px] font-bold text-[var(--typeui-text)] group-hover:text-amber-600 dark:group-hover:text-amber-400">ดูรายงานผล</span>
+            </Link>
+          </div>
+        </section>
+      )}
+
       <section className="grid grid-cols-2 gap-[14px] lg:grid-cols-4" aria-label="Dashboard statistics">
-        <StatCard label={t('dashboard.total')} value={stats.total} icon={Globe} tone="primary" />
+        <StatCard label={t('dashboard.total')} value={stats.total} icon={FileText} tone="primary" />
         <StatCard label={t('dashboard.waiting')} value={stats.waiting} icon={Clock} tone="muted" />
         <StatCard label={t('dashboard.inProgress')} value={stats.inProgress} icon={TrendingUp} tone="warning" />
         <StatCard label={t('dashboard.completed')} value={stats.completed} icon={CheckCircle2} tone="success" />
       </section>
 
-      <AdminTable loading={loading} websites={websites} />
+      {overview?.completionByRole && (
+        <section className="rounded-[18px] border border-[var(--typeui-card-border)] bg-[var(--typeui-card-bg)] p-6 shadow-[var(--typeui-card-shadow)]">
+          <h3 className="text-[14px] font-bold text-[var(--typeui-text)] mb-4">ความคืบหน้าตาม Role</h3>
+          <div className="space-y-3">
+            {[
+              { key: 'student', label: 'นักศึกษา' },
+              { key: 'teacher', label: 'อาจารย์' },
+              { key: 'staff', label: 'บุคลากร' },
+            ].map(({ key, label }) => {
+              const count = overview.completionByRole?.[key] ?? 0;
+              const pct = overview.totalResponses > 0 ? Math.round((count / overview.totalResponses) * 100) : 0;
+              return (
+                <div key={key} className="flex items-center gap-3">
+                  <span className="w-20 text-[12px] text-[var(--typeui-subtext)]">{label}</span>
+                  <div className="flex-1 h-2 rounded-full bg-[var(--typeui-card-border)] overflow-hidden">
+                    <div className="h-full bg-[var(--typeui-primary)] rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="w-12 text-right text-[12px] font-semibold text-[var(--typeui-text)]">{pct}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <AdminTable loading={loading} websites={websites} isExecutive={isExecutive} />
     </DashboardSurface>
   );
 }
@@ -368,8 +476,8 @@ function EvaluatorTable({loading, websites}: {loading: boolean; websites: Evalua
         <EmptyState title={t('dashboard.noAssigned')} subtitle={t('dashboard.newAssignedDesc')} />
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
-          {tabFiltered.map((website) => (
-            <EvaluatorWebsiteCard key={website.id} website={website} />
+          {tabFiltered.map((website, i) => (
+            <EvaluatorWebsiteCard key={website.id ? `${website.id}-${i}` : i} website={website} />
           ))}
         </div>
       )}
@@ -379,7 +487,7 @@ function EvaluatorTable({loading, websites}: {loading: boolean; websites: Evalua
   );
 }
 
-function AdminTable({loading, websites}: {loading: boolean; websites: AdminWebsite[]}) {
+function AdminTable({loading, websites, isExecutive}: {loading: boolean; websites: AdminWebsite[]; isExecutive: boolean}) {
   const t = useTranslations();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'Complete'>('All');
@@ -419,11 +527,11 @@ function AdminTable({loading, websites}: {loading: boolean; websites: AdminWebsi
           {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : tabFiltered.length === 0 ? (
-        <EmptyState title={t('dashboard.noForms')} subtitle={t('dashboard.newAssignedDesc')} />
+        <EmptyState title={t('dashboard.noForms')} subtitle={t('dashboard.newAssignedDesc')} isAdmin={!isExecutive} />
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(268px,1fr))] gap-[14px] px-6 py-5">
-          {tabFiltered.map((website) => (
-            <AdminWebsiteCard key={website.id} website={website} />
+          {tabFiltered.map((website, i) => (
+            <AdminWebsiteCard key={website.id ? `${website.id}-${i}` : i} website={website} isExecutive={isExecutive} />
           ))}
         </div>
       )}
@@ -501,7 +609,7 @@ function EvaluatorWebsiteCard({website}: {website: EvaluatorWebsite}) {
       <div className="px-0 pb-0 pt-0">
         <Link
           href={href}
-          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[12px] border-0 bg-[linear-gradient(135deg,var(--typeui-primary)_0%,#1e7cd8_100%)] py-[13px] text-[14px] font-extrabold tracking-[0.01em] text-white shadow-[0_4px_18_rgba(12,92,171,0.35)] transition-[opacity,transform] duration-150 hover:-translate-y-px hover:opacity-[0.88]"
+          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[12px] border-0 bg-[linear-gradient(135deg,#1d4ed8_0%,#2563eb_100%)] py-[13px] text-[14px] font-extrabold tracking-[0.01em] text-white shadow-[0_4px_18_rgba(12,92,171,0.35)] transition-[opacity,transform] duration-150 hover:-translate-y-px hover:opacity-[0.88]"
         >
           <ExternalLink className="h-[15px] w-[15px] stroke-[2.5]" />
           {t('dashboard.startEvaluation')}
@@ -511,7 +619,7 @@ function EvaluatorWebsiteCard({website}: {website: EvaluatorWebsite}) {
   );
 }
 
-function AdminWebsiteCard({website}: {website: AdminWebsite}) {
+function AdminWebsiteCard({website, isExecutive}: {website: AdminWebsite; isExecutive: boolean}) {
   const t = useTranslations();
   const progress = website.totalEvaluators > 0
     ? Math.round((website.submitted / website.totalEvaluators) * 100)
@@ -573,30 +681,56 @@ function AdminWebsiteCard({website}: {website: AdminWebsite}) {
         </div>
       )}
 
-      <div className="px-0 pb-0 pt-0">
-        <Link
-          href="/forms"
-          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[12px] border-0 bg-[linear-gradient(135deg,var(--typeui-primary)_0%,#1e7cd8_100%)] py-[13px] text-[14px] font-extrabold tracking-[0.01em] text-white shadow-[0_4px_18_rgba(12,92,171,0.35)] transition-[opacity,transform] duration-150 hover:-translate-y-px hover:opacity-[0.88]"
-        >
-          <ExternalLink className="h-[15px] w-[15px] stroke-[2.5]" />
-          {t('dashboard.startEvaluation')}
-        </Link>
-      </div>
+      {!isExecutive && (
+        <div className="px-0 pb-0 pt-0">
+          <Link
+            href="/forms"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[12px] border-0 bg-[linear-gradient(135deg,#1d4ed8_0%,#2563eb_100%)] py-[13px] text-[14px] font-extrabold tracking-[0.01em] text-white shadow-[0_4px_18_rgba(12,92,171,0.35)] transition-[opacity,transform] duration-150 hover:-translate-y-px hover:opacity-[0.88]"
+          >
+            <ExternalLink className="h-[15px] w-[15px] stroke-[2.5]" />
+            จัดการแบบฟอร์ม
+          </Link>
+        </div>
+      )}
     </article>
   );
 }
 
-function EmptyState({title, subtitle}: {title: string; subtitle: string}) {
+function EmptyState({title, subtitle, isAdmin}: {title: string; subtitle: string; isAdmin?: boolean}) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--typeui-search-bg)] text-[var(--typeui-subtext)]">
-        <AlertCircle className="h-6 w-6" />
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--typeui-search-bg)] text-[var(--typeui-subtext)] shadow-inner mb-6">
+        <FileText className="h-8 w-8 text-[var(--typeui-muted)]" />
       </div>
-      <h3 className="mt-4 text-[14px] font-semibold text-[var(--typeui-text)]">{title}</h3>
-      <p className="mt-2 max-w-sm text-[12px] font-normal text-[var(--typeui-subtext)]">{subtitle}</p>
+      <h3 className="text-[18px] font-bold text-[var(--typeui-text)] mb-2">{title}</h3>
+      <p className="max-w-md text-[13px] font-medium text-[var(--typeui-subtext)] leading-relaxed mb-8">{subtitle}</p>
+      
+      {isAdmin && (
+        <div className="flex flex-col gap-3 w-full max-w-sm text-left bg-[var(--typeui-search-bg)] p-5 rounded-2xl border border-[var(--typeui-card-border-soft)]">
+          <p className="text-[12px] font-bold text-[var(--typeui-text)] mb-1">เริ่มต้นใช้งานระบบง่ายๆ 3 ขั้นตอน:</p>
+          <div className="flex items-center gap-3">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">1</span>
+            <span className="text-[13px] text-[var(--typeui-text)] font-medium">เปิดรอบการประเมินใหม่ที่เมนู <Link href="/rounds" className="text-blue-600 hover:underline">รอบประเมิน</Link></span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">2</span>
+            <span className="text-[13px] text-[var(--typeui-text)] font-medium">เพิ่มเว็บไซต์เป้าหมายที่ <Link href="/websites" className="text-blue-600 hover:underline">ทะเบียนเว็บไซต์</Link></span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">3</span>
+            <span className="text-[13px] text-[var(--typeui-text)] font-medium">สร้างแบบฟอร์มเพื่อเริ่มรับการประเมิน</span>
+          </div>
+          
+          <Link href="/forms" className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-blue-700">
+            <PlusCircle className="h-4 w-4" /> ไปสร้างแบบฟอร์มกันเลย
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
+
+type TabId = 'All' | 'Active' | 'Complete';
 
 function TableFooter({
   countLabel,
@@ -605,18 +739,18 @@ function TableFooter({
 }: {
   countLabel: string;
   activeTab: string;
-  onTabChange: (t: string) => void;
+  onTabChange: (t: TabId) => void;
 }) {
   const t = useTranslations();
   return (
     <footer className="flex flex-col gap-3 border-t border-[var(--typeui-divider)] px-6 py-[14px] sm:flex-row sm:items-center sm:justify-between">
       <p className="text-[11px] font-medium text-[var(--typeui-muted)]">{countLabel}</p>
       <div className="flex items-center gap-2">
-        {[
-          {id: 'All', label: t('dashboard.all')},
-          {id: 'Active', label: t('dashboard.active')},
-          {id: 'Complete', label: t('dashboard.complete')}
-        ].map((tab) => (
+        {([
+          {id: 'All' as TabId, label: t('dashboard.all')},
+          {id: 'Active' as TabId, label: t('dashboard.active')},
+          {id: 'Complete' as TabId, label: t('dashboard.complete')}
+        ] as const).map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -659,9 +793,9 @@ function getToneClasses(tone: StatTone) {
       border: 'border-[rgba(239,68,68,0.30)]',
     },
     muted: {
-      icon: 'bg-[var(--typeui-danger-soft)] text-[var(--typeui-danger)]',
-      badge: 'bg-[var(--typeui-danger-soft)] text-[var(--typeui-danger-text)]',
-      border: 'border-[rgba(239,68,68,0.30)]',
+      icon: 'bg-[var(--typeui-search-bg)] text-[var(--typeui-muted)]',
+      badge: 'bg-[var(--typeui-search-bg)] text-[var(--typeui-muted)]',
+      border: 'border-[var(--typeui-card-border)]',
     },
   };
 

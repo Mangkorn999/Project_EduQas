@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, integer, jsonb, boolean, index } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, uuid, integer, jsonb, boolean, index, primaryKey } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import { faculties } from './faculties'
 import { users } from './users'
@@ -41,7 +41,17 @@ export const forms = pgTable('forms', {
 export const formTargetRoles = pgTable('form_target_roles', {
   formId: uuid('form_id').notNull().references(() => forms.id, { onDelete: 'cascade' }),
   role: roleEnum('role').notNull(),
-})
+}, (t) => [
+  primaryKey({ columns: [t.formId, t.role] }),
+])
+
+// FR-FORM-13b — target faculties: คณะที่ form ถูกส่งไปประเมิน (เมื่อ publish)
+export const formTargetFaculties = pgTable('form_target_faculties', {
+  formId: uuid('form_id').notNull().references(() => forms.id, { onDelete: 'cascade' }),
+  facultyId: uuid('faculty_id').notNull().references(() => faculties.id),
+}, (t) => [
+  primaryKey({ columns: [t.formId, t.facultyId] }),
+])
 
 // ─── Evaluation Criteria ──────────────────────────────────────────────────────
 // FR-CRIT-01~08 — เกณฑ์การประเมิน snapshot ที่ผูกกับ form

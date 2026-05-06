@@ -1,6 +1,10 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { RoundsService } from './rounds.service'
 import { createAuditLog } from '../audit/audit.service'
+import { and, eq, isNull, or } from 'drizzle-orm'
+import { rounds } from '../../../../db/schema'
+
+import { db } from '../../../../db'
 
 export class RoundsController {
   private service: RoundsService
@@ -12,8 +16,20 @@ export class RoundsController {
   list = async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user as any
     const { scope, academicYear, status } = request.query as any
-    const facultyFilter = user.role === 'admin' ? user.facultyId : undefined
-    const data = await this.service.listRounds(scope, facultyFilter, academicYear ? parseInt(academicYear) : undefined, status)
+    
+    // Admins see their faculty rounds + university rounds
+    const data = await db.select()
+      .from(rounds)
+      .where(and(
+        isNull(rounds.deletedAt),
+        scope ? eq(rounds.scope, scope as any) : undefined,
+        academicYear ? eq(rounds.academicYear, parseInt(academicYear)) : undefined,
+        status ? eq(rounds.status, status as any) : undefined,
+        user.role === 'admin' 
+          ? or(eq(rounds.facultyId, user.facultyId), eq(rounds.scope, 'university'))
+          : undefined
+      ))
+    
     return { data }
   }
 
@@ -29,12 +45,8 @@ export class RoundsController {
   create = async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user as any
     const body = request.body as any
-
-    if (user.role === 'admin' && body.scope === 'university') {
-      return reply.code(403).send({ error: { code: 'forbidden', message: 'Admin cannot create university rounds' } })
-    }
     
-    const facultyId = user.role === 'admin' ? user.facultyId : body.facultyId
+    const facultyId = body.scope === 'university' ? null : (user.role === 'admin' ? user.facultyId : body.facultyId)
 
     try {
       const data = await this.service.createRound({

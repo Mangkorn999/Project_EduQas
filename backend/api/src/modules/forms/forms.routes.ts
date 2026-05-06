@@ -85,6 +85,10 @@ export default async function formsRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorize('form.create')],
     schema: { params: formIdParamsSchema }
   }, controller.close)
+  app.post('/:id/reopen', {
+    preHandler: [app.authenticate, app.authorize('form.reopen')],
+    schema: { params: formIdParamsSchema }
+  }, controller.reopen)
   app.post('/:id/duplicate', {
     preHandler: [app.authenticate, app.authorize('form.create')],
     schema: { params: formIdParamsSchema }

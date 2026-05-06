@@ -77,15 +77,15 @@ export function UserMenu({
           type="button"
           onClick={() => setIsOpen((value) => !value)}
           className={cn(
-            'flex min-h-11 w-full items-center gap-3 rounded-[10px] border border-[var(--typeui-sidebar-border)] bg-white/[0.06] px-3 py-3 text-left transition-colors duration-150 hover:bg-[var(--typeui-sidebar-active-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--typeui-gold)] motion-reduce:transition-none',
+            'flex min-h-11 w-full items-center gap-3 rounded-[10px] border border-[var(--sidebar-border)] bg-white/[0.06] px-3 py-3 text-left transition-colors duration-150 hover:bg-[var(--sidebar-active-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--typeui-gold)] motion-reduce:transition-none',
             collapsed && 'lg:justify-center lg:px-0'
           )}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--typeui-sidebar-active-bg)] text-[var(--typeui-sidebar-text)]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--sidebar-active-bg)] text-[var(--sidebar-text)]">
             <User className="h-4 w-4" />
           </span>
           <span className={cn('min-w-0 flex-1', collapsed && 'lg:hidden')}>
-            <span className="block truncate text-sm font-semibold text-[var(--typeui-sidebar-text)]">{user.name}</span>
+            <span className="block truncate text-sm font-semibold text-[var(--sidebar-text)]">{user.name}</span>
             <span className="mt-1 inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs font-medium text-white/40">
               <span className="truncate">{roleLabel}</span>
             </span>

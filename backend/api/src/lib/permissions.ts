@@ -1,10 +1,10 @@
 export const PERMISSIONS = {
   'website_target.manage.global': ['super_admin'],
   'website_target.manage.faculty': ['super_admin', 'admin'],
-  'round.create.university': ['super_admin'],
+  'round.create.university': ['super_admin', 'admin'],
   'round.create.faculty': ['super_admin', 'admin'],
   'form.create': ['super_admin', 'admin'],
-  'form.create.university_scope': ['super_admin'],
+  'form.create.university_scope': ['super_admin', 'admin'],
   'form.reopen': ['super_admin'],
   'template.manage.global': ['super_admin'],
   'template.manage.faculty': ['super_admin', 'admin'],

@@ -11,7 +11,7 @@ _2026-05-06_
 
 | Role (DB) | ชื่อในระบบ | ทำได้ |
 |-----------|-----------|-------|
-| `super_admin` | ผู้ดูแลระบบ IT | จัดการ users, audit log, system settings — ไม่ได้สร้างการประเมินเอง |
+| `super_admin` | ผู้ดูแลระบบ IT | จัดการ users, audit log, system settings — สร้างการประเมินเองได้ |
 | `admin` | ผู้ดูแล EILA | สร้าง/จัดการการประเมินทั้งมหาวิทยาลัย, export รายงาน |
 | `executive` | ผู้บริหาร | อ่านอย่างเดียว — dashboard + รายงาน |
 | `teacher` / `staff` / `student` | ผู้ประเมิน | ตอบแบบประเมินที่ตรง faculty+role ของตัวเอง |

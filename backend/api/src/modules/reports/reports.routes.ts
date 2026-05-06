@@ -9,4 +9,9 @@ export default async function reportsRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorize('report.export_pdf')],
     schema: { params: exportResponsesSchema }
   }, controller.exportResponsesXlsx)
+
+  app.get('/forms/:formId/responses/export.pdf', {
+    preHandler: [app.authenticate, app.authorize('report.export_pdf')],
+    schema: { params: exportResponsesSchema }
+  }, controller.exportResponsesPdf)
 }

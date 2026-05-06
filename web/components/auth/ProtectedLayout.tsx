@@ -6,9 +6,23 @@ import { useAuthStore } from '@/lib/stores/authStore';
 import { getPostLoginPath } from '@/lib/auth/role-routing';
 import { getRoutePermission } from '@/lib/auth/route-permissions';
 import { hasPermission, type UserRole } from '@/lib/permissions';
+import { useSessionTimeout } from '@/lib/auth/session-timeout';
+import { SessionTimeoutDialog } from './SessionTimeoutDialog';
 
 interface ProtectedLayoutProps {
   children: React.ReactNode;
+}
+
+function SessionGuard() {
+  const { warningType, secondsLeft, extendSession, forceLogout } = useSessionTimeout();
+  return (
+    <SessionTimeoutDialog
+      type={warningType}
+      secondsLeft={secondsLeft}
+      onExtend={extendSession}
+      onLogout={forceLogout}
+    />
+  );
 }
 
 export function ProtectedLayout({ children }: ProtectedLayoutProps) {
@@ -22,19 +36,16 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
     const PUBLIC_ROUTES = ['/login', '/callback', '/403'];
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
-    // ยังไม่ login → redirect ไป login พร้อม redirect param
     if (!isAuthenticated && !isPublicRoute) {
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 
-    // login อยู่แล้วแต่เข้าหน้า login → ส่งไปหน้า default ของ role
     if (isAuthenticated && pathname === '/login') {
       router.replace(getPostLoginPath(user?.role ?? 'student'));
       return;
     }
 
-    // Route permission check — ถ้า user ไม่มีสิทธิ์เข้าหน้านี้ → redirect /403
     if (isAuthenticated && user) {
       const requiredPermission = getRoutePermission(pathname);
       if (requiredPermission && !hasPermission(user.role as UserRole, requiredPermission)) {
@@ -46,10 +57,10 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8f9ff]">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
         <div className="text-center">
-          <div className="h-8 w-8 border-4 border-psu-navy border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-sm text-gray-500">กำลังโหลด...</p>
+          <div className="h-8 w-8 border-4 border-[#0d2257] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-[var(--text-muted)]">กำลังโหลด...</p>
         </div>
       </div>
     );
@@ -59,5 +70,10 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <SessionGuard />
+    </>
+  );
 }

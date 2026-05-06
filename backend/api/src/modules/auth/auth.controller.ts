@@ -321,11 +321,48 @@ async function resolveFacultyState(
   )
 
   if (hasIncomingFacultyMetadata) {
+    const code   = (directFacultyCode ?? facultyCodeClaim ?? directFacultyId ?? facultyIdClaim ?? null)?.toUpperCase()
+    const nameTh = directNameTh ?? facultyNameThClaim ?? null
+    const nameEn = directNameEn ?? facultyNameEnClaim ?? null
+
+    if (code && nameTh) {
+      try {
+        // AUTO-SYNC: สร้างคณะใหม่ใน DB ทันทีถ้ายังไม่มี เพื่อเลิกใช้ mock
+        const [syncedFaculty] = await app.db.insert(faculties)
+          .values({
+            code,
+            nameTh,
+            nameEn: nameEn ?? nameTh, // fallback ถ้าไม่มีชื่อ ENG
+          })
+          .onConflictDoUpdate({
+            target: faculties.code,
+            set: {
+              nameTh,
+              nameEn: nameEn ?? nameTh,
+              updatedAt: new Date(),
+            }
+          })
+          .returning()
+
+        if (syncedFaculty) {
+          return {
+            facultyId:     syncedFaculty.id,
+            facultyCode:   syncedFaculty.code,
+            facultyNameTh: syncedFaculty.nameTh,
+            facultyNameEn: syncedFaculty.nameEn,
+            facultySource: 'psu_sync',
+          }
+        }
+      } catch (err) {
+        console.error('[auth] Auto-sync faculty failed:', err)
+      }
+    }
+
     return {
       facultyId:     null,
-      facultyCode:   directFacultyCode ?? facultyCodeClaim ?? directFacultyId ?? facultyIdClaim ?? null,
-      facultyNameTh: directNameTh ?? facultyNameThClaim ?? null,
-      facultyNameEn: directNameEn ?? facultyNameEnClaim ?? null,
+      facultyCode:   code ?? null,
+      facultyNameTh: nameTh ?? null,
+      facultyNameEn: nameEn ?? null,
       facultySource: 'psu_profile',
     }
   }
@@ -726,6 +763,22 @@ export class AuthController {
       facultyNameEn: faculty?.nameEn ?? null,
       faculty,
     }
+  }
+
+  // ── revokeAll (FR-AUTH-13) ────────────────────────────────────────────────────
+
+  revokeAll = async (request: FastifyRequest, reply: FastifyReply) => {
+    const payload = request.user as { userId: string }
+
+    await this.sessionService.revokeAll(payload.userId)
+
+    reply.clearCookie('refreshToken', { path: '/auth', httpOnly: true, secure: env.NODE_ENV === 'production', sameSite: 'lax' })
+    reply.clearCookie('accessToken', { path: '/', httpOnly: true, secure: env.NODE_ENV === 'production', sameSite: 'lax' })
+    reply.clearCookie('session_active', { path: '/', httpOnly: false, secure: env.NODE_ENV === 'production', sameSite: 'lax' })
+
+    await createAuditLog({ userId: payload.userId, ip: request.ip }, 'auth.revoke_all', 'user', payload.userId, null, {})
+
+    return { success: true }
   }
 
   // ── setRole (dev only) ────────────────────────────────────────────────────────
