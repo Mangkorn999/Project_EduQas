@@ -9,14 +9,24 @@ _2026-05-06_
 
 ## Roles
 
-| Role | ชื่อในระบบ | ทำได้ |
-|------|-----------|-------|
-| `super_admin` | ผู้ดูแลระบบ EILA | ทุกอย่าง ทุกคณะ |
-| `admin` | ผู้ดูแลคณะ | เฉพาะคณะตัวเอง (auto จาก `faculty_id` ใน OAuth) |
+| Role (DB) | ชื่อในระบบ | ทำได้ |
+|-----------|-----------|-------|
+| `super_admin` | ผู้ดูแลระบบ IT | จัดการ users, audit log, system settings — ไม่ได้สร้างการประเมินเอง |
+| `admin` | ผู้ดูแล EILA | สร้าง/จัดการการประเมินทั้งมหาวิทยาลัย, export รายงาน |
 | `executive` | ผู้บริหาร | อ่านอย่างเดียว — dashboard + รายงาน |
 | `teacher` / `staff` / `student` | ผู้ประเมิน | ตอบแบบประเมินที่ตรง faculty+role ของตัวเอง |
 
-Faculty admin ใช้ UI เดียวกับ EILA admin ทุกอย่าง — แต่ query ถูก filter ด้วย `faculty_id` จาก JWT อัตโนมัติ ไม่ต้องเขียน code แยก
+**admin faculty** — defer อนาคต ไม่ทำใน MVP  
+DB `role` enum ไม่ต้องแก้ — `admin` = EILA admin ก่อน
+
+| ทำอะไร | super_admin | admin (EILA) | executive | evaluator |
+|--------|:-----------:|:------------:|:---------:|:---------:|
+| จัดการ users / เปลี่ยน role | ✅ | ❌ | ❌ | ❌ |
+| ดู audit log | ✅ | ❌ | ❌ | ❌ |
+| สร้างการประเมิน | ❌ | ✅ | ❌ | ❌ |
+| ดู dashboard ทุกคณะ | ✅ | ✅ | ✅ | ❌ |
+| Export รายงาน | ✅ | ✅ | ✅ | ❌ |
+| ตอบแบบประเมิน | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
