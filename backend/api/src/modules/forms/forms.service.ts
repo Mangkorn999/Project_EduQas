@@ -272,6 +272,13 @@ export class FormsService {
         )
       }
 
+      const roles = await tx.select().from(formTargetRoles).where(eq(formTargetRoles.formId, id))
+      if (roles.length > 0) {
+        await tx.insert(formTargetRoles).values(
+          roles.map(r => ({ formId: newForm.id, role: r.role }))
+        )
+      }
+
       return newForm
     })
   }
