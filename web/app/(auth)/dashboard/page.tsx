@@ -30,6 +30,8 @@ type DashboardForm = {
   websiteName?: string;
   websiteUrl?: string;
   updatedAt?: string;
+  hasSubmitted?: boolean;
+  hasOpenedWebsite?: boolean;
 };
 
 type DashboardOverview = {
@@ -818,14 +820,17 @@ function mapFormsToEvaluatorWebsites(forms: DashboardForm[]): EvaluatorWebsite[]
   return forms
     .filter((form) => form.websiteUrl || form.websiteName || form.title)
     .map((form) => {
-      // progress will be fetched per-form once assignment API returns submittedCount
-      const status = form.status === 'closed' ? 'submitted' : form.status === 'open' ? 'in_progress' : 'not_started';
+      const evalStatus: EvaluationStatus =
+        form.hasSubmitted ? 'submitted'
+        : form.status === 'open' ? 'in_progress'
+        : 'not_started';
+
       return {
         id: form.id,
         name: form.websiteName || form.title || 'ไม่ระบุชื่อ',
         url: form.websiteUrl || '',
-        progress: status === 'submitted' ? 100 : 0,
-        status,
+        progress: form.hasSubmitted ? 100 : 0,
+        status: evalStatus,
       };
     });
 }
