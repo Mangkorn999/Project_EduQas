@@ -6,17 +6,18 @@ import {usePathname} from 'next/navigation';
 import {useTranslations} from 'next-intl';
 import {
   Bell,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   LayoutDashboard,
   Menu,
-  Search,
+  Globe,
+  BarChart3,
+  ShieldCheck,
   User,
   X,
+  Command,
   type LucideIcon,
 } from 'lucide-react';
-import {motion} from 'framer-motion';
+import {AnimatePresence, motion} from 'motion/react';
 import {useEffect, useMemo, useState} from 'react';
 import {cn} from '@/lib/utils';
 import {ProtectedLayout} from '@/components/auth/ProtectedLayout';
@@ -25,47 +26,48 @@ import {UserMenu} from '@/components/auth/UserMenu';
 import {LanguageToggle} from '@/components/ui/LanguageToggle';
 import {ThemeToggle} from '@/components/ui/ThemeToggle';
 import {useAuthStore} from '@/lib/stores/authStore';
-import type {UserRole} from '@/lib/permissions';
 import {getAvailableRoles} from '@/lib/roles';
+
+type NavLabelKey = 'dashboard' | 'forms' | 'websites' | 'users' | 'audit' | 'reports';
 
 type ShellNavItem = {
   icon: LucideIcon;
-  labelKey: 'dashboard' | 'forms' | 'notifications' | 'profile';
+  labelKey: NavLabelKey;
   href: string;
   matchPrefix?: string;
 };
 
-const EVALUATOR_ROLES: UserRole[] = ['student', 'staff', 'teacher'];
-const ADMIN_ROLES: UserRole[] = ['super_admin', 'admin', 'executive'];
-
 const SHELL_NAV_ITEMS: ShellNavItem[] = [
-  {icon: LayoutDashboard, labelKey: 'dashboard', href: '/dashboard', matchPrefix: '/dashboard'},
-  {icon: FileText, labelKey: 'forms', href: '/forms', matchPrefix: '/forms'},
-  {icon: Bell, labelKey: 'notifications', href: '/notifications', matchPrefix: '/notifications'},
+  {icon: LayoutDashboard, labelKey: 'dashboard', href: '/dashboard',    matchPrefix: '/dashboard'},
+  {icon: FileText,        labelKey: 'forms',     href: '/forms',        matchPrefix: '/forms'},
+  {icon: Globe,           labelKey: 'websites',  href: '/websites',     matchPrefix: '/websites'},
+  {icon: User,            labelKey: 'users',     href: '/admin/users',  matchPrefix: '/admin/users'},
+  {icon: ShieldCheck,     labelKey: 'audit',     href: '/admin/audit',  matchPrefix: '/admin/audit'},
+  {icon: BarChart3,       labelKey: 'reports',   href: '/reports',      matchPrefix: '/reports'},
 ];
 
-export default function AuthLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function AuthLayout({children}: {children: React.ReactNode}) {
   const pathname = usePathname();
   const t = useTranslations();
   const {user} = useAuthStore();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openCmd, setOpenCmd] = useState(false);
 
   useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setOpenCmd((value) => !value);
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setOpenCmd((v) => !v);
       }
     };
-
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   const useAppShell =
     pathname.startsWith('/evaluator') ||
@@ -74,16 +76,30 @@ export default function AuthLayout({
     pathname === '/profile' ||
     pathname === '/notifications' ||
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/reports');
+    pathname.startsWith('/reports') ||
+    pathname.startsWith('/websites');
 
   const visibleNavItems = useMemo(() => {
-    const role = user?.role as UserRole | undefined;
-    const isAdmin = role ? ADMIN_ROLES.includes(role) : false;
-    const isEvaluator = role ? EVALUATOR_ROLES.includes(role) : false;
+    const role = user?.role as string | undefined;
 
     return SHELL_NAV_ITEMS.filter((item) => {
-      if (item.labelKey !== 'forms') return true;
-      return isAdmin && !isEvaluator;
+      if (item.labelKey === 'dashboard') return true;
+
+      // Evaluators: dashboard only
+      if (role === 'teacher' || role === 'staff' || role === 'student') return false;
+
+      // Executive: dashboard + reports only
+      if (role === 'executive') return item.labelKey === 'reports';
+
+      // Admin (EILA): forms, websites, reports
+      if (role === 'admin') {
+        return ['forms', 'websites', 'reports'].includes(item.labelKey);
+      }
+
+      // Super admin: everything
+      if (role === 'super_admin') return true;
+
+      return false;
     });
   }, [user]);
 
@@ -93,7 +109,7 @@ export default function AuthLayout({
       icon: item.icon,
       label: t(`nav.${item.labelKey}`),
     })),
-    [t, visibleNavItems]
+    [t, visibleNavItems],
   );
 
   if (!useAppShell) {
@@ -104,145 +120,197 @@ export default function AuthLayout({
 
   return (
     <ProtectedLayout>
-      <div className="min-h-screen overflow-hidden bg-[var(--typeui-content-bg)] text-[var(--typeui-text)] dark:bg-[#020617] dark:text-white">
-        {/* Background Gradients */}
-        <div className="pointer-events-none fixed inset-0 z-0">
-          <div className="absolute right-0 top-0 h-[400px] w-[400px] bg-cyan-400/10 blur-[120px]" />
-          <div className="absolute bottom-0 left-0 h-[400px] w-[400px] bg-blue-500/10 blur-[120px]" />
-        </div>
+      <div className="flex h-screen overflow-hidden bg-[var(--bg-page)]">
 
-        <CommandPalette
-          items={commandItems}
-          open={openCmd}
-          onClose={() => {
-            setOpenCmd(false);
-            setMobileOpen(false);
-          }}
-        />
+        {/* ── Mobile overlay ─────────────────────────────────────────────── */}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div
+              initial={{opacity: 0}}
+              animate={{opacity: 1}}
+              exit={{opacity: 0}}
+              transition={{duration: 0.2}}
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+        </AnimatePresence>
 
-        {/* Unified Topbar */}
-        <header className="glass fixed left-0 right-0 top-0 z-50 h-[72px] border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
-          <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-4 px-6 md:px-8">
-            <div className="flex items-center gap-6">
-              {/* Logo */}
-              <Link href="/dashboard" className="flex shrink-0 items-center transition-transform hover:scale-[1.02] active:scale-[0.98]">
-                <Image
-                  src="/images/eila-logo.png"
-                  alt="EILA - PSU"
-                  width={120}
-                  height={40}
-                  priority
-                  className="h-9 w-auto object-contain"
-                />
-              </Link>
-
-              {/* Desktop Navigation */}
-              <nav className="hidden items-center gap-1 lg:flex">
-                {visibleNavItems.map((item) => {
-                  const isActive = item.matchPrefix ? pathname.startsWith(item.matchPrefix) : pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        'relative flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-medium transition-all duration-300',
-                        isActive 
-                          ? 'bg-[#e0efff] text-[var(--typeui-primary)] dark:bg-white/10 dark:text-cyan-400' 
-                          : 'text-[var(--typeui-subtext)] hover:bg-white/5 hover:text-[var(--typeui-text)] dark:text-white/60 dark:hover:text-white'
-                      )}
-                    >
-                      <item.icon className={cn("h-4 w-4", isActive ? "opacity-100" : "opacity-70")} />
-                      <span>{t(`nav.${item.labelKey}`)}</span>
-                      {isActive && (
-                        <motion.div
-                          layoutId="nav-underline"
-                          className="absolute bottom-1 left-4 right-4 h-0.5 rounded-full bg-[var(--typeui-primary)] dark:bg-cyan-400 shadow-[0_0_8px_rgba(0,102,255,0.4)]"
-                          transition={{type: 'spring', stiffness: 500, damping: 30}}
-                        />
-                      )}
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 md:gap-2">
-                <LanguageToggle />
-                <ThemeToggle />
-                <Link
-                  href="/notifications"
-                  className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-[var(--typeui-subtext)] transition-all hover:bg-white/10 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] active:scale-[0.97]"
-                  aria-label={t('nav.notifications')}
-                >
-                  <Bell className="h-4 w-4" />
-                  <span className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
-                </Link>
-                {user && <UserMenu variant="topbar" availableRoles={getAvailableRoles(user.roles)} />}
-                
-                {/* Mobile Menu Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setMobileOpen(!mobileOpen)}
-                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-[var(--typeui-subtext)] lg:hidden"
-                >
-                  {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
+        {/* ── Sidebar ────────────────────────────────────────────────────── */}
+        <aside
+          className={cn(
+            'fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col lg:relative lg:translate-x-0',
+            'transition-transform duration-300 ease-in-out',
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          )}
+          style={{background: 'var(--sidebar-bg-gradient)'}}
+        >
+          {/* Logo */}
+          <div className="flex h-16 shrink-0 items-center gap-3 border-b border-[var(--sidebar-border)] px-5">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 transition-opacity hover:opacity-80"
+            >
+              <Image
+                src="/images/eila-logo.png"
+                alt="EILA — PSU Website Evaluation"
+                width={108}
+                height={36}
+                priority
+                className="h-8 w-auto object-contain brightness-[999] saturate-0"
+              />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white lg:hidden"
+              aria-label="Close sidebar"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
 
-          {/* Mobile Navigation Dropdown */}
-          {mobileOpen && (
-            <motion.div
-              initial={{opacity: 0, y: -10}}
-              animate={{opacity: 1, y: 0}}
-              className="glass absolute left-0 right-0 top-[72px] z-40 border-b border-white/10 p-4 lg:hidden"
-            >
-              <nav className="flex flex-col gap-1">
-                {visibleNavItems.map((item) => {
-                  const isActive = item.matchPrefix ? pathname.startsWith(item.matchPrefix) : pathname === item.href;
-                  return (
+          {/* Nav */}
+          <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
+            <ul className="space-y-0.5" role="list">
+              {visibleNavItems.map((item) => {
+                const isActive = item.matchPrefix
+                  ? pathname.startsWith(item.matchPrefix)
+                  : pathname === item.href;
+                return (
+                  <li key={item.href}>
                     <Link
-                      key={item.href}
                       href={item.href}
-                      onClick={() => setMobileOpen(false)}
                       className={cn(
-                        'flex h-12 items-center gap-3 rounded-xl px-4 text-sm font-medium transition-all',
-                        isActive 
-                          ? 'bg-[#e0efff] text-[var(--typeui-primary)] dark:bg-white/10 dark:text-cyan-400' 
-                          : 'text-[var(--typeui-subtext)] hover:bg-white/5 hover:text-[var(--typeui-text)] dark:text-white/60 dark:hover:text-white'
+                        'group relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium',
+                        'transition-colors duration-150',
+                        isActive
+                          ? 'bg-[var(--sidebar-active-bg)] text-white'
+                          : 'text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]',
                       )}
+                      aria-current={isActive ? 'page' : undefined}
                     >
-                      <item.icon className="h-5 w-5" />
-                      <span>{t(`nav.${item.labelKey}`)}</span>
+                      {isActive && (
+                        <span
+                          className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--sidebar-active-accent)]"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <item.icon
+                        className={cn(
+                          'h-4 w-4 shrink-0',
+                          isActive
+                            ? 'text-[var(--sidebar-icon-active)]'
+                            : 'text-[var(--sidebar-icon)] group-hover:text-[var(--sidebar-text-muted)]',
+                        )}
+                        aria-hidden="true"
+                      />
+                      <span className="truncate">{t(`nav.${item.labelKey}`)}</span>
                     </Link>
-                  );
-                })}
-              </nav>
-            </motion.div>
-          )}
-        </header>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
 
-        <div className="min-h-screen pt-[72px]">
-          <main className="relative z-10 mx-auto max-w-7xl px-6 pb-12 pt-10">
-            <motion.div
-              initial={{opacity: 0, y: 20}}
-              animate={{opacity: 1, y: 0}}
-              className="card-premium rounded-3xl p-6 md:p-8"
+          {/* User menu */}
+          <div className="shrink-0 border-t border-[var(--sidebar-border)] p-3">
+            {user && (
+              <UserMenu
+                variant="sidebar"
+                availableRoles={getAvailableRoles(user.roles)}
+              />
+            )}
+          </div>
+        </aside>
+
+        {/* ── Main area ──────────────────────────────────────────────────── */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+
+          {/* Topbar */}
+          <header className="flex h-16 shrink-0 items-center gap-4 border-b border-[var(--border)] bg-[var(--bg-surface)] px-4 md:px-6">
+            {/* Mobile menu button */}
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] lg:hidden"
+              aria-label="Open menu"
             >
-              {children}
-            </motion.div>
+              <Menu className="h-4 w-4" />
+            </button>
+
+            {/* Page title */}
+            <h1 className="text-[15px] font-semibold text-[var(--text-primary)]">
+              {pageTitle}
+            </h1>
+
+            {/* Right controls */}
+            <div className="ml-auto flex items-center gap-1.5">
+              {/* Command palette trigger */}
+              <button
+                type="button"
+                onClick={() => setOpenCmd(true)}
+                className="hidden h-8 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] px-3 text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface)] sm:flex"
+                aria-label="Open command palette"
+              >
+                <Command className="h-3 w-3" />
+                <span>K</span>
+              </button>
+
+              <LanguageToggle />
+              <ThemeToggle />
+
+              <Link
+                href="/notifications"
+                className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
+                aria-label={t('nav.notifications')}
+              >
+                <Bell className="h-4 w-4" />
+                <span
+                  className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--color-error)]"
+                  aria-hidden="true"
+                />
+              </Link>
+            </div>
+          </header>
+
+          {/* Content */}
+          <main
+            id="main-content"
+            className="flex-1 overflow-y-auto"
+            tabIndex={-1}
+          >
+            <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
+              <motion.div
+                key={pathname}
+                initial={{opacity: 0, y: 8}}
+                animate={{opacity: 1, y: 0}}
+                transition={{duration: 0.18, ease: [0.4, 0, 0.2, 1]}}
+              >
+                {children}
+              </motion.div>
+            </div>
           </main>
         </div>
       </div>
+
+      <CommandPalette
+        items={commandItems}
+        open={openCmd}
+        onClose={() => setOpenCmd(false)}
+      />
     </ProtectedLayout>
   );
 }
 
 function getPageTitle(pathname: string, t: ReturnType<typeof useTranslations>) {
-  if (pathname.startsWith('/forms')) return t('nav.forms');
-  if (pathname.startsWith('/notifications')) return t('nav.notifications');
-  if (pathname.startsWith('/profile')) return t('nav.profile');
+  if (pathname === '/dashboard')              return t('nav.dashboard');
+  if (pathname.startsWith('/forms'))          return t('nav.forms');
+  if (pathname.startsWith('/websites'))       return t('nav.websites');
+  if (pathname.startsWith('/admin/users'))    return t('nav.users');
+  if (pathname.startsWith('/admin/audit'))    return t('nav.audit');
+  if (pathname.startsWith('/reports'))        return t('nav.reports');
+  if (pathname.startsWith('/notifications'))  return t('nav.notifications');
+  if (pathname.startsWith('/profile'))        return t('nav.profile');
   return t('nav.dashboard');
 }

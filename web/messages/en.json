@@ -1,11 +1,15 @@
 {
   "nav": {
-    "forms": "Forms",
+    "forms": "Evaluations",
     "dashboard": "Dashboard",
     "notifications": "Notifications",
     "profile": "Profile",
     "settings": "Settings",
-    "logout": "Logout"
+    "logout": "Logout",
+    "users": "Users",
+    "audit": "Audit Log",
+    "websites": "Website Registry",
+    "reports": "Reports"
   },
   "dashboard": {
     "greeting": "Hello, {name}",
@@ -108,6 +112,14 @@
     "error": "Something went wrong",
     "success": "Success",
     "search": "Search..."
+  },
+  "session": {
+    "idleTitle": "Session about to expire",
+    "idleDesc": "You've been inactive for a while. Your session will expire soon.",
+    "absoluteTitle": "Session time limit reached",
+    "absoluteDesc": "You've been signed in for 8 hours. For security, your session will end shortly.",
+    "remaining": "remaining",
+    "extend": "Stay signed in"
   },
   "auth": {
     "signIn": "Sign in to continue",
