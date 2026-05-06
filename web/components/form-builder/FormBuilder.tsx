@@ -59,6 +59,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [faculties, setFaculties] = useState<{id: string; nameTh: string}[]>([]);
   const [selectedFacultyIds, setSelectedFacultyIds] = useState<Set<string>>(new Set());
+  const [selectedRoles, setSelectedRoles] = useState<Set<string>>(new Set(['teacher', 'staff', 'student']));
 
   // Toast notification state
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -306,6 +307,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
     }
     // เลือกทุกคณะเป็น default
     setSelectedFacultyIds(new Set(faculties.map(f => f.id)));
+    setSelectedRoles(new Set(['teacher', 'staff', 'student']));
     setShowPublishModal(true);
   };
 
@@ -314,6 +316,7 @@ export function FormBuilder({ formId }: FormBuilderProps) {
       setPublishing(true);
       await apiPost(`/api/v1/forms/${formId}/publish`, {
         targetFacultyIds: Array.from(selectedFacultyIds),
+        targetRoles: Array.from(selectedRoles),
       });
       setForm((prev: any) => ({ ...prev, status: 'open' }));
       setShowPublishModal(false);
@@ -732,6 +735,36 @@ export function FormBuilder({ formId }: FormBuilderProps) {
                     ⚠️ หลังจากเผยแพร่แล้ว จะไม่สามารถแก้ไขคำถามได้ หากต้องการแก้ไขให้ Rollback หรือ Duplicate ก่อน
                   </p>
                 </div>
+
+                {/* Role Selection — show only for non-university scope */}
+                {form?.scope !== 'university' && (
+                  <div className="mb-4 pb-4 border-b border-gray-100">
+                    <p className="text-sm font-bold text-gray-700 mb-2">ผู้ประเมิน</p>
+                    <div className="flex flex-wrap gap-4">
+                      {[
+                        { role: 'teacher', label: 'อาจารย์' },
+                        { role: 'staff', label: 'บุคลากร' },
+                        { role: 'student', label: 'นักศึกษา' },
+                      ].map(({ role, label }) => (
+                        <label key={role} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedRoles.has(role)}
+                            onChange={(e) => {
+                              setSelectedRoles(prev => {
+                                const next = new Set(prev);
+                                e.target.checked ? next.add(role) : next.delete(role);
+                                return next;
+                              });
+                            }}
+                            className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                          />
+                          <span className="text-sm">{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Select All */}
                 <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-100">
