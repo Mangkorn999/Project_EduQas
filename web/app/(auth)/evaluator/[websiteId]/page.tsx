@@ -88,6 +88,16 @@ const fallbackCriteria: BackendCriterion[] = [
   {id: 'mock-c2', name: 'ข้อเสนอแนะ'},
 ];
 
+// Module-level helper for required-field validation
+function validateSectionRequired(
+  section: ReturnType<typeof buildSections>[0],
+  answers: Answers
+): string[] {
+  return section.questions
+    .filter((q) => q.isRequired && !hasAnswer(answers[q.id]))
+    .map((q) => q.id);
+}
+
 export default function EvaluatorFormPage({params}: {params: Promise<{websiteId: string}>}) {
   const {websiteId} = use(params);
   const router = useRouter();
@@ -102,21 +112,18 @@ export default function EvaluatorFormPage({params}: {params: Promise<{websiteId:
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchForm = async () => {
+      // Phase 1: load form (if fails, show fallback)
       try {
         setLoading(true);
         const res = await apiGet(`/api/v1/forms/${websiteId}`);
         setForm(res.data);
-
         const savedDraft = window.localStorage.getItem(draftKey);
         if (savedDraft) {
           setAnswers(JSON.parse(savedDraft));
-        }
-
-        if (!readonly) {
-          await apiPost(`/api/v1/forms/${websiteId}/website-open`, {});
         }
       } catch (err) {
         console.error('Failed to load evaluation form', err);
@@ -131,6 +138,18 @@ export default function EvaluatorFormPage({params}: {params: Promise<{websiteId:
         });
       } finally {
         setLoading(false);
+      }
+
+      // Phase 2: website-open separately — failure shows banner only, never replaces form
+      if (!readonly) {
+        try {
+          await apiPost(`/api/v1/forms/${websiteId}/website-open`, {});
+        } catch (err) {
+          setNotice(
+            'ไม่สามารถบันทึกการเปิดเว็บไซต์: ' +
+              (err instanceof Error ? err.message : 'ข้อผิดพลาดที่ไม่ทราบสาเหตุ')
+          );
+        }
       }
     };
 
@@ -156,7 +175,6 @@ export default function EvaluatorFormPage({params}: {params: Promise<{websiteId:
   const submitEvaluation = async () => {
     try {
       setSubmitting(true);
-      await apiPost(`/api/v1/forms/${websiteId}/website-open`, {});
       await apiPost(`/api/v1/forms/${websiteId}/responses`, {answers: toAnswerPayload(answers, sections)});
       window.localStorage.removeItem(draftKey);
       setNotice('ส่งแบบประเมินเรียบร้อยแล้ว');
@@ -167,6 +185,37 @@ export default function EvaluatorFormPage({params}: {params: Promise<{websiteId:
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleNext = () => {
+    const missingIds = validateSectionRequired(activeSection, answers);
+    if (missingIds.length > 0) {
+      const errors: Record<string, string> = {};
+      missingIds.forEach((id) => {
+        errors[id] = 'กรุณาตอบคำถามที่จำเป็น';
+      });
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
+    setCurrentSection((v) => Math.min(sections.length - 1, v + 1));
+  };
+
+  const handleSubmit = async () => {
+    const allErrors: Record<string, string> = {};
+    sections.forEach((section) => {
+      validateSectionRequired(section, answers).forEach((id) => {
+        allErrors[id] = 'กรุณาตอบคำถามที่จำเป็น';
+      });
+    });
+    if (Object.keys(allErrors).length > 0) {
+      setValidationErrors(allErrors);
+      setNotice(
+        `กรุณาตอบคำถามที่จำเป็นให้ครบก่อนส่ง (${Object.keys(allErrors).length} ข้อ)`
+      );
+      return;
+    }
+    await submitEvaluation();
   };
 
   if (loading || !form || !activeSection) {
@@ -234,7 +283,11 @@ export default function EvaluatorFormPage({params}: {params: Promise<{websiteId:
         <aside className="h-fit rounded-xl border border-[#E7E5E4] bg-white p-3 shadow-sm">
           {sections.map((section, index) => {
             const active = index === currentSection;
-            const complete = section.questions.every((question) => hasAnswer(answers[question.id]));
+            const requiredQuestions = section.questions.filter((q) => q.isRequired);
+            const complete =
+              requiredQuestions.length === 0
+                ? true
+                : requiredQuestions.every((q) => hasAnswer(answers[q.id]));
             return (
               <button
                 key={section.id}
@@ -266,7 +319,15 @@ export default function EvaluatorFormPage({params}: {params: Promise<{websiteId:
                 question={question}
                 value={answers[question.id]}
                 readonly={readonly}
-                onChange={(value) => setAnswers((prev) => ({...prev, [question.id]: value}))}
+                error={validationErrors[question.id]}
+                onChange={(value) => {
+                  setAnswers((prev) => ({...prev, [question.id]: value}));
+                  setValidationErrors((prev) => {
+                    const next = {...prev};
+                    delete next[question.id];
+                    return next;
+                  });
+                }}
               />
             ))}
           </div>
@@ -281,17 +342,38 @@ export default function EvaluatorFormPage({params}: {params: Promise<{websiteId:
 
       <div className="sticky bottom-0 -mx-5 border-t border-[#E7E5E4] bg-[#FAFAF9]/95 px-5 py-4 backdrop-blur md:-mx-8 md:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {/* LEFT: prev */}
           <button
             type="button"
             disabled={currentSection === 0}
-            onClick={() => setCurrentSection((value) => Math.max(0, value - 1))}
+            onClick={() => setCurrentSection((v) => Math.max(0, v - 1))}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E7E5E4] bg-white px-4 text-sm font-semibold text-[#1C1917] transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ArrowLeft className="h-4 w-4" />
             ส่วนก่อนหน้า
           </button>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          {/* CENTER: numbered pages */}
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {sections.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setCurrentSection(idx)}
+                className={cn(
+                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold transition-colors',
+                  idx === currentSection
+                    ? 'bg-[#CA8A04] text-white shadow-sm'
+                    : 'border border-[#E7E5E4] bg-white text-[#1C1917] hover:bg-gray-50'
+                )}
+              >
+                {idx + 1}
+              </button>
+            ))}
+          </div>
+
+          {/* RIGHT: save + next or submit */}
+          <div className="flex items-center gap-2">
             {!readonly && (
               <button
                 type="button"
@@ -303,11 +385,10 @@ export default function EvaluatorFormPage({params}: {params: Promise<{websiteId:
                 บันทึกร่าง
               </button>
             )}
-
             {currentSection < sections.length - 1 ? (
               <button
                 type="button"
-                onClick={() => setCurrentSection((value) => Math.min(sections.length - 1, value + 1))}
+                onClick={handleNext}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#1C1917] px-4 text-sm font-semibold text-white transition-colors hover:bg-stone-700"
               >
                 ส่วนถัดไป
@@ -317,7 +398,7 @@ export default function EvaluatorFormPage({params}: {params: Promise<{websiteId:
               !readonly && (
                 <button
                   type="button"
-                  onClick={submitEvaluation}
+                  onClick={handleSubmit}
                   disabled={submitting}
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#CA8A04] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#A16207] disabled:opacity-60"
                 >
@@ -338,22 +419,30 @@ function QuestionField({
   index,
   value,
   readonly,
+  error,
   onChange,
 }: {
   question: BackendQuestion;
   index: number;
   value?: AnswerValue;
   readonly: boolean;
+  error?: string;
   onChange: (value: AnswerValue) => void;
 }) {
   return (
-    <div className="rounded-xl border border-[#E7E5E4] bg-white p-5 shadow-sm">
+    <div
+      className={cn(
+        'rounded-xl border bg-white p-5 shadow-sm',
+        error ? 'border-red-300' : 'border-[#E7E5E4]'
+      )}
+    >
       <label className="block text-sm font-semibold leading-6 text-[#0C0A09]">
         {index + 1}. {question.label}
         {question.isRequired && <span className="ml-1 text-red-600">*</span>}
       </label>
       {question.helpText && <p className="mt-1 text-sm text-[#78716C]">{question.helpText}</p>}
       <div className="mt-4">{renderQuestionInput(question, value, readonly, onChange)}</div>
+      {error && <p className="mt-2 text-xs font-medium text-red-500">{error}</p>}
     </div>
   );
 }
