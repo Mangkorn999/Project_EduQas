@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Plus, Search, Trash2, ChevronRight, Calendar, Users, Globe, ExternalLink, ArrowRight, ArrowLeft, CheckCircle2, LayoutTemplate } from 'lucide-react';
+import { Plus, Search, Trash2, Copy, ChevronRight, Calendar, Users, Globe, ExternalLink, ArrowRight, ArrowLeft, CheckCircle2, LayoutTemplate } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -156,6 +156,17 @@ export default function FormsPage() {
     }, 200);
   };
 
+  const onDuplicateForm = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm('คัดลอกแบบฟอร์มนี้?')) return
+    try {
+      const res = await apiPost(`/api/v1/forms/${id}/duplicate`, {})
+      router.push(`/forms/${res.data.id}/builder`)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'คัดลอกไม่สำเร็จ')
+    }
+  };
+
   const onDeleteForm = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบแบบฟอร์มนี้? (การลบจะเป็นการ Soft Delete)')) return;
@@ -285,6 +296,15 @@ export default function FormsPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <PermissionGate permission="form.create">
+                          <button
+                            title="คัดลอก"
+                            onClick={(e) => onDuplicateForm(form.id, e)}
+                            className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800/50"
+                          >
+                            <Copy className="h-5 w-5" />
+                          </button>
+                        </PermissionGate>
                         <PermissionGate permission="form.create">
                           <button
                             onClick={(e) => onDeleteForm(form.id, e)}
